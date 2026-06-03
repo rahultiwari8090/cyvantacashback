@@ -53,7 +53,7 @@ export default function CashbackCalculator() {
           <div className="calc-slider-card">
             <div className="slider-label-row">
               <span>Fashion & Lifestyle (12% Avg. Cashback)</span>
-              <span>${fashion} / mo</span>
+              <span>₹{fashion} / mo</span>
             </div>
             <input
               type="range"
@@ -70,7 +70,7 @@ export default function CashbackCalculator() {
           <div className="calc-slider-card">
             <div className="slider-label-row">
               <span>Electronics & Mobiles (5% Avg. Cashback)</span>
-              <span>${electronics} / mo</span>
+              <span>₹{electronics} / mo</span>
             </div>
             <input
               type="range"
@@ -87,7 +87,7 @@ export default function CashbackCalculator() {
           <div className="calc-slider-card">
             <div className="slider-label-row">
               <span>Food & Daily Groceries (4% Avg. Cashback)</span>
-              <span>${grocery} / mo</span>
+              <span>₹{grocery} / mo</span>
             </div>
             <input
               type="range"
@@ -104,7 +104,7 @@ export default function CashbackCalculator() {
           <div className="calc-slider-card">
             <div className="slider-label-row">
               <span>Travel & Flight Bookings (8% Avg. Cashback)</span>
-              <span>${travel} / mo</span>
+              <span>₹{travel} / mo</span>
             </div>
             <input
               type="range"
@@ -122,9 +122,9 @@ export default function CashbackCalculator() {
         <div className="calc-results-card">
           <Calculator size={36} style={{ color: 'var(--primary)' }} />
           <div className="calc-result-title">Estimated Annual Payout</div>
-          <div className="calc-result-amount">${yearlyCashback.toFixed(0)}</div>
+          <div className="calc-result-amount">₹{yearlyCashback.toFixed(0)}</div>
           <p className="calc-result-subtext">
-            Based on a total monthly spend of <strong>${fashion + electronics + grocery + travel}</strong>.
+            Based on a total monthly spend of <strong>₹{fashion + electronics + grocery + travel}</strong>.
             This cashback is 100% real currency, withdrawable straight to your bank account or gift cards!
           </p>
         </div>

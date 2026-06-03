@@ -59,7 +59,7 @@ export default function AdminSettings({ globalSettings, onSaveSettings }) {
           />
 
           <AdminFormInput
-            label="Minimum Withdrawal Threshold ($)"
+            label="Minimum Withdrawal Threshold (₹)"
             id="settings-min"
             type="number"
             step="0.01"

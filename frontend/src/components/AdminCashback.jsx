@@ -35,7 +35,7 @@ export default function AdminCashback({ cashbackList, onApprove, onReject, globa
     <tr key={item.id} className="animate-fade">
       <td style={{ fontWeight: '600', color: 'var(--text-bold)' }}>{item.userName}</td>
       <td style={{ maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.productName}</td>
-      <td style={{ color: 'var(--secondary)', fontWeight: '700' }}>${item.amount.toFixed(2)}</td>
+      <td style={{ color: 'var(--secondary)', fontWeight: '700' }}>₹{item.amount.toFixed(2)}</td>
       <td>
         <span className={`status-badge ${item.status}`}>{item.status}</span>
       </td>

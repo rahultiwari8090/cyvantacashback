@@ -11,7 +11,7 @@
 const BASE_URL = 'http://localhost:8080/api';
 
 // By default, use mock data. Set to false to connect to your real Spring Boot server.
-const USE_MOCK = localStorage.getItem('api_use_mock') !== 'false';
+const USE_MOCK = typeof localStorage !== 'undefined' ? localStorage.getItem('api_use_mock') !== 'false' : true;
 
 console.log(`[API Service] Running in ${USE_MOCK ? 'MOCK' : 'SPRING BOOT LIVE'} mode.`);
 

@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { Wallet, Link, History, Gift, Copy, Check, ShieldCheck, ArrowUpRight } from 'lucide-react';
 
 const DUMMY_CLICKS = [
-  { id: 1, date: '2026-05-28', store: 'Myntra Fashion', action: 'Outbound Redirect', status: 'Confirmed', amount: '$14.20' },
-  { id: 2, date: '2026-05-29', store: 'Flipkart Mobiles', action: 'Outbound Redirect', status: 'Pending', amount: '$35.00' },
-  { id: 3, date: '2026-05-30', store: 'Amazon Deals', action: 'Outbound Redirect', status: 'Pending', amount: '$4.12' },
-  { id: 4, date: '2026-05-31', store: 'Ajio Fashion', action: 'Outbound Redirect', status: 'Confirmed', amount: '$12.50' },
+  { id: 1, date: '2026-05-28', store: 'Myntra Fashion', action: 'Outbound Redirect', status: 'Confirmed', amount: '₹14.20' },
+  { id: 2, date: '2026-05-29', store: 'Flipkart Mobiles', action: 'Outbound Redirect', status: 'Pending', amount: '₹35.00' },
+  { id: 3, date: '2026-05-30', store: 'Amazon Deals', action: 'Outbound Redirect', status: 'Pending', amount: '₹4.12' },
+  { id: 4, date: '2026-05-31', store: 'Ajio Fashion', action: 'Outbound Redirect', status: 'Confirmed', amount: '₹12.50' },
 ];
 
 export default function Dashboard({ currentUser, onAddNotification, setView }) {
@@ -24,14 +24,14 @@ export default function Dashboard({ currentUser, onAddNotification, setView }) {
 
   const handleWithdraw = () => {
     if (currentUser.wallet.confirmed <= 0) {
-      onAddNotification('Insufficient confirmed cashback to withdraw! Minimum is $10.', 'error');
+      onAddNotification('Insufficient confirmed cashback to withdraw! Minimum is ₹10.', 'error');
       return;
     }
     setWithdrawing(true);
-    onAddNotification(`Processing withdrawal request of $${currentUser.wallet.confirmed.toFixed(2)}...`, 'info');
+    onAddNotification(`Processing withdrawal request of ₹${currentUser.wallet.confirmed.toFixed(2)}...`, 'info');
 
     setTimeout(() => {
-      onAddNotification(`Success! $${currentUser.wallet.confirmed.toFixed(2)} transferred to your linked Bank Account.`, 'success');
+      onAddNotification(`Success! ₹${currentUser.wallet.confirmed.toFixed(2)} transferred to your linked Bank Account.`, 'success');
       currentUser.wallet.confirmed = 0.0; // reset
       setWithdrawing(false);
     }, 2500);
@@ -78,15 +78,15 @@ export default function Dashboard({ currentUser, onAddNotification, setView }) {
             <div className="wallet-banner">
               <div className="wallet-stat">
                 <span className="wallet-stat-label">Confirmed Cashback</span>
-                <span className="wallet-stat-val">${currentUser.wallet.confirmed.toFixed(2)}</span>
+                <span className="wallet-stat-val">₹{currentUser.wallet.confirmed.toFixed(2)}</span>
               </div>
               <div className="wallet-stat">
                 <span className="wallet-stat-label">Pending Rewards</span>
-                <span className="wallet-stat-val">${currentUser.wallet.pending.toFixed(2)}</span>
+                <span className="wallet-stat-val">₹{currentUser.wallet.pending.toFixed(2)}</span>
               </div>
               <div className="wallet-stat">
                 <span className="wallet-stat-label">Referral Earnings</span>
-                <span className="wallet-stat-val">${currentUser.wallet.referral.toFixed(2)}</span>
+                <span className="wallet-stat-val">₹{currentUser.wallet.referral.toFixed(2)}</span>
               </div>
 
               <button

@@ -42,7 +42,7 @@ export default function AdminReferrals({ users }) {
       </td>
       <td style={{ fontWeight: '600', color: 'var(--text-bold)' }}>{item.user}</td>
       <td>{item.invites} Referrals</td>
-      <td style={{ color: 'var(--secondary)', fontWeight: '700' }}>${item.earnings.toFixed(2)}</td>
+      <td style={{ color: 'var(--secondary)', fontWeight: '700' }}>₹{item.earnings.toFixed(2)}</td>
     </tr>
   );
 
@@ -73,7 +73,7 @@ export default function AdminReferrals({ users }) {
         <div className="admin-kpi-card">
           <div className="admin-kpi-info">
             <h3>Total Referral Bonus</h3>
-            <div className="admin-kpi-value">${totalBonus.toFixed(2)}</div>
+            <div className="admin-kpi-value">₹{totalBonus.toFixed(2)}</div>
             <span className="admin-kpi-trend positive" style={{ marginTop: '4px' }}>
               <TrendingUp size={12} style={{ marginRight: '4px' }} /> Paid out
             </span>

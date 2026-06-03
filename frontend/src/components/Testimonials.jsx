@@ -4,23 +4,23 @@ import { Star, MessageSquare, ShieldCheck } from 'lucide-react';
 const TESTIMONIALS = [
   {
     id: 1,
-    quote: "I was skeptical at first, but in the last 6 months I've withdrawn over $340 straight into my bank account. It's literally free money for shopping I was already doing!",
+    quote: "I was skeptical at first, but in the last 6 months I've withdrawn over ₹340 straight into my bank account. It's literally free money for shopping I was already doing!",
     user: "Elena Rostova",
-    earnings: "$342.50",
+    earnings: "₹342.50",
     avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150",
   },
   {
     id: 2,
     quote: "The referral program is insane! I shared my link on my Instagram and now I get 10% of whatever my friends earn. Earning passive income has never been this simple.",
     user: "Rahul Sharma",
-    earnings: "$810.00",
+    earnings: "₹810.00",
     avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
   },
   {
     id: 3,
     quote: "Bought all my travel bookings and flight tickets through MakeMyTrip via Cyvanta Cashback. Stacking credit card points, store discounts, and affiliate cashback is the ultimate hack!",
     user: "Marcus Chen",
-    earnings: "$1,120.00",
+    earnings: "₹1,120.00",
     avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150",
   },
 ];

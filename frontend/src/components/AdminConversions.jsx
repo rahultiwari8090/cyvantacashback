@@ -56,7 +56,7 @@ export default function AdminConversions({ conversions, onAdjustConversion, onAd
     <tr key={item.id} className="animate-fade">
       <td style={{ fontFamily: 'monospace', fontWeight: '700', color: 'var(--text-bold)' }}>{item.subId}</td>
       <td style={{ fontFamily: 'monospace' }}>{item.clickId}</td>
-      <td style={{ color: 'var(--secondary)', fontWeight: '700' }}>${item.commission.toFixed(2)}</td>
+      <td style={{ color: 'var(--secondary)', fontWeight: '700' }}>₹{item.commission.toFixed(2)}</td>
       <td>
         <span className={`status-badge ${item.status}`}>{item.status}</span>
       </td>
@@ -177,7 +177,7 @@ export default function AdminConversions({ conversions, onAdjustConversion, onAd
               <div>
                 <span style={{ fontSize: '11px', color: 'var(--text)', textTransform: 'uppercase', fontWeight: '600' }}>Retailer Commission</span>
                 <p style={{ fontWeight: '700', color: 'var(--secondary)', fontSize: '15px', marginTop: '2px' }}>
-                  ${selectedConv.commission.toFixed(2)}
+                  ₹{selectedConv.commission.toFixed(2)}
                 </p>
               </div>
               <div>
@@ -226,7 +226,7 @@ export default function AdminConversions({ conversions, onAdjustConversion, onAd
                 Adjusting cashback for SubID: <strong>{adjustConv.subId}</strong>
               </p>
               <p style={{ fontSize: '12px', color: 'var(--text)', marginTop: '4px' }}>
-                Current Commission: <strong>${adjustConv.commission.toFixed(2)}</strong>
+                Current Commission: <strong>₹{adjustConv.commission.toFixed(2)}</strong>
               </p>
             </div>
 
@@ -242,7 +242,7 @@ export default function AdminConversions({ conversions, onAdjustConversion, onAd
             />
 
             <AdminFormInput
-              label="Adjustment Amount ($)"
+              label="Adjustment Amount (₹)"
               id="adj-amount"
               type="number"
               step="0.01"

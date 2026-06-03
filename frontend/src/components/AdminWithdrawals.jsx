@@ -31,7 +31,7 @@ export default function AdminWithdrawals({ withdrawRequests, onApprove, onReject
     <tr key={item.id} className="animate-fade">
       <td style={{ fontWeight: '600', color: 'var(--text-bold)' }}>{item.userName}</td>
       <td style={{ fontWeight: '500' }}>{(item.coins || item.amount * 100).toLocaleString()} Coins</td>
-      <td style={{ fontWeight: '700', color: 'var(--text-bold)' }}>${item.amount.toFixed(2)}</td>
+      <td style={{ fontWeight: '700', color: 'var(--text-bold)' }}>₹{item.amount.toFixed(2)}</td>
       <td style={{ fontFamily: 'monospace', color: 'var(--primary)', fontWeight: '600' }}>{item.upiId}</td>
       <td>{item.date}</td>
       <td>
@@ -201,9 +201,9 @@ export default function AdminWithdrawals({ withdrawRequests, onApprove, onReject
                 </p>
               </div>
               <div>
-                <span style={{ fontSize: '11px', color: 'var(--text)', textTransform: 'uppercase', fontWeight: '600' }}>Payout Value ($)</span>
+                <span style={{ fontSize: '11px', color: 'var(--text)', textTransform: 'uppercase', fontWeight: '600' }}>Payout Value (₹)</span>
                 <p style={{ fontWeight: '700', color: 'var(--secondary)', fontSize: '15px', marginTop: '2px' }}>
-                  ${selectedRequest.amount.toFixed(2)}
+                  ₹{selectedRequest.amount.toFixed(2)}
                 </p>
               </div>
               <div>

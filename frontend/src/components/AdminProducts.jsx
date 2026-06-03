@@ -95,7 +95,7 @@ export default function AdminProducts({ products, categories = [], onAddProduct,
       <td>
         <span style={{ fontSize: '13px', fontWeight: '500' }}>{item.platform}</span>
       </td>
-      <td style={{ fontWeight: '600', color: 'var(--text-bold)' }}>${item.price.toFixed(2)}</td>
+      <td style={{ fontWeight: '600', color: 'var(--text-bold)' }}>₹{item.price.toFixed(2)}</td>
       <td style={{ color: 'var(--secondary)', fontWeight: '600' }}>
         {item.cashbackValue}%
       </td>
@@ -243,7 +243,7 @@ export default function AdminProducts({ products, categories = [], onAddProduct,
 
           <div className="admin-form-row">
             <AdminFormInput
-              label="Price ($) *"
+              label="Price (₹) *"
               id="prod-price"
               type="number"
               step="0.01"

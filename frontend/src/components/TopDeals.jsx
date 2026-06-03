@@ -39,22 +39,22 @@ export default function TopDeals({ deals, onGrabDeal }) {
                 <div className="deal-price-section">
                   <div className="deal-retail-row">
                     <span>Retail Price:</span>
-                    <span className="deal-retail-price">${deal.retailPrice.toFixed(2)}</span>
+                    <span className="deal-retail-price">₹{deal.retailPrice.toFixed(2)}</span>
                   </div>
 
                   <div className="deal-discounted-row">
                     <span>Special Price:</span>
-                    <span>${deal.dealPrice.toFixed(2)}</span>
+                    <span>₹{deal.dealPrice.toFixed(2)}</span>
                   </div>
 
                   <div className="deal-cashback-row">
                     <span>Cyvanta Cashback:</span>
-                    <span>-${deal.cashbackEarned.toFixed(2)}</span>
+                    <span>-₹{deal.cashbackEarned.toFixed(2)}</span>
                   </div>
 
                   <div className="deal-effective-row">
                     <span>Final Effective Price:</span>
-                    <span>${finalEffectivePrice}</span>
+                    <span>₹{finalEffectivePrice}</span>
                   </div>
                 </div>
 

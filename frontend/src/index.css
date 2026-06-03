@@ -59,11 +59,17 @@
   padding: 0;
 }
 
+html, body, #root, #main, [data-reactroot] {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  height: auto !important;
+  min-height: 100% !important;
+}
+
 body {
   font-family: var(--sans);
   background-color: var(--bg);
   color: var(--text);
-  overflow-x: hidden;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }

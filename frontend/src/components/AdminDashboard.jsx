@@ -124,7 +124,7 @@ export default function AdminDashboard({ users, products, orders, withdrawReques
         <div className="admin-kpi-card">
           <div className="admin-kpi-info">
             <h3>Total Cashback</h3>
-            <div className="admin-kpi-value">${totalCashbackVal.toFixed(2)}</div>
+            <div className="admin-kpi-value">₹{totalCashbackVal.toFixed(2)}</div>
             <span className="admin-kpi-trend positive">
               <TrendingUp size={12} style={{ marginRight: '2px' }} /> +12.5%
             </span>
@@ -138,7 +138,7 @@ export default function AdminDashboard({ users, products, orders, withdrawReques
         <div className="admin-kpi-card">
           <div className="admin-kpi-info">
             <h3>Total Withdrawals</h3>
-            <div className="admin-kpi-value">${totalWithdrawalsVal.toFixed(2)}</div>
+            <div className="admin-kpi-value">₹{totalWithdrawalsVal.toFixed(2)}</div>
             <span className="admin-kpi-trend positive">
               <TrendingUp size={12} style={{ marginRight: '2px' }} /> +9.3%
             </span>
@@ -243,7 +243,7 @@ export default function AdminDashboard({ users, products, orders, withdrawReques
                 {recentWithdrawals.map((w) => (
                   <tr key={w.id}>
                     <td>{w.userName}</td>
-                    <td style={{ fontWeight: '700', color: 'var(--text-bold)' }}>${w.amount.toFixed(2)}</td>
+                    <td style={{ fontWeight: '700', color: 'var(--text-bold)' }}>₹{w.amount.toFixed(2)}</td>
                     <td>
                       <span className={`status-badge ${w.status}`}>{w.status}</span>
                     </td>
@@ -277,7 +277,7 @@ export default function AdminDashboard({ users, products, orders, withdrawReques
                 {recentCashbacks.map((c) => (
                   <tr key={c.id}>
                     <td>{c.userName}</td>
-                    <td style={{ fontWeight: '700', color: 'var(--secondary)' }}>${c.amount.toFixed(2)}</td>
+                    <td style={{ fontWeight: '700', color: 'var(--secondary)' }}>₹{c.amount.toFixed(2)}</td>
                     <td>
                       <span className={`status-badge ${c.status}`}>{c.status}</span>
                     </td>

@@ -32,7 +32,7 @@ export default function AdminFinance({ finance, withdrawRequests }) {
           color: item.type === 'credit' ? '#10b981' : '#ef4444',
         }}
       >
-        {item.type === 'credit' ? '+' : '-'}${item.amount.toFixed(2)}
+        {item.type === 'credit' ? '+' : '-'}₹{item.amount.toFixed(2)}
       </td>
       <td>{item.date}</td>
     </tr>
@@ -41,7 +41,7 @@ export default function AdminFinance({ finance, withdrawRequests }) {
   const renderWhRow = (item, idx) => (
     <tr key={item.id} className="animate-fade">
       <td style={{ fontWeight: '600', color: 'var(--text-bold)' }}>{item.userName}</td>
-      <td style={{ fontWeight: '700', color: 'var(--text-bold)' }}>${item.amount.toFixed(2)}</td>
+      <td style={{ fontWeight: '700', color: 'var(--text-bold)' }}>₹{item.amount.toFixed(2)}</td>
       <td style={{ fontFamily: 'monospace', fontSize: '13px' }}>{item.upiId}</td>
       <td>
         <span className={`status-badge ${item.status}`}>{item.status}</span>
@@ -65,7 +65,7 @@ export default function AdminFinance({ finance, withdrawRequests }) {
         <div className="admin-kpi-card">
           <div className="admin-kpi-info">
             <h3>Total Revenue</h3>
-            <div className="admin-kpi-value">${finance.totalRevenue.toFixed(2)}</div>
+            <div className="admin-kpi-value">₹{finance.totalRevenue.toFixed(2)}</div>
             <span style={{ fontSize: '12px', color: 'var(--text)', display: 'block', marginTop: '4px' }}>
               Affiliate earnings + Ads
             </span>
@@ -79,7 +79,7 @@ export default function AdminFinance({ finance, withdrawRequests }) {
         <div className="admin-kpi-card">
           <div className="admin-kpi-info">
             <h3>Total Cashback Paid</h3>
-            <div className="admin-kpi-value">${finance.totalCashbackPaid.toFixed(2)}</div>
+            <div className="admin-kpi-value">₹{finance.totalCashbackPaid.toFixed(2)}</div>
             <span style={{ fontSize: '12px', color: 'var(--text)', display: 'block', marginTop: '4px' }}>
               Confirmed user credits
             </span>
@@ -93,7 +93,7 @@ export default function AdminFinance({ finance, withdrawRequests }) {
         <div className="admin-kpi-card">
           <div className="admin-kpi-info">
             <h3>Total Withdraw Paid</h3>
-            <div className="admin-kpi-value">${finance.totalWithdrawPaid.toFixed(2)}</div>
+            <div className="admin-kpi-value">₹{finance.totalWithdrawPaid.toFixed(2)}</div>
             <span style={{ fontSize: '12px', color: 'var(--text)', display: 'block', marginTop: '4px' }}>
               Disbursed to UPI bank
             </span>
@@ -107,7 +107,7 @@ export default function AdminFinance({ finance, withdrawRequests }) {
         <div className="admin-kpi-card">
           <div className="admin-kpi-info">
             <h3>Pending Liability</h3>
-            <div className="admin-kpi-value">${finance.pendingWithdrawals.toFixed(2)}</div>
+            <div className="admin-kpi-value">₹{finance.pendingWithdrawals.toFixed(2)}</div>
             <span style={{ fontSize: '12px', color: 'var(--text)', display: 'block', marginTop: '4px' }}>
               Queued payouts
             </span>

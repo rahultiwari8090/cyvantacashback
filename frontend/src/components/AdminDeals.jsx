@@ -138,7 +138,7 @@ export default function AdminDeals({ deals, onAddDeal, onDeleteDeal }) {
 
           <div className="admin-form-row">
             <AdminFormInput
-              label="Cashback Reward (e.g., 10% or $5.00) *"
+              label="Cashback Reward (e.g., 10% or ₹5.00) *"
               id="deal-cashback"
               type="text"
               placeholder="e.g., 10%"

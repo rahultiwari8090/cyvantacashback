@@ -130,7 +130,7 @@ export default function AuthModal({ isOpen, onClose, onLogin }) {
           </div>
 
           <button type="submit" className="btn-auth-submit">
-            {activeTab === 'login' ? 'Continue & Claim Cashback' : 'Join Now & Get $5.00 Bonus'}
+            {activeTab === 'login' ? 'Continue & Claim Cashback' : 'Join Now & Get ₹5.00 Bonus'}
           </button>
 
           <p style={{ fontSize: '12px', textAlign: 'center', marginTop: '8px', color: 'var(--text)' }}>

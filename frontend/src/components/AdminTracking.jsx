@@ -270,8 +270,8 @@ export default function AdminTracking({
         </td>
         <td>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontWeight: '600' }}>${item.price.toFixed(2)}</span>
-            <span style={{ fontSize: '12px', color: '#10b981', fontWeight: '700' }}>+${item.cashbackAmount.toFixed(2)} CB</span>
+            <span style={{ fontWeight: '600' }}>₹{item.price.toFixed(2)}</span>
+            <span style={{ fontSize: '12px', color: '#10b981', fontWeight: '700' }}>+₹{item.cashbackAmount.toFixed(2)} CB</span>
           </div>
         </td>
         <td>
@@ -475,7 +475,7 @@ export default function AdminTracking({
               id="new-product"
               value={newProductId}
               onChange={(e) => setNewProductId(e.target.value)}
-              options={products.map(p => ({ value: p.id, label: `[${p.platform}] ${p.name} - $${p.price}` }))}
+              options={products.map(p => ({ value: p.id, label: `[${p.platform}] ${p.name} - ₹${p.price}` }))}
             />
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
@@ -546,7 +546,7 @@ export default function AdminTracking({
               <div>
                 <span style={{ fontSize: '11px', color: 'var(--text)', textTransform: 'uppercase', fontWeight: '600' }}>Earnings Snapshot</span>
                 <p style={{ fontWeight: '700', color: '#10b981', marginTop: '2px' }}>
-                  ${selectedOrder.cashbackAmount.toFixed(2)} Pending Cashback
+                  ₹{selectedOrder.cashbackAmount.toFixed(2)} Pending Cashback
                 </p>
               </div>
             </div>
@@ -679,7 +679,7 @@ export default function AdminTracking({
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                 <span style={{ color: 'var(--text)' }}>Commission value:</span>
-                <strong style={{ color: '#10b981' }}>+${simulationOrder.cashbackAmount.toFixed(2)}</strong>
+                <strong style={{ color: '#10b981' }}>+₹{simulationOrder.cashbackAmount.toFixed(2)}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                 <span style={{ color: 'var(--text)' }}>Active Status:</span>
@@ -767,7 +767,7 @@ export default function AdminTracking({
                   <ShieldCheck size={16} /> Order Completed Safely
                 </h4>
                 <p style={{ fontSize: '12px', color: 'var(--text)', marginTop: '6px' }}>
-                  Return policy window has expired. Affiliate commission is fully validated and cashback of <strong>${simulationOrder.cashbackAmount.toFixed(2)}</strong> is cleared into the user's wallet!
+                  Return policy window has expired. Affiliate commission is fully validated and cashback of <strong>₹{simulationOrder.cashbackAmount.toFixed(2)}</strong> is cleared into the user's wallet!
                 </p>
               </div>
             )}

@@ -88,7 +88,7 @@ export default function MobileApp({
     }
 
     if (amount < 10) {
-      onAddNotification('Minimum withdrawal amount is $10.00', 'error');
+      onAddNotification('Minimum withdrawal amount is ₹10.00', 'error');
       return;
     }
 
@@ -108,7 +108,7 @@ export default function MobileApp({
     setTimeout(() => {
       const newRequest = {
         userName: user.name,
-        coins: Math.round(amount * 100), // 100 coins = $1
+        coins: Math.round(amount * 100), // 100 coins = ₹1
         amount: amount,
         upiId: upiId,
         date: new Date().toISOString().split('T')[0],
@@ -177,11 +177,11 @@ export default function MobileApp({
                 <TrendingUp size={16} style={{ color: '#10b981' }} />
               </div>
               <div className="quick-wallet-balance">
-                ${(user.wallet.confirmed + user.wallet.pending).toFixed(2)}
+                ₹{(user.wallet.confirmed + user.wallet.pending).toFixed(2)}
               </div>
               <div className="quick-wallet-breakdown">
-                <span>Confirmed: <strong>${user.wallet.confirmed.toFixed(2)}</strong></span>
-                <span>Pending: <strong>${user.wallet.pending.toFixed(2)}</strong></span>
+                <span>Confirmed: <strong>₹{user.wallet.confirmed.toFixed(2)}</strong></span>
+                <span>Pending: <strong>₹{user.wallet.pending.toFixed(2)}</strong></span>
               </div>
             </div>
 
@@ -210,8 +210,8 @@ export default function MobileApp({
                   <div className="app-deal-info">
                     <h4>{deal.title}</h4>
                     <div className="app-deal-prices">
-                      <span className="deal-price-val">${deal.dealPrice.toFixed(2)}</span>
-                      <span className="deal-price-cb">+${deal.cashbackEarned.toFixed(2)} Cashback</span>
+                      <span className="deal-price-val">₹{deal.dealPrice.toFixed(2)}</span>
+                      <span className="deal-price-cb">+₹{deal.cashbackEarned.toFixed(2)} Cashback</span>
                     </div>
                   </div>
                 </div>
@@ -304,8 +304,8 @@ export default function MobileApp({
                       <h4 className="app-track-product-name">{item.productName}</h4>
                       
                       <div className="app-track-values">
-                        <span>Price: <strong>${item.price.toFixed(2)}</strong></span>
-                        <span className="app-track-cb-val">+${item.cashbackAmount.toFixed(2)} CB</span>
+                        <span>Price: <strong>₹{item.price.toFixed(2)}</strong></span>
+                        <span className="app-track-cb-val">+₹{item.cashbackAmount.toFixed(2)} CB</span>
                       </div>
 
                       <div className="app-track-status-progress">
@@ -339,18 +339,18 @@ export default function MobileApp({
                 <div className="wallet-bal-box">
                   <span className="wallet-bal-lbl">CONFIRMED</span>
                   <span className="wallet-bal-num" style={{ color: '#10b981' }}>
-                    ${user.wallet.confirmed.toFixed(2)}
+                    ₹{user.wallet.confirmed.toFixed(2)}
                   </span>
                 </div>
                 <div className="wallet-bal-box">
                   <span className="wallet-bal-lbl">PENDING</span>
                   <span className="wallet-bal-num" style={{ color: '#f59e0b' }}>
-                    ${user.wallet.pending.toFixed(2)}
+                    ₹{user.wallet.pending.toFixed(2)}
                   </span>
                 </div>
               </div>
 
-              <p className="wallet-disclaimer">* Only confirmed cashback (after return policy window closure) is withdrawable. Minimum threshold is $10.00.</p>
+              <p className="wallet-disclaimer">* Only confirmed cashback (after return policy window closure) is withdrawable. Minimum threshold is ₹10.00.</p>
             </div>
 
             {/* Request Withdrawal Form */}
@@ -358,11 +358,11 @@ export default function MobileApp({
               <h3>Request Bank Transfer</h3>
               <form onSubmit={handleRequestWithdrawal}>
                 <div className="app-input-group">
-                  <label>Amount ($)</label>
+                  <label>Amount (₹)</label>
                   <input 
                     type="number" 
                     step="0.01" 
-                    placeholder="Enter amount (min $10)" 
+                    placeholder="Enter amount (min ₹10)" 
                     value={withdrawAmount}
                     onChange={e => setWithdrawAmount(e.target.value)}
                   />
@@ -429,7 +429,7 @@ export default function MobileApp({
                 <strong className="meta-val" style={{ color: 'var(--primary)' }}>{selectedOrder.platform}</strong>
 
                 <span className="meta-lbl">Cashback Earned:</span>
-                <strong className="meta-val" style={{ color: '#10b981' }}>+${selectedOrder.cashbackAmount.toFixed(2)}</strong>
+                <strong className="meta-val" style={{ color: '#10b981' }}>+₹{selectedOrder.cashbackAmount.toFixed(2)}</strong>
               </div>
 
               {/* Vertical Mobile Stepper */}

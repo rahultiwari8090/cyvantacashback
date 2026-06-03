@@ -128,7 +128,7 @@ export default function Header({
               <div className="user-avatar">{currentUser.name[0].toUpperCase()}</div>
               <div className="user-info">
                 <span className="user-name">Hey, {currentUser.name}</span>
-                <span className="user-wallet">${currentUser.wallet.confirmed.toFixed(2)}</span>
+                <span className="user-wallet">₹{currentUser.wallet.confirmed.toFixed(2)}</span>
               </div>
               <ChevronDown size={14} style={{ color: 'var(--text)', opacity: 0.5 }} />
             </div>

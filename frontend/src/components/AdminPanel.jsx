@@ -42,6 +42,17 @@ import {
 
 export default function AdminPanel({ onLogout, theme, toggleTheme, onAddNotification }) {
   const getInitialTab = () => {
+    const hash = window.location.hash;
+    if (hash === '#/admin/users') return 'users';
+    if (hash === '#/admin/products') return 'products';
+    if (hash === '#/admin/cashback') return 'cashback';
+    if (hash === '#/admin/withdrawals') return 'withdrawals';
+    if (hash === '#/admin/click-logs') return 'click-logs';
+    if (hash === '#/admin/conversions') return 'conversions';
+    if (hash === '#/admin/referrals') return 'referrals';
+    if (hash === '#/admin/settings') return 'settings';
+    if (hash === '#/admin/tracking') return 'tracking';
+
     const path = window.location.pathname;
     if (path === '/admin/users') return 'users';
     if (path === '/admin/products') return 'products';
@@ -62,7 +73,11 @@ export default function AdminPanel({ onLogout, theme, toggleTheme, onAddNotifica
 
   const setActiveTab = (tabId) => {
     setActiveTabRaw(tabId);
+    const newHash = `#/admin/${tabId}`;
     const newPath = `/admin/${tabId}`;
+    if (window.location.hash !== newHash) {
+      window.location.hash = newHash;
+    }
     if (window.location.pathname !== newPath) {
       window.history.pushState(null, '', newPath);
     }
@@ -314,7 +329,7 @@ export default function AdminPanel({ onLogout, theme, toggleTheme, onAddNotifica
       // Re-fetch finance logs to stay fully in sync
       const financeData = await apiFinance.getData();
       setFinance(financeData);
-      onAddNotification(type === 'credit' ? `Manual Credit: $${amount} added successfully.` : `Manual Debit: $${amount} deducted successfully.`, type === 'credit' ? 'success' : 'info');
+      onAddNotification(type === 'credit' ? `Manual Credit: ₹${amount} added successfully.` : `Manual Debit: ₹${amount} deducted successfully.`, type === 'credit' ? 'success' : 'info');
     } catch (err) {
       console.error(err);
       onAddNotification('Failed to adjust conversion.', 'error');
@@ -576,7 +591,7 @@ export default function AdminPanel({ onLogout, theme, toggleTheme, onAddNotifica
                           setShowNotifications(false);
                         }}
                       >
-                        Withdraw request of <strong>${w.amount}</strong> from {w.userName} is pending.
+                        Withdraw request of <strong>₹{w.amount}</strong> from {w.userName} is pending.
                       </div>
                     ))}
                     {withdrawRequests.filter((w) => w.status === 'pending').length === 0 && (
