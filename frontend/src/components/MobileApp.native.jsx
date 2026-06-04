@@ -102,6 +102,55 @@ const TESTIMONIALS = [
   { id: 3, name: 'Vikram K.', rating: '⭐⭐⭐⭐⭐', text: 'Cyvanta tracking is flawless. Best affiliate platform right now.' },
 ];
 
+const STORES_INFO = [
+  { platform: 'Amazon', logo: 'https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg', cashbackPercent: 10.0 },
+  { platform: 'Flipkart', logo: 'https://upload.wikimedia.org/wikipedia/commons/7/7a/Flipkart_logo.svg', cashbackPercent: 8.5 },
+  { platform: 'Myntra', logo: 'https://upload.wikimedia.org/wikipedia/commons/b/bc/Myntra_Logo.png', cashbackPercent: 12.0 },
+  { platform: 'Ajio', logo: 'https://upload.wikimedia.org/wikipedia/commons/c/c9/Ajio_Logo.svg', cashbackPercent: 15.0 },
+  { platform: 'Nykaa Beauty', logo: 'https://upload.wikimedia.org/wikipedia/commons/5/5b/Nykaa_Logo.svg', cashbackPercent: 7.0 },
+  { platform: 'MakeMyTrip', logo: 'https://upload.wikimedia.org/wikipedia/commons/f/fb/MakeMyTrip_Logo.svg', cashbackPercent: 9.0 }
+];
+
+const generatePriceComparisons = (deal) => {
+  if (!deal) return [];
+  
+  let platforms = ['Amazon', 'Flipkart'];
+  if (deal.category === 'fashion') {
+    platforms = ['Myntra', 'Ajio', 'Flipkart', 'Amazon'];
+  } else if (deal.category === 'health') {
+    platforms = ['Nykaa Beauty', 'Amazon', 'Flipkart'];
+  } else if (deal.category === 'travel') {
+    platforms = ['MakeMyTrip', 'Amazon'];
+  } else {
+    platforms = ['Amazon', 'Flipkart', 'Myntra', 'Ajio'];
+  }
+
+  return platforms.map(platformName => {
+    const store = STORES_INFO.find(s => s.platform === platformName) || STORES_INFO[0];
+    
+    let dealPrice = deal.dealPrice;
+    if (platformName !== deal.platform) {
+      const hash = platformName.split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
+      const percentDiff = ((hash % 21) - 10) / 100; // -10% to +10%
+      dealPrice = parseFloat((deal.dealPrice * (1 + percentDiff)).toFixed(2));
+    }
+    
+    const cashbackValue = store.cashbackPercent;
+    const cashbackEarned = parseFloat(((dealPrice * cashbackValue) / 100).toFixed(2));
+    const effectivePrice = parseFloat((dealPrice - cashbackEarned).toFixed(2));
+    
+    return {
+      platform: platformName,
+      logo: store.logo,
+      dealPrice,
+      cashbackPercent: cashbackValue,
+      cashbackEarned,
+      effectivePrice,
+      isOriginal: platformName === deal.platform
+    };
+  }).sort((a, b) => a.effectivePrice - b.effectivePrice);
+};
+
 export default function MobileApp({
   currentUser,
   trackedOrders = [],
@@ -137,6 +186,7 @@ export default function MobileApp({
 
   // Selected Order for tracking modal
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [comparisonDeal, setComparisonDeal] = useState(null);
 
   // Auto-play hero slider
   useEffect(() => {
@@ -207,7 +257,12 @@ export default function MobileApp({
   };
 
   const handleGrabDeal = (deal) => {
-    onAddNotification(`Activating cashback tracker for ${deal.title}...`, 'success');
+    setComparisonDeal(deal);
+  };
+
+  const executeSimulatorGrabDeal = (dealItem, storeItem) => {
+    setComparisonDeal(null);
+    onAddNotification(`Activating cashback tracker on ${storeItem.platform} for ${dealItem.title || dealItem.name}...`, 'success');
     setTimeout(() => {
       onAddNotification(`Redirected to merchant! Shop completed.`, 'info');
     }, 1500);
@@ -934,6 +989,120 @@ export default function MobileApp({
               
               <TouchableOpacity style={styles.modalBtn} onPress={() => setSelectedOrder(null)}>
                 <Text style={styles.modalBtnText}>Close Timeline</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* Price Comparison Modal */}
+      {comparisonDeal && (
+        <Modal
+          visible={comparisonDeal !== null}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setComparisonDeal(null)}
+        >
+          <View style={styles.modalBackdrop}>
+            <View style={[styles.modalContent, themeStyles.card, { maxHeight: '80%' }]}>
+              <View style={[styles.modalHeader, themeStyles.borderTop]}>
+                <Text style={[styles.modalTitle, themeStyles.text, { fontSize: 16 }]}>🔍 Compare Prices & Cashback</Text>
+                <TouchableOpacity style={styles.modalClose} onPress={() => setComparisonDeal(null)}>
+                  <Text style={styles.modalCloseText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Product header */}
+              <View style={{ flexDirection: 'row', gap: 12, padding: 14, backgroundColor: isDark ? '#1a202c' : '#f8fafc', borderBottomWidth: 1, borderBottomColor: isDark ? '#2d3748' : '#edf2f7' }}>
+                <Image
+                  source={{ uri: comparisonDeal.image }}
+                  style={{ width: 44, height: 44, borderRadius: 4, resizeMode: 'cover' }}
+                />
+                <View style={{ flex: 1, justifyContent: 'center' }}>
+                  <Text style={[themeStyles.text, { fontSize: 13, fontWeight: '700' }]} numberOfLines={1}>
+                    {comparisonDeal.title || comparisonDeal.name}
+                  </Text>
+                  <Text style={[themeStyles.textMuted, { fontSize: 10, textTransform: 'capitalize', marginTop: 2 }]}>
+                    Category: {comparisonDeal.category}
+                  </Text>
+                </View>
+              </View>
+
+              <ScrollView style={[styles.modalBody, { padding: 14 }]}>
+                <View style={{ gap: 10, paddingBottom: 20 }}>
+                  {generatePriceComparisons(comparisonDeal).map((item, index) => {
+                    const isBestValue = index === 0;
+                    return (
+                      <View
+                        key={item.platform}
+                        style={{
+                          borderWidth: isBestValue ? 2 : 1,
+                          borderColor: isBestValue ? '#10b981' : isDark ? '#2d3748' : '#e2e8f0',
+                          borderRadius: 8,
+                          padding: 12,
+                          backgroundColor: isDark ? '#111827' : '#ffffff',
+                          flexDirection: 'row',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          position: 'relative'
+                        }}
+                      >
+                        {isBestValue && (
+                          <View style={{
+                            position: 'absolute',
+                            top: -9,
+                            left: 10,
+                            backgroundColor: '#10b981',
+                            paddingVertical: 1,
+                            paddingHorizontal: 6,
+                            borderRadius: 6
+                          }}>
+                            <Text style={{ color: '#ffffff', fontSize: 7, fontWeight: '800', textTransform: 'uppercase' }}>
+                              🏆 Best Value
+                            </Text>
+                          </View>
+                        )}
+
+                        {/* Left Info */}
+                        <View style={{ gap: 2 }}>
+                          <Text style={[themeStyles.text, { fontSize: 12, fontWeight: '700' }]}>{item.platform}</Text>
+                          <Text style={[themeStyles.textMuted, { fontSize: 9, textDecorationLine: 'line-through' }]}>
+                            ₹{item.dealPrice.toFixed(2)}
+                          </Text>
+                          <Text style={{ fontSize: 9, color: '#10b981', fontWeight: '700' }}>
+                            -{item.cashbackPercent}% Cashback
+                          </Text>
+                        </View>
+
+                        {/* Right CTA */}
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                          <View style={{ alignItems: 'flex-end' }}>
+                            <Text style={[themeStyles.textMuted, { fontSize: 8 }]}>Effective Price:</Text>
+                            <Text style={{ fontSize: 13, fontWeight: '800', color: isBestValue ? '#10b981' : isDark ? '#f3f4f6' : '#0f172a' }}>
+                              ₹{item.effectivePrice.toFixed(2)}
+                            </Text>
+                          </View>
+
+                          <TouchableOpacity
+                            style={{
+                              backgroundColor: '#ff4f2f',
+                              paddingVertical: 6,
+                              paddingHorizontal: 10,
+                              borderRadius: 4
+                            }}
+                            onPress={() => executeSimulatorGrabDeal(comparisonDeal, item)}
+                          >
+                            <Text style={{ color: '#ffffff', fontSize: 10, fontWeight: '700' }}>Buy</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              </ScrollView>
+
+              <TouchableOpacity style={[styles.modalBtn, { marginTop: 0 }]} onPress={() => setComparisonDeal(null)}>
+                <Text style={styles.modalBtnText}>Close</Text>
               </TouchableOpacity>
             </View>
           </View>

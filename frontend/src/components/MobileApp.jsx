@@ -20,6 +20,55 @@ import {
   AlertCircle
 } from 'lucide-react';
 
+const STORES_INFO = [
+  { platform: 'Amazon', logo: 'https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg', cashbackPercent: 10.0 },
+  { platform: 'Flipkart', logo: 'https://upload.wikimedia.org/wikipedia/commons/7/7a/Flipkart_logo.svg', cashbackPercent: 8.5 },
+  { platform: 'Myntra', logo: 'https://upload.wikimedia.org/wikipedia/commons/b/bc/Myntra_Logo.png', cashbackPercent: 12.0 },
+  { platform: 'Ajio', logo: 'https://upload.wikimedia.org/wikipedia/commons/c/c9/Ajio_Logo.svg', cashbackPercent: 15.0 },
+  { platform: 'Nykaa Beauty', logo: 'https://upload.wikimedia.org/wikipedia/commons/5/5b/Nykaa_Logo.svg', cashbackPercent: 7.0 },
+  { platform: 'MakeMyTrip', logo: 'https://upload.wikimedia.org/wikipedia/commons/f/fb/MakeMyTrip_Logo.svg', cashbackPercent: 9.0 }
+];
+
+const generatePriceComparisons = (deal) => {
+  if (!deal) return [];
+  
+  let platforms = ['Amazon', 'Flipkart'];
+  if (deal.category === 'fashion') {
+    platforms = ['Myntra', 'Ajio', 'Flipkart', 'Amazon'];
+  } else if (deal.category === 'health') {
+    platforms = ['Nykaa Beauty', 'Amazon', 'Flipkart'];
+  } else if (deal.category === 'travel') {
+    platforms = ['MakeMyTrip', 'Amazon'];
+  } else {
+    platforms = ['Amazon', 'Flipkart', 'Myntra', 'Ajio'];
+  }
+
+  return platforms.map(platformName => {
+    const store = STORES_INFO.find(s => s.platform === platformName) || STORES_INFO[0];
+    
+    let dealPrice = deal.dealPrice;
+    if (platformName !== deal.platform) {
+      const hash = platformName.split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
+      const percentDiff = ((hash % 21) - 10) / 100; // -10% to +10%
+      dealPrice = parseFloat((deal.dealPrice * (1 + percentDiff)).toFixed(2));
+    }
+    
+    const cashbackValue = store.cashbackPercent;
+    const cashbackEarned = parseFloat(((dealPrice * cashbackValue) / 100).toFixed(2));
+    const effectivePrice = parseFloat((dealPrice - cashbackEarned).toFixed(2));
+    
+    return {
+      platform: platformName,
+      logo: store.logo,
+      dealPrice,
+      cashbackPercent: cashbackValue,
+      cashbackEarned,
+      effectivePrice,
+      isOriginal: platformName === deal.platform
+    };
+  }).sort((a, b) => a.effectivePrice - b.effectivePrice);
+};
+
 export default function MobileApp({
   currentUser,
   trackedOrders = [],
@@ -42,6 +91,7 @@ export default function MobileApp({
 
   // Selected Order for tracking modal
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [comparisonDeal, setComparisonDeal] = useState(null);
 
   // Get current user's wallet info (or fallback if guest)
   const isGuest = !currentUser;
@@ -63,7 +113,12 @@ export default function MobileApp({
   };
 
   const handleGrabDeal = (deal) => {
-    onAddNotification(`Activating cashback tracker for ${deal.title}...`, 'success');
+    setComparisonDeal(deal);
+  };
+
+  const executeSimulatorGrabDeal = (dealItem, storeItem) => {
+    setComparisonDeal(null);
+    onAddNotification(`Activating cashback tracker on ${storeItem.platform} for ${dealItem.title || dealItem.name}...`, 'success');
     setTimeout(() => {
       onAddNotification(`Redirected to merchant! Shop completed.`, 'info');
     }, 1500);
@@ -166,9 +221,124 @@ export default function MobileApp({
 
       {/* Main Screen Content Frame */}
       <div className="mobile-app-screen-content">
-        
-        {/* TAB 1: HOME SCREEN */}
-        {activeTab === 'home' && (
+        {comparisonDeal ? (
+          <div className="mobile-screen-tab-panel animate-fade" style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '12px', height: '100%', overflowY: 'auto' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <button 
+                onClick={() => setComparisonDeal(null)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  color: 'var(--primary)',
+                  fontWeight: '700',
+                  padding: 0
+                }}
+              >
+                &larr; Back
+              </button>
+              <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-bold)' }}>Price Comparison</span>
+            </div>
+
+            {/* Product card info */}
+            <div style={{ display: 'flex', gap: '10px', backgroundColor: 'var(--bg)', padding: '10px', borderRadius: '6px', border: '1px solid var(--border)' }}>
+              <img 
+                src={comparisonDeal.image} 
+                alt="" 
+                style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '4px' }}
+              />
+              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <h4 style={{ margin: 0, fontSize: '11px', fontWeight: '700', color: 'var(--text-bold)', lineHeight: '1.3', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                  {comparisonDeal.title || comparisonDeal.name}
+                </h4>
+                <span style={{ fontSize: '9px', color: 'var(--text)', textTransform: 'capitalize', marginTop: '2px' }}>
+                  Category: <strong>{comparisonDeal.category}</strong>
+                </span>
+              </div>
+            </div>
+
+            {/* Platform Comparison List */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', paddingBottom: '20px' }}>
+              {generatePriceComparisons(comparisonDeal).map((item, index) => {
+                const isBestValue = index === 0;
+                return (
+                  <div
+                    key={item.platform}
+                    style={{
+                      border: isBestValue ? '1.5px solid #10b981' : '1px solid var(--border)',
+                      borderRadius: '6px',
+                      padding: '8px 10px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      position: 'relative',
+                      backgroundColor: 'var(--card-bg)'
+                    }}
+                  >
+                    {isBestValue && (
+                      <span style={{
+                        position: 'absolute',
+                        top: '-7px',
+                        left: '8px',
+                        backgroundColor: '#10b981',
+                        color: '#fff',
+                        fontSize: '6px',
+                        fontWeight: '800',
+                        padding: '1px 5px',
+                        borderRadius: '6px',
+                        textTransform: 'uppercase'
+                      }}>
+                        🏆 Best Value
+                      </span>
+                    )}
+
+                    {/* Left side info */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                      <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-bold)' }}>{item.platform}</span>
+                      <span style={{ fontSize: '8px', color: 'var(--text)', textDecoration: 'line-through' }}>
+                        ₹{item.dealPrice.toFixed(2)}
+                      </span>
+                      <span style={{ fontSize: '9px', color: '#10b981', fontWeight: '600' }}>
+                        -{item.cashbackPercent}% CB (-₹{item.cashbackEarned.toFixed(2)})
+                      </span>
+                    </div>
+
+                    {/* Right side Price & CTA */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                        <span style={{ fontSize: '8px', color: 'var(--text)' }}>Net Price:</span>
+                        <span style={{ fontSize: '12px', fontWeight: '800', color: isBestValue ? '#10b981' : 'var(--text-bold)' }}>
+                          ₹{item.effectivePrice.toFixed(2)}
+                        </span>
+                      </div>
+                      
+                      <button
+                        onClick={() => executeSimulatorGrabDeal(comparisonDeal, item)}
+                        style={{
+                          backgroundColor: '#ff4f2f',
+                          color: '#fff',
+                          border: 'none',
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          fontWeight: '600',
+                          fontSize: '9px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Shop
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* TAB 1: HOME SCREEN */}
+            {activeTab === 'home' && (
           <div className="mobile-screen-tab-panel animate-fade">
             {/* Wallet Quick Summary */}
             <div className="app-quick-wallet">
@@ -408,8 +578,9 @@ export default function MobileApp({
             </div>
           </div>
         )}
-
-      </div>
+      </>
+    )}
+  </div>
 
       {/* App Mobile Stepper Details Modal */}
       {selectedOrder && (

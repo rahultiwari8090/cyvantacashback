@@ -6,11 +6,13 @@ export default function AdminSettings({ globalSettings, onSaveSettings }) {
   const [cbPercent, setCbPercent] = useState(globalSettings.cashbackPercent.toString());
   const [holdPeriod, setHoldPeriod] = useState(globalSettings.holdDays.toString());
   const [minWithdraw, setMinWithdraw] = useState(globalSettings.minimumWithdrawal.toString());
+  const [sharedCbPercent, setSharedCbPercent] = useState((globalSettings.sharedCommissionPercent || 5.0).toString());
+  const [sharedHoldPeriod, setSharedHoldPeriod] = useState((globalSettings.sharedCommissionHoldDays || 30).toString());
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (!cbPercent || !holdPeriod || !minWithdraw) {
+    if (!cbPercent || !holdPeriod || !minWithdraw || !sharedCbPercent || !sharedHoldPeriod) {
       return;
     }
 
@@ -18,6 +20,8 @@ export default function AdminSettings({ globalSettings, onSaveSettings }) {
       cashbackPercent: parseFloat(cbPercent),
       holdDays: parseInt(holdPeriod, 10),
       minimumWithdrawal: parseFloat(minWithdraw),
+      sharedCommissionPercent: parseFloat(sharedCbPercent),
+      sharedCommissionHoldDays: parseInt(sharedHoldPeriod, 10),
     });
   };
 
@@ -66,6 +70,25 @@ export default function AdminSettings({ globalSettings, onSaveSettings }) {
             placeholder="10.00"
             value={minWithdraw}
             onChange={(e) => setMinWithdraw(e.target.value)}
+          />
+
+          <AdminFormInput
+            label="Default User Shared Commission Rate (%)"
+            id="settings-shared-cb"
+            type="number"
+            step="0.1"
+            placeholder="5.0"
+            value={sharedCbPercent}
+            onChange={(e) => setSharedCbPercent(e.target.value)}
+          />
+
+          <AdminFormInput
+            label="Shared Commission Hold Period (Days)"
+            id="settings-shared-hold"
+            type="number"
+            placeholder="30"
+            value={sharedHoldPeriod}
+            onChange={(e) => setSharedHoldPeriod(e.target.value)}
           />
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ef4444', fontSize: '11px', fontWeight: '500', marginTop: '6px' }}>

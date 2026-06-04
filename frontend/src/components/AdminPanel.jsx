@@ -29,6 +29,7 @@ import AdminConversions from './AdminConversions';
 import AdminReferrals from './AdminReferrals';
 import AdminSettings from './AdminSettings';
 import AdminTracking from './AdminTracking';
+import AdminSharedCommissions from './AdminSharedCommissions';
 import {
   apiUsers,
   apiProducts,
@@ -37,7 +38,9 @@ import {
   apiWithdrawals,
   apiAnalytics,
   apiFinance,
-  apiSettings
+  apiSettings,
+  apiSharedLinks,
+  apiSharedCommissions
 } from '../services/api';
 
 export default function AdminPanel({ onLogout, theme, toggleTheme, onAddNotification }) {
@@ -52,6 +55,7 @@ export default function AdminPanel({ onLogout, theme, toggleTheme, onAddNotifica
     if (hash === '#/admin/referrals') return 'referrals';
     if (hash === '#/admin/settings') return 'settings';
     if (hash === '#/admin/tracking') return 'tracking';
+    if (hash === '#/admin/shared-commissions') return 'shared-commissions';
 
     const path = window.location.pathname;
     if (path === '/admin/users') return 'users';
@@ -63,6 +67,7 @@ export default function AdminPanel({ onLogout, theme, toggleTheme, onAddNotifica
     if (path === '/admin/referrals') return 'referrals';
     if (path === '/admin/settings') return 'settings';
     if (path === '/admin/tracking') return 'tracking';
+    if (path === '/admin/shared-commissions') return 'shared-commissions';
     return 'dashboard';
   };
 
@@ -107,6 +112,8 @@ export default function AdminPanel({ onLogout, theme, toggleTheme, onAddNotifica
   const [withdrawRequests, setWithdrawRequests] = useState([]);
   const [clickLogs, setClickLogs] = useState([]);
   const [conversions, setConversions] = useState([]);
+  const [sharedLinks, setSharedLinks] = useState([]);
+  const [sharedCommissions, setSharedCommissions] = useState([]);
   const [finance, setFinance] = useState({
     totalRevenue: 0.00,
     totalCashbackPaid: 0.00,
@@ -129,7 +136,9 @@ export default function AdminPanel({ onLogout, theme, toggleTheme, onAddNotifica
           clicksData,
           conversionsData,
           financeData,
-          settingsData
+          settingsData,
+          sharedLinksData,
+          sharedCommissionsData
         ] = await Promise.all([
           apiUsers.getAll(),
           apiProducts.getAll(),
@@ -139,7 +148,9 @@ export default function AdminPanel({ onLogout, theme, toggleTheme, onAddNotifica
           apiAnalytics.getClickLogs(),
           apiAnalytics.getConversions(),
           apiFinance.getData(),
-          apiSettings.get()
+          apiSettings.get(),
+          apiSharedLinks.getAll(),
+          apiSharedCommissions.getAll()
         ]);
 
         setUsers(usersData);
@@ -151,6 +162,8 @@ export default function AdminPanel({ onLogout, theme, toggleTheme, onAddNotifica
         setConversions(conversionsData);
         setFinance(financeData);
         setGlobalSettings(settingsData);
+        setSharedLinks(sharedLinksData);
+        setSharedCommissions(sharedCommissionsData);
       } catch (err) {
         console.error('Failed to load Spring Boot dashboard APIs:', err);
         onAddNotification('Failed to sync data with backend.', 'error');
@@ -198,6 +211,7 @@ export default function AdminPanel({ onLogout, theme, toggleTheme, onAddNotifica
     { id: 'withdrawals', label: 'Withdrawals', icon: Wallet },
     { id: 'click-logs', label: 'Click Logs', icon: MousePointer },
     { id: 'conversions', label: 'Conversions', icon: CheckSquare },
+    { id: 'shared-commissions', label: 'Shared Commissions', icon: Share2 },
     { id: 'referrals', label: 'Referrals', icon: Share2 },
     { id: 'settings', label: 'Settings', icon: SettingsIcon },
   ];
@@ -211,6 +225,17 @@ export default function AdminPanel({ onLogout, theme, toggleTheme, onAddNotifica
     } catch (err) {
       console.error(err);
       onAddNotification('Failed to add product.', 'error');
+    }
+  };
+
+  const addProductBulk = async (productsList) => {
+    try {
+      const added = await apiProducts.createBulk(productsList);
+      setProducts((prev) => [...prev, ...added]);
+      onAddNotification(`Successfully imported ${added.length} products.`, 'success');
+    } catch (err) {
+      console.error(err);
+      onAddNotification('Failed to import products in bulk.', 'error');
     }
   };
 
@@ -385,6 +410,70 @@ export default function AdminPanel({ onLogout, theme, toggleTheme, onAddNotifica
     }
   };
 
+  const approveSharedCommission = async (id, amount) => {
+    try {
+      const updated = await apiSharedCommissions.updateStatus(id, 'approved', amount);
+      setSharedCommissions((prev) =>
+        prev.map((c) => (c.id === id ? updated : c))
+      );
+      
+      const links = await apiSharedLinks.getAll();
+      setSharedLinks(links);
+
+      const [usersData, financeData] = await Promise.all([
+        apiUsers.getAll(),
+        apiFinance.getData()
+      ]);
+      setUsers(usersData);
+      setFinance(financeData);
+      onAddNotification('Shared link commission claim approved.', 'success');
+    } catch (err) {
+      console.error(err);
+      onAddNotification('Failed to approve shared commission.', 'error');
+    }
+  };
+
+  const rejectSharedCommission = async (id) => {
+    try {
+      const current = sharedCommissions.find(c => c.id === id);
+      const amount = current ? current.commissionAmount : 0;
+      const updated = await apiSharedCommissions.updateStatus(id, 'rejected', amount);
+      setSharedCommissions((prev) =>
+        prev.map((c) => (c.id === id ? updated : c))
+      );
+
+      const usersData = await apiUsers.getAll();
+      setUsers(usersData);
+      onAddNotification('Shared link commission claim rejected.', 'error');
+    } catch (err) {
+      console.error(err);
+      onAddNotification('Failed to reject shared commission.', 'error');
+    }
+  };
+
+  const adjustSharedCommission = async (id, amount, currentStatus) => {
+    try {
+      const updated = await apiSharedCommissions.updateStatus(id, currentStatus, amount);
+      setSharedCommissions((prev) =>
+        prev.map((c) => (c.id === id ? updated : c))
+      );
+
+      const links = await apiSharedLinks.getAll();
+      setSharedLinks(links);
+
+      const [usersData, financeData] = await Promise.all([
+        apiUsers.getAll(),
+        apiFinance.getData()
+      ]);
+      setUsers(usersData);
+      setFinance(financeData);
+      onAddNotification(`Fixed commission payout adjusted to ₹${amount}.`, 'success');
+    } catch (err) {
+      console.error(err);
+      onAddNotification('Failed to adjust shared commission.', 'error');
+    }
+  };
+
   // Render active route panel
   const renderContent = () => {
     switch (activeTab) {
@@ -414,6 +503,7 @@ export default function AdminPanel({ onLogout, theme, toggleTheme, onAddNotifica
           <AdminProducts
             products={products}
             onAddProduct={addProduct}
+            onAddProductBulk={addProductBulk}
             onEditProduct={editProduct}
             onToggleStatus={toggleProductStatus}
             onDeleteProduct={deleteProduct}
@@ -460,6 +550,17 @@ export default function AdminPanel({ onLogout, theme, toggleTheme, onAddNotifica
         );
       case 'referrals':
         return <AdminReferrals users={users} />;
+      case 'shared-commissions':
+        return (
+          <AdminSharedCommissions
+            sharedLinks={sharedLinks}
+            sharedCommissions={sharedCommissions}
+            onApproveCommission={approveSharedCommission}
+            onRejectCommission={rejectSharedCommission}
+            onAdjustCommission={adjustSharedCommission}
+            onAddNotification={onAddNotification}
+          />
+        );
       case 'settings':
         return (
           <AdminSettings

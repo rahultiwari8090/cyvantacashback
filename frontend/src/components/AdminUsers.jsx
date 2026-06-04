@@ -18,6 +18,7 @@ export default function AdminUsers({ users, setUsers, onAddNotification }) {
   const [editEmail, setEditEmail] = useState('');
   const [editMobile, setEditMobile] = useState('');
   const [editStatus, setEditStatus] = useState('active');
+  const [editSharedCommRate, setEditSharedCommRate] = useState('');
 
   const handleToggleUserStatus = (userId) => {
     setUsers((prev) =>
@@ -43,6 +44,7 @@ export default function AdminUsers({ users, setUsers, onAddNotification }) {
     setEditEmail(user.email || `${user.name.toLowerCase().replace(' ', '')}@gmail.com`);
     setEditMobile(user.phone || '+91 9876543210');
     setEditStatus(user.status);
+    setEditSharedCommRate(user.sharedCommissionRate !== null && user.sharedCommissionRate !== undefined ? user.sharedCommissionRate.toString() : '');
     setIsEditModalOpen(true);
   };
 
@@ -62,6 +64,7 @@ export default function AdminUsers({ users, setUsers, onAddNotification }) {
               email: editEmail,
               phone: editMobile,
               status: editStatus,
+              sharedCommissionRate: editSharedCommRate.trim() === '' ? null : parseFloat(editSharedCommRate),
             }
           : u
       )
@@ -260,6 +263,12 @@ export default function AdminUsers({ users, setUsers, onAddNotification }) {
                   <span className={`status-badge ${selectedUser.status === 'active' ? 'active' : 'inactive'}`}>{selectedUser.status}</span>
                 </p>
               </div>
+              <div>
+                <span style={{ fontSize: '11px', color: 'var(--text)', textTransform: 'uppercase', fontWeight: '600' }}>Shared Commission Rate</span>
+                <p style={{ fontWeight: '500', color: 'var(--text-bold)', fontSize: '14px', marginTop: '2px' }}>
+                  {selectedUser.sharedCommissionRate !== null && selectedUser.sharedCommissionRate !== undefined ? `${selectedUser.sharedCommissionRate}%` : 'Platform Default'}
+                </p>
+              </div>
             </div>
           </div>
         </AdminModal>
@@ -303,6 +312,15 @@ export default function AdminUsers({ users, setUsers, onAddNotification }) {
               type="text"
               value={editMobile}
               onChange={(e) => setEditMobile(e.target.value)}
+            />
+            <AdminFormInput
+              label="Custom Shared Commission Rate (%) (Leave blank for default)"
+              id="edit-shared-comm-rate"
+              type="number"
+              step="0.1"
+              value={editSharedCommRate}
+              onChange={(e) => setEditSharedCommRate(e.target.value)}
+              placeholder="e.g. 6.0"
             />
             <AdminFormSelect
               label="Account Status"

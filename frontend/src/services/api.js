@@ -17,11 +17,22 @@ console.log(`[API Service] Running in ${USE_MOCK ? 'MOCK' : 'SPRING BOOT LIVE'} 
 
 // --- IN-MEMORY MOCK DATABASE (For fallback / mockup development) ---
 let mockUsers = [
-  { id: 'u1', name: 'Rahul Sharma', email: 'rahul.sharma@gmail.com', phone: '+91 9876543210', referralCode: 'RAHUL50', referredBy: 'None', joinDate: '2026-04-12', status: 'active' },
-  { id: 'u2', name: 'Sneha Patel', email: 'sneha.patel@gmail.com', phone: '+91 8765432109', referralCode: 'SNEHA12', referredBy: 'RAHUL50', joinDate: '2026-04-18', status: 'active' },
-  { id: 'u3', name: 'Amit Verma', email: 'amit.verma@gmail.com', phone: '+91 7654321098', referralCode: 'AMIT99', referredBy: 'RAHUL50', joinDate: '2026-04-20', status: 'active' },
-  { id: 'u4', name: 'Pooja Hegde', email: 'pooja.hegde@gmail.com', phone: '+91 6543210987', referralCode: 'POOJA45', referredBy: 'SNEHA12', joinDate: '2026-04-22', status: 'active' },
-  { id: 'u5', name: 'Rohan Joshi', email: 'rohan.joshi@gmail.com', phone: '+91 5432109876', referralCode: 'ROHAN88', referredBy: 'None', joinDate: '2026-05-01', status: 'blocked' },
+  { id: 'u1', name: 'Rahul Sharma', email: 'rahul.sharma@gmail.com', phone: '+91 9876543210', referralCode: 'RAHUL50', referredBy: 'None', joinDate: '2026-04-12', status: 'active', sharedCommissionRate: null },
+  { id: 'u2', name: 'Sneha Patel', email: 'sneha.patel@gmail.com', phone: '+91 8765432109', referralCode: 'SNEHA12', referredBy: 'RAHUL50', joinDate: '2026-04-18', status: 'active', sharedCommissionRate: null },
+  { id: 'u3', name: 'Amit Verma', email: 'amit.verma@gmail.com', phone: '+91 7654321098', referralCode: 'AMIT99', referredBy: 'RAHUL50', joinDate: '2026-04-20', status: 'active', sharedCommissionRate: null },
+  { id: 'u4', name: 'Pooja Hegde', email: 'pooja.hegde@gmail.com', phone: '+91 6543210987', referralCode: 'POOJA45', referredBy: 'SNEHA12', joinDate: '2026-04-22', status: 'active', sharedCommissionRate: null },
+  { id: 'u5', name: 'Rohan Joshi', email: 'rohan.joshi@gmail.com', phone: '+91 5432109876', referralCode: 'ROHAN88', referredBy: 'None', joinDate: '2026-05-01', status: 'blocked', sharedCommissionRate: null },
+];
+
+let mockSharedLinks = [
+  { id: 'sl1', userId: 'u1', userName: 'Rahul Sharma', productName: 'boAt Rockerz Headphones', store: 'Amazon', productUrl: 'https://amazon.in/dp/example', shortUrl: 'https://cyvanta.cashback/share/sl1', clicksCount: 24, conversionsCount: 2, totalEarnings: 3.00, userSharePercent: 70, buyerSharePercent: 30, status: 'active', date: '2026-05-25' },
+  { id: 'sl2', userId: 'u2', userName: 'Sneha Patel', productName: 'Adidas UltraBoost Shoes', store: 'Myntra', productUrl: 'https://myntra.com/shoes/example', shortUrl: 'https://cyvanta.cashback/share/sl2', clicksCount: 15, conversionsCount: 1, totalEarnings: 5.50, userSharePercent: 50, buyerSharePercent: 50, status: 'active', date: '2026-05-28' },
+];
+
+let mockSharedCommissions = [
+  { id: 'sc1', userId: 'u1', userName: 'Rahul Sharma', linkId: 'sl1', productName: 'boAt Rockerz Headphones', store: 'Amazon', purchaseAmount: 29.99, commissionRate: 5.0, commissionAmount: 1.50, userSharePercent: 70, buyerSharePercent: 30, userCommissionAmount: 1.05, buyerCommissionAmount: 0.45, status: 'approved', date: '2026-05-28' },
+  { id: 'sc2', userId: 'u1', userName: 'Rahul Sharma', linkId: 'sl1', productName: 'boAt Rockerz Headphones', store: 'Amazon', purchaseAmount: 29.99, commissionRate: 5.0, commissionAmount: 1.50, userSharePercent: 70, buyerSharePercent: 30, userCommissionAmount: 1.05, buyerCommissionAmount: 0.45, status: 'pending', date: '2026-05-29' },
+  { id: 'sc3', userId: 'u2', userName: 'Sneha Patel', linkId: 'sl2', productName: 'Adidas UltraBoost Shoes', store: 'Myntra', purchaseAmount: 110.00, commissionRate: 5.0, commissionAmount: 5.50, userSharePercent: 50, buyerSharePercent: 50, userCommissionAmount: 2.75, buyerCommissionAmount: 2.75, status: 'pending', date: '2026-06-01' },
 ];
 
 let mockProducts = [
@@ -131,6 +142,8 @@ let mockSettings = {
   cashbackPercent: 8.0,
   holdDays: 30,
   minimumWithdrawal: 10.00,
+  sharedCommissionPercent: 5.0,
+  sharedCommissionHoldDays: 30,
 };
 
 // --- HELPER WRAPPER TO MAKE FETCH REQUESTS ---
@@ -190,6 +203,34 @@ export const apiProducts = {
     return request('/products', {
       method: 'POST',
       body: JSON.stringify(product),
+    });
+  },
+  createBulk: (productsList) => {
+    if (USE_MOCK) {
+      const addedProducts = productsList.map((prod, index) => {
+        return {
+          ...prod,
+          id: (Date.now() + index).toString(),
+          status: prod.status || 'active'
+        };
+      });
+      mockProducts.push(...addedProducts);
+      return Promise.resolve(addedProducts);
+    }
+    return request('/products/bulk', {
+      method: 'POST',
+      body: JSON.stringify(productsList),
+    }).catch(async (err) => {
+      console.warn("Bulk endpoint failed, falling back to sequential creations", err);
+      const results = [];
+      for (const prod of productsList) {
+        const res = await request('/products', {
+          method: 'POST',
+          body: JSON.stringify(prod),
+        });
+        results.push(res);
+      }
+      return results;
     });
   },
   update: (product) => {
@@ -426,6 +467,225 @@ export const apiSettings = {
     return request('/settings', {
       method: 'PUT',
       body: JSON.stringify(settings),
+    });
+  }
+};
+
+// 9. Shared User Link APIs
+export const apiSharedLinks = {
+  getAll: () => {
+    if (USE_MOCK) return Promise.resolve([...mockSharedLinks]);
+    return request('/shared-links');
+  },
+  getByUser: (userId) => {
+    if (USE_MOCK) return Promise.resolve(mockSharedLinks.filter(l => l.userId === userId));
+    return request(`/shared-links/user/${userId}`);
+  },
+  create: (linkData) => {
+    if (USE_MOCK) {
+      const id = 'sl' + Date.now();
+      const newLink = {
+        id,
+        userId: linkData.userId,
+        userName: linkData.userName,
+        productName: linkData.productName,
+        store: linkData.store,
+        productUrl: linkData.productUrl,
+        shortUrl: `https://cyvanta.cashback/share/${id}`,
+        clicksCount: 0,
+        conversionsCount: 0,
+        totalEarnings: 0.00,
+        userSharePercent: linkData.userSharePercent !== undefined ? linkData.userSharePercent : 100,
+        buyerSharePercent: linkData.buyerSharePercent !== undefined ? linkData.buyerSharePercent : 0,
+        status: 'active',
+        date: new Date().toISOString().split('T')[0]
+      };
+      mockSharedLinks.unshift(newLink);
+      return Promise.resolve(newLink);
+    }
+    return request('/shared-links', {
+      method: 'POST',
+      body: JSON.stringify(linkData),
+    });
+  },
+  delete: (id) => {
+    if (USE_MOCK) {
+      mockSharedLinks = mockSharedLinks.filter(l => l.id !== id);
+      return Promise.resolve({ success: true });
+    }
+    return request(`/shared-links/${id}`, {
+      method: 'DELETE',
+    });
+  },
+  incrementClicks: (id) => {
+    if (USE_MOCK) {
+      const link = mockSharedLinks.find(l => l.id === id);
+      if (link) {
+        link.clicksCount += 1;
+        // 10% chance of auto-generating a conversion in simulation
+        if (Math.random() < 0.3) {
+          const u = mockUsers.find(usr => usr.id === link.userId || usr.name === link.userName);
+          const rate = u && u.sharedCommissionRate ? u.sharedCommissionRate : mockSettings.sharedCommissionPercent;
+          const purchaseVal = Math.round(15 + Math.random() * 200);
+          const totalComm = parseFloat(((purchaseVal * rate) / 100).toFixed(2));
+          
+          const userPct = link.userSharePercent !== undefined ? link.userSharePercent : 100;
+          const buyerPct = link.buyerSharePercent !== undefined ? link.buyerSharePercent : 0;
+          
+          const userComm = parseFloat(((totalComm * userPct) / 100).toFixed(2));
+          const buyerComm = parseFloat(((totalComm * buyerPct) / 100).toFixed(2));
+          
+          const commissionId = 'sc' + Date.now();
+          const newComm = {
+            id: commissionId,
+            userId: link.userId,
+            userName: link.userName,
+            linkId: link.id,
+            productName: link.productName,
+            store: link.store,
+            purchaseAmount: purchaseVal,
+            commissionRate: rate,
+            commissionAmount: totalComm,
+            userSharePercent: userPct,
+            buyerSharePercent: buyerPct,
+            userCommissionAmount: userComm,
+            buyerCommissionAmount: buyerComm,
+            status: 'pending',
+            date: new Date().toISOString().split('T')[0]
+          };
+          
+          mockSharedCommissions.unshift(newComm);
+          link.conversionsCount += 1;
+
+          // Add only user's share to user's pending wallet
+          if (u) {
+            if (!u.wallet) {
+              u.wallet = { confirmed: 0.00, pending: 0.00, referral: 0.00 };
+            }
+            u.wallet.pending += userComm;
+          }
+        }
+      }
+      return Promise.resolve(link);
+    }
+    return request(`/shared-links/${id}/click`, { method: 'POST' });
+  }
+};
+
+// 10. Shared Commission Logs APIs
+export const apiSharedCommissions = {
+  getAll: () => {
+    if (USE_MOCK) return Promise.resolve([...mockSharedCommissions]);
+    return request('/shared-commissions');
+  },
+  getByUser: (userId) => {
+    if (USE_MOCK) return Promise.resolve(mockSharedCommissions.filter(c => c.userId === userId));
+    return request(`/shared-commissions/user/${userId}`);
+  },
+  create: (commData) => {
+    if (USE_MOCK) {
+      const userPct = commData.userSharePercent !== undefined ? commData.userSharePercent : 100;
+      const buyerPct = commData.buyerSharePercent !== undefined ? commData.buyerSharePercent : 0;
+      const userComm = parseFloat(((commData.commissionAmount * userPct) / 100).toFixed(2));
+      const buyerComm = parseFloat(((commData.commissionAmount * buyerPct) / 100).toFixed(2));
+
+      const newComm = {
+        ...commData,
+        id: 'sc' + Date.now(),
+        userSharePercent: userPct,
+        buyerSharePercent: buyerPct,
+        userCommissionAmount: userComm,
+        buyerCommissionAmount: buyerComm,
+        status: 'pending',
+        date: new Date().toISOString().split('T')[0]
+      };
+      mockSharedCommissions.unshift(newComm);
+      
+      // Update link conversion count
+      const link = mockSharedLinks.find(l => l.id === commData.linkId);
+      if (link) {
+        link.conversionsCount += 1;
+      }
+      
+      // Add to user pending wallet (only link creator's share)
+      const u = mockUsers.find(usr => usr.id === commData.userId || usr.name === commData.userName);
+      if (u) {
+        if (!u.wallet) {
+          u.wallet = { confirmed: 0.00, pending: 0.00, referral: 0.00 };
+        }
+        u.wallet.pending += userComm;
+      }
+
+      return Promise.resolve(newComm);
+    }
+    return request('/shared-commissions', {
+      method: 'POST',
+      body: JSON.stringify(commData),
+    });
+  },
+  updateStatus: (id, status, amount) => {
+    if (USE_MOCK) {
+      const finalAmount = parseFloat(amount);
+      let updatedObj = null;
+      
+      mockSharedCommissions = mockSharedCommissions.map(c => {
+        if (c.id === id) {
+          const oldStatus = c.status;
+          
+          const userPct = c.userSharePercent !== undefined ? c.userSharePercent : 100;
+          const buyerPct = c.buyerSharePercent !== undefined ? c.buyerSharePercent : 0;
+          const userComm = parseFloat(((finalAmount * userPct) / 100).toFixed(2));
+          const buyerComm = parseFloat(((finalAmount * buyerPct) / 100).toFixed(2));
+
+          updatedObj = { 
+            ...c, 
+            status, 
+            commissionAmount: finalAmount,
+            userCommissionAmount: userComm,
+            buyerCommissionAmount: buyerComm
+          };
+
+          // Find user to adjust wallet
+          const u = mockUsers.find(user => user.id === c.userId || user.name === c.userName);
+          if (u) {
+            if (!u.wallet) {
+              u.wallet = { confirmed: 0.00, pending: 0.00, referral: 0.00 };
+            }
+            // If status changes to approved, credit it to confirmed
+            if (status === 'approved' && oldStatus !== 'approved') {
+              u.wallet.confirmed += userComm;
+              if (oldStatus === 'pending') {
+                u.wallet.pending = Math.max(0, u.wallet.pending - c.userCommissionAmount);
+              }
+            } else if (status === 'rejected' && oldStatus === 'pending') {
+              u.wallet.pending = Math.max(0, u.wallet.pending - c.userCommissionAmount);
+            } else if (status === 'approved' && oldStatus === 'approved') {
+              // If it was already approved but amount changed
+              const difference = userComm - c.userCommissionAmount;
+              u.wallet.confirmed += difference;
+            }
+          }
+
+          // Also update totalEarnings in the corresponding mockSharedLink
+          const l = mockSharedLinks.find(link => link.id === c.linkId);
+          if (l) {
+            l.totalEarnings = mockSharedCommissions
+              .filter(comm => comm.linkId === l.id && comm.status === 'approved')
+              .reduce((sum, comm) => sum + (comm.id === id ? userComm : comm.userCommissionAmount), 0);
+          }
+        }
+        return c;
+      });
+
+      if (status === 'approved') {
+        mockFinance.totalCashbackPaid += finalAmount;
+      }
+
+      return Promise.resolve(updatedObj);
+    }
+    return request(`/shared-commissions/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status, amount }),
     });
   }
 };

@@ -15,7 +15,7 @@ import Footer from './components/Footer';
 import AdminLogin from './components/AdminLogin';
 import AdminPanel from './components/AdminPanel';
 import MobileApp from './components/MobileApp';
-import { apiTracking, apiWithdrawals } from './services/api';
+import { apiTracking, apiWithdrawals, apiProducts } from './services/api';
 import './index.css';
 import './App.css';
 
@@ -145,6 +145,109 @@ const DEALS_DATA = [
   },
 ];
 
+const STORES_LOGO_MAP = {
+  'Amazon': 'https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg',
+  'Myntra': 'https://upload.wikimedia.org/wikipedia/commons/b/bc/Myntra_Logo.png',
+  'Flipkart': 'https://upload.wikimedia.org/wikipedia/commons/7/7a/Flipkart_logo.svg',
+  'Ajio': 'https://upload.wikimedia.org/wikipedia/commons/c/c9/Ajio_Logo.svg',
+  'Nykaa Beauty': 'https://upload.wikimedia.org/wikipedia/commons/5/5b/Nykaa_Logo.svg',
+  'MakeMyTrip': 'https://upload.wikimedia.org/wikipedia/commons/f/fb/MakeMyTrip_Logo.svg'
+};
+
+const mapProductsToDeals = (productsList) => {
+  if (!productsList || productsList.length === 0) {
+    return DEALS_DATA;
+  }
+  const activeProducts = productsList.filter(p => p.status === 'active');
+  if (activeProducts.length === 0) {
+    return DEALS_DATA;
+  }
+  return activeProducts.map(p => {
+    const platform = p.platform || 'Amazon';
+    const storeLogo = STORES_LOGO_MAP[platform] || STORES_LOGO_MAP['Amazon'];
+    
+    let category = 'electronics';
+    const lowerName = p.name.toLowerCase();
+    const lowerPlatform = platform.toLowerCase();
+    
+    if (lowerPlatform === 'myntra' || lowerPlatform === 'ajio' || lowerName.includes('shoes') || lowerName.includes('clothing') || lowerName.includes('boots') || lowerName.includes('wear')) {
+      category = 'fashion';
+    } else if (lowerPlatform === 'nykaa beauty' || lowerName.includes('cleanser') || lowerName.includes('cream') || lowerName.includes('facial') || lowerName.includes('beauty')) {
+      category = 'health';
+    } else if (lowerPlatform === 'makemytrip' || lowerName.includes('flight') || lowerName.includes('hotel') || lowerName.includes('trip')) {
+      category = 'travel';
+    } else if (lowerName.includes('headphones') || lowerName.includes('laptop') || lowerName.includes('phone') || lowerName.includes('tv') || lowerName.includes('speaker')) {
+      category = 'electronics';
+    } else if (lowerPlatform === 'amazon') {
+      category = 'grocery';
+    }
+    
+    const dealPrice = p.price;
+    const retailPrice = parseFloat((dealPrice * 1.5).toFixed(2));
+    const cashbackEarned = parseFloat(((dealPrice * p.cashbackValue) / 100).toFixed(2));
+    
+    return {
+      id: p.id,
+      title: p.name,
+      retailPrice,
+      dealPrice,
+      cashbackEarned,
+      category,
+      storeLogo,
+      image: p.image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300'
+    };
+  });
+};
+
+const STORES_INFO = [
+  { platform: 'Amazon', logo: 'https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg', cashbackPercent: 10.0 },
+  { platform: 'Flipkart', logo: 'https://upload.wikimedia.org/wikipedia/commons/7/7a/Flipkart_logo.svg', cashbackPercent: 8.5 },
+  { platform: 'Myntra', logo: 'https://upload.wikimedia.org/wikipedia/commons/b/bc/Myntra_Logo.png', cashbackPercent: 12.0 },
+  { platform: 'Ajio', logo: 'https://upload.wikimedia.org/wikipedia/commons/c/c9/Ajio_Logo.svg', cashbackPercent: 15.0 },
+  { platform: 'Nykaa Beauty', logo: 'https://upload.wikimedia.org/wikipedia/commons/5/5b/Nykaa_Logo.svg', cashbackPercent: 7.0 },
+  { platform: 'MakeMyTrip', logo: 'https://upload.wikimedia.org/wikipedia/commons/f/fb/MakeMyTrip_Logo.svg', cashbackPercent: 9.0 }
+];
+
+const generatePriceComparisons = (deal) => {
+  if (!deal) return [];
+  
+  let platforms = ['Amazon', 'Flipkart'];
+  if (deal.category === 'fashion') {
+    platforms = ['Myntra', 'Ajio', 'Flipkart', 'Amazon'];
+  } else if (deal.category === 'health') {
+    platforms = ['Nykaa Beauty', 'Amazon', 'Flipkart'];
+  } else if (deal.category === 'travel') {
+    platforms = ['MakeMyTrip', 'Amazon'];
+  } else {
+    platforms = ['Amazon', 'Flipkart', 'Myntra', 'Ajio'];
+  }
+
+  return platforms.map(platformName => {
+    const store = STORES_INFO.find(s => s.platform === platformName) || STORES_INFO[0];
+    
+    let dealPrice = deal.dealPrice;
+    if (platformName !== deal.platform) {
+      const hash = platformName.split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
+      const percentDiff = ((hash % 21) - 10) / 100; // -10% to +10%
+      dealPrice = parseFloat((deal.dealPrice * (1 + percentDiff)).toFixed(2));
+    }
+    
+    const cashbackValue = store.cashbackPercent;
+    const cashbackEarned = parseFloat(((dealPrice * cashbackValue) / 100).toFixed(2));
+    const effectivePrice = parseFloat((dealPrice - cashbackEarned).toFixed(2));
+    
+    return {
+      platform: platformName,
+      logo: store.logo,
+      dealPrice,
+      cashbackPercent: cashbackValue,
+      cashbackEarned,
+      effectivePrice,
+      isOriginal: platformName === deal.platform
+    };
+  }).sort((a, b) => a.effectivePrice - b.effectivePrice);
+};
+
 export default function App() {
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(() => {
     const session = sessionStorage.getItem('admin_session');
@@ -192,17 +295,21 @@ export default function App() {
   const [isSimulatorMode, setIsSimulatorMode] = useState(false);
   const [trackedOrders, setTrackedOrders] = useState([]);
   const [withdrawRequests, setWithdrawRequests] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [activeComparisonDeal, setActiveComparisonDeal] = useState(null);
 
-  // Load initial tracked orders and withdrawal requests to sync between views
+  // Load initial tracked orders, withdrawal requests, and products to sync between views
   useEffect(() => {
     const syncAppStates = async () => {
       try {
-        const [tracking, withdrawals] = await Promise.all([
+        const [tracking, withdrawals, productsData] = await Promise.all([
           apiTracking.getAll(),
-          apiWithdrawals.getAll()
+          apiWithdrawals.getAll(),
+          apiProducts.getAll()
         ]);
         setTrackedOrders(tracking);
         setWithdrawRequests(withdrawals);
+        setProducts(productsData);
       } catch (err) {
         console.error('Failed to sync states:', err);
       }
@@ -321,9 +428,14 @@ export default function App() {
   };
 
   const handleGrabProductDeal = (deal) => {
-    addNotification(`Activating secure cashback tracker for ${deal.title}...`, 'success');
+    setActiveComparisonDeal(deal);
+  };
+
+  const executeGrabDealTracked = (dealItem, storeItem) => {
+    setActiveComparisonDeal(null);
+    addNotification(`Activating secure cashback tracker on ${storeItem.platform} for ${dealItem.title || dealItem.name}...`, 'success');
     setTimeout(() => {
-      addNotification(`Redirecting to secure merchant cart... Save ₹${deal.cashbackEarned.toFixed(2)}!`, 'info');
+      addNotification(`Redirecting to secure merchant cart... Save ₹${storeItem.cashbackEarned.toFixed(2)}!`, 'info');
     }, 1800);
   };
 
@@ -344,6 +456,9 @@ export default function App() {
     : STORES_DATA.filter((s) => s.category === activeCategory);
 
   const selectedStore = STORES_DATA.find((s) => s.id === selectedStoreId);
+
+  // Map and cache dynamic product deals
+  const dynamicDeals = React.useMemo(() => mapProductsToDeals(products), [products]);
 
   if (currentView === 'admin-login') {
     return (
@@ -412,7 +527,7 @@ export default function App() {
               withdrawRequests={withdrawRequests}
               onAddWithdrawalRequest={handleAppWithdrawalRequest}
               storesData={STORES_DATA}
-              dealsData={DEALS_DATA}
+              dealsData={dynamicDeals}
               onAddNotification={addNotification}
               openAuthModal={() => setIsAuthModalOpen(true)}
               onLogout={handleLogout}
@@ -484,7 +599,7 @@ export default function App() {
 
             {/* Deals Grid */}
             <TopDeals
-              deals={DEALS_DATA}
+              deals={dynamicDeals}
               onGrabDeal={handleGrabProductDeal}
             />
 
@@ -525,6 +640,215 @@ export default function App() {
         onClose={() => setIsAuthModalOpen(false)}
         onLogin={handleLogin}
       />
+
+      {/* Price Comparison Modal */}
+      {activeComparisonDeal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.6)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000,
+          padding: '20px',
+        }}>
+          <div style={{
+            backgroundColor: 'var(--card-bg)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius)',
+            boxShadow: 'var(--shadow-lg)',
+            width: '100%',
+            maxWidth: '650px',
+            maxHeight: '90vh',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+          }}>
+            {/* Header */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '16px 20px',
+              borderBottom: '1px solid var(--border)'
+            }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: 'var(--text-bold)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                🔍 Price & Cashback Comparison
+              </h3>
+              <button
+                onClick={() => setActiveComparisonDeal(null)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '20px',
+                  cursor: 'pointer',
+                  color: 'var(--text)',
+                  fontWeight: 'bold'
+                }}
+              >
+                &times;
+              </button>
+            </div>
+
+            {/* Product info banner */}
+            <div style={{
+              display: 'flex',
+              gap: '16px',
+              padding: '20px',
+              backgroundColor: 'var(--bg)',
+              borderBottom: '1px solid var(--border)'
+            }}>
+              <img
+                src={activeComparisonDeal.image}
+                alt=""
+                style={{
+                  width: '70px',
+                  height: '70px',
+                  objectFit: 'cover',
+                  borderRadius: '6px',
+                  border: '1px solid var(--border)'
+                }}
+              />
+              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <h4 style={{ margin: '0 0 6px 0', fontSize: '15px', fontWeight: '600', color: 'var(--text-bold)', lineHeight: '1.4' }}>
+                  {activeComparisonDeal.title || activeComparisonDeal.name}
+                </h4>
+                <span style={{ fontSize: '12px', color: 'var(--text)', textTransform: 'capitalize' }}>
+                  Category: <strong>{activeComparisonDeal.category}</strong>
+                </span>
+              </div>
+            </div>
+
+            {/* Platform Comparison List */}
+            <div style={{
+              padding: '20px',
+              overflowY: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px'
+            }}>
+              {generatePriceComparisons(activeComparisonDeal).map((item, index) => {
+                const isBestValue = index === 0;
+                return (
+                  <div
+                    key={item.platform}
+                    style={{
+                      border: isBestValue ? '2px solid var(--secondary)' : '1px solid var(--border)',
+                      borderRadius: '8px',
+                      padding: '14px 16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      position: 'relative',
+                      backgroundColor: 'var(--card-bg)',
+                      boxShadow: isBestValue ? '0 4px 12px rgba(16, 185, 129, 0.1)' : 'none'
+                    }}
+                  >
+                    {isBestValue && (
+                      <span style={{
+                        position: 'absolute',
+                        top: '-10px',
+                        left: '16px',
+                        backgroundColor: 'var(--secondary)',
+                        color: '#fff',
+                        fontSize: '9px',
+                        fontWeight: '800',
+                        padding: '2px 8px',
+                        borderRadius: '10px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
+                      }}>
+                        🏆 Best Value Deal (Lowest Price)
+                      </span>
+                    )}
+
+                    {/* Left details */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <img
+                        src={item.logo}
+                        alt={item.platform}
+                        style={{
+                          height: '24px',
+                          width: 'auto',
+                          maxWidth: '70px',
+                          objectFit: 'contain'
+                        }}
+                      />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                        <span style={{ fontSize: '11px', color: 'var(--text)', textDecoration: 'line-through' }}>
+                          Listed Price: ₹{item.dealPrice.toFixed(2)}
+                        </span>
+                        <span style={{ fontSize: '12px', color: 'var(--secondary)', fontWeight: '600' }}>
+                          -{item.cashbackPercent}% Cashback (-₹{item.cashbackEarned.toFixed(2)})
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Right Price & CTA */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                        <span style={{ fontSize: '11px', color: 'var(--text)' }}>Effective Price:</span>
+                        <span style={{ fontSize: '18px', fontWeight: '800', color: isBestValue ? 'var(--secondary)' : 'var(--text-bold)' }}>
+                          ₹{item.effectivePrice.toFixed(2)}
+                        </span>
+                      </div>
+                      
+                      <button
+                        onClick={() => executeGrabDealTracked(activeComparisonDeal, item)}
+                        style={{
+                          backgroundColor: isBestValue ? 'var(--secondary)' : 'var(--primary)',
+                          color: '#fff',
+                          border: 'none',
+                          padding: '8px 14px',
+                          borderRadius: '6px',
+                          fontWeight: '600',
+                          fontSize: '13px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        Buy & Earn
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Footer */}
+            <div style={{
+              padding: '14px 20px',
+              borderTop: '1px solid var(--border)',
+              display: 'flex',
+              justifyContent: 'flex-end',
+              backgroundColor: 'var(--bg)'
+            }}>
+              <button
+                onClick={() => setActiveComparisonDeal(null)}
+                style={{
+                  padding: '8px 16px',
+                  border: '1px solid var(--border)',
+                  backgroundColor: 'var(--card-bg)',
+                  color: 'var(--text-bold)',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  fontSize: '13px'
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

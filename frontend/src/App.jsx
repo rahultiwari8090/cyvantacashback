@@ -4,7 +4,7 @@ import MobileApp from './components/MobileApp';
 import AuthModal from './components/AuthModal';
 import Notification from './components/Notification';
 import StoreDetail from './components/StoreDetail';
-import { apiTracking, apiWithdrawals } from './services/api';
+import { apiTracking, apiWithdrawals, apiProducts } from './services/api';
 
 // --- MOCK DATA ---
 const STORES_DATA = [
@@ -107,12 +107,67 @@ const DEALS_DATA = [
   },
 ];
 
+const STORES_LOGO_MAP = {
+  'Amazon': 'https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg',
+  'Myntra': 'https://upload.wikimedia.org/wikipedia/commons/b/bc/Myntra_Logo.png',
+  'Flipkart': 'https://upload.wikimedia.org/wikipedia/commons/7/7a/Flipkart_logo.svg',
+  'Ajio': 'https://upload.wikimedia.org/wikipedia/commons/c/c9/Ajio_Logo.svg',
+  'Nykaa Beauty': 'https://upload.wikimedia.org/wikipedia/commons/5/5b/Nykaa_Logo.svg',
+  'MakeMyTrip': 'https://upload.wikimedia.org/wikipedia/commons/f/fb/MakeMyTrip_Logo.svg'
+};
+
+const mapProductsToDeals = (productsList) => {
+  if (!productsList || productsList.length === 0) {
+    return DEALS_DATA;
+  }
+  const activeProducts = productsList.filter(p => p.status === 'active');
+  if (activeProducts.length === 0) {
+    return DEALS_DATA;
+  }
+  return activeProducts.map(p => {
+    const platform = p.platform || 'Amazon';
+    const storeLogo = STORES_LOGO_MAP[platform] || STORES_LOGO_MAP['Amazon'];
+    
+    let category = 'electronics';
+    const lowerName = p.name.toLowerCase();
+    const lowerPlatform = platform.toLowerCase();
+    
+    if (lowerPlatform === 'myntra' || lowerPlatform === 'ajio' || lowerName.includes('shoes') || lowerName.includes('clothing') || lowerName.includes('boots') || lowerName.includes('wear')) {
+      category = 'fashion';
+    } else if (lowerPlatform === 'nykaa beauty' || lowerName.includes('cleanser') || lowerName.includes('cream') || lowerName.includes('facial') || lowerName.includes('beauty')) {
+      category = 'health';
+    } else if (lowerPlatform === 'makemytrip' || lowerName.includes('flight') || lowerName.includes('hotel') || lowerName.includes('trip')) {
+      category = 'travel';
+    } else if (lowerName.includes('headphones') || lowerName.includes('laptop') || lowerName.includes('phone') || lowerName.includes('tv') || lowerName.includes('speaker')) {
+      category = 'electronics';
+    } else if (lowerPlatform === 'amazon') {
+      category = 'grocery';
+    }
+    
+    const dealPrice = p.price;
+    const retailPrice = parseFloat((dealPrice * 1.5).toFixed(2));
+    const cashbackEarned = parseFloat(((dealPrice * p.cashbackValue) / 100).toFixed(2));
+    
+    return {
+      id: p.id,
+      title: p.name,
+      retailPrice,
+      dealPrice,
+      cashbackEarned,
+      category,
+      storeLogo,
+      image: p.image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300'
+    };
+  });
+};
+
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [trackedOrders, setTrackedOrders] = useState([]);
   const [withdrawRequests, setWithdrawRequests] = useState([]);
+  const [products, setProducts] = useState([]);
   const [currentView, setCurrentView] = useState('home');
   const [selectedStoreId, setSelectedStoreId] = useState(null);
   const [theme, setTheme] = useState('light');
@@ -121,15 +176,17 @@ export default function App() {
     setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
   };
 
-  // Load initial tracked orders and withdrawal requests
+  // Load initial tracked orders, withdrawal requests, and products
   const syncAppStates = async () => {
     try {
-      const [tracking, withdrawals] = await Promise.all([
+      const [tracking, withdrawals, productsData] = await Promise.all([
         apiTracking.getAll(),
-        apiWithdrawals.getAll()
+        apiWithdrawals.getAll(),
+        apiProducts.getAll()
       ]);
       setTrackedOrders(tracking);
       setWithdrawRequests(withdrawals);
+      setProducts(productsData);
     } catch (err) {
       console.error('Failed to sync states on native:', err);
     }
@@ -137,7 +194,7 @@ export default function App() {
 
   useEffect(() => {
     syncAppStates();
-  }, [currentUser]);
+  }, [currentUser, currentView]);
 
   const handleAppWithdrawalRequest = async (newReq) => {
     try {
@@ -182,6 +239,9 @@ export default function App() {
 
   const selectedStore = STORES_DATA.find((s) => s.id === selectedStoreId);
 
+  // Map and cache dynamic product deals
+  const dynamicDeals = React.useMemo(() => mapProductsToDeals(products), [products]);
+
   return (
     <SafeAreaView style={[styles.container, theme === 'dark' ? styles.containerDark : styles.containerLight]}>
       <StatusBar 
@@ -201,7 +261,7 @@ export default function App() {
           withdrawRequests={withdrawRequests}
           onAddWithdrawalRequest={handleAppWithdrawalRequest}
           storesData={STORES_DATA}
-          dealsData={DEALS_DATA}
+          dealsData={dynamicDeals}
           onAddNotification={addNotification}
           openAuthModal={() => setIsAuthModalOpen(true)}
           onLogout={handleLogout}
