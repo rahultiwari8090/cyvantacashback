@@ -1,0 +1,197 @@
+package com.cyvanta.affiliate_app.controller;
+
+import com.cyvanta.affiliate_app.model.User;
+import com.cyvanta.affiliate_app.model.Wallet;
+import com.cyvanta.affiliate_app.repository.UserRepository;
+import com.cyvanta.affiliate_app.service.WalletService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/api/users")
+@RequiredArgsConstructor
+public class UserController {
+
+    private final UserRepository userRepository;
+    private final WalletService walletService;
+    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+
+    @GetMapping
+    public ResponseEntity<List<User>> getAllUsers() {
+        return ResponseEntity.ok(userRepository.findAll());
+    }
+
+    @PutMapping("/{id}/status")
+    public ResponseEntity<User> updateStatus(@PathVariable String id, @RequestBody Map<String, String> body) {
+        return userRepository.findById(id).map(user -> {
+            if (body.containsKey("status")) {
+                user.setStatus(body.get("status"));
+            }
+            return ResponseEntity.ok(userRepository.save(user));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    // --- User Registration ---
+    @PostMapping("/register")
+    public ResponseEntity<?> registerUser(@RequestBody Map<String, String> body) {
+        String name = body.get("name");
+        String email = body.get("email");
+        String password = body.get("password");
+
+        if (email == null || password == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Email and password are required"));
+        }
+
+        // Check if user already exists
+        if (userRepository.findByEmail(email).isPresent()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "User with this email already exists"));
+        }
+
+        // Generate a unique referral code
+        String referralCode = generateReferralCode(name);
+
+        String referredBy = body.getOrDefault("referredBy", null);
+
+        User user = User.builder()
+                .name(name != null ? name : email.split("@")[0])
+                .email(email)
+                .passwordHash(passwordEncoder.encode(password))
+                .phone(body.getOrDefault("phone", null))
+                .referralCode(referralCode)
+                .referredBy(referredBy)
+                .role(User.Role.USER)
+                .status("active")
+                .build();
+
+        User savedUser = userRepository.save(user);
+
+        // Create wallet for new user
+        Wallet wallet = walletService.getOrCreateWallet(savedUser.getId());
+
+        // Build response matching frontend expectations
+        Map<String, Object> response = buildUserResponse(savedUser, wallet);
+
+        return ResponseEntity.ok(response);
+    }
+
+    // --- User Login ---
+    @PostMapping("/login")
+    public ResponseEntity<?> loginUser(@RequestBody Map<String, String> body) {
+        String email = body.get("email");
+        String password = body.get("password");
+
+        if (email == null || password == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Email and password are required"));
+        }
+
+        return userRepository.findByEmail(email).map(user -> {
+            String stored = user.getPasswordHash();
+            boolean ok;
+            if (stored != null && (stored.startsWith("$2a$") || stored.startsWith("$2b$") || stored.startsWith("$2y$"))) {
+                ok = passwordEncoder.matches(password, stored);
+            } else {
+                ok = password.equals(stored);
+            }
+
+            if (!ok) {
+                return ResponseEntity.status(401).body((Object) Map.of("error", "Invalid credentials"));
+            }
+
+            if ("blocked".equals(user.getStatus())) {
+                return ResponseEntity.status(403).body((Object) Map.of("error", "Account is blocked"));
+            }
+
+            Wallet wallet = walletService.getOrCreateWallet(user.getId());
+            Map<String, Object> response = buildUserResponse(user, wallet);
+
+            return ResponseEntity.ok((Object) response);
+        }).orElse(ResponseEntity.status(401).body(Map.of("error", "User not found")));
+    }
+
+    // --- Admin Login ---
+  @PostMapping("/admin/login")
+public ResponseEntity<?> loginAdmin(@RequestBody Map<String, String> body) {
+
+    String email = body.get("email");
+    String password = body.get("password");
+
+    System.out.println("LOGIN EMAIL = " + email);
+    System.out.println("LOGIN PASSWORD = " + password);
+
+    return userRepository.findByEmail(email).map(user -> {
+
+        System.out.println("FOUND USER = " + user.getEmail());
+        System.out.println("DB PASSWORD = " + user.getPasswordHash());
+        System.out.println("ROLE = " + user.getRole());
+
+        String stored = user.getPasswordHash();
+        boolean ok;
+        if (stored != null && (stored.startsWith("$2a$") || stored.startsWith("$2b$") || stored.startsWith("$2y$"))) {
+            ok = passwordEncoder.matches(password, stored);
+        } else {
+            ok = password.equals(stored);
+        }
+
+        if (!ok) {
+            System.out.println("PASSWORD MISMATCH");
+            return ResponseEntity.status(401)
+                    .body(Map.of("error", "Invalid credentials"));
+        }
+
+        System.out.println("PASSWORD MATCHED");
+
+        return ResponseEntity.ok(Map.of(
+                "id", user.getId(),
+                "name", user.getName(),
+                "email", user.getEmail(),
+                "role", user.getRole().toString(),
+                "isAdmin", true,
+                "status", user.getStatus()
+        ));
+
+    }).orElseGet(() -> {
+        System.out.println("USER NOT FOUND");
+        return ResponseEntity.status(401)
+                .body(Map.of("error", "Admin user not found"));
+    });
+}
+    
+    // --- Helper: Build user response with wallet data ---
+
+    private Map<String, Object> buildUserResponse(User user, Wallet wallet) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("id", user.getId());
+        response.put("name", user.getName());
+        response.put("email", user.getEmail());
+        response.put("phone", user.getPhone());
+        response.put("referralCode", user.getReferralCode());
+        response.put("referredBy", user.getReferredBy());
+        response.put("status", user.getStatus());
+        response.put("joinDate", user.getJoinDate());
+        response.put("sharedCommissionRate", user.getSharedCommissionRate());
+
+        Map<String, Double> walletData = new HashMap<>();
+        walletData.put("confirmed", wallet.getApprovedBalance());
+        walletData.put("pending", wallet.getPendingBalance());
+        walletData.put("referral", 0.0); // Can be computed from referral transactions later
+        response.put("wallet", walletData);
+
+        return response;
+    }
+
+    // --- Helper: Generate referral code ---
+    private String generateReferralCode(String name) {
+        String prefix = (name != null && name.length() >= 3)
+                ? name.substring(0, 3).toUpperCase()
+                : "USR";
+        String suffix = UUID.randomUUID().toString().substring(0, 4).toUpperCase();
+        return prefix + suffix;
+    }
+}
