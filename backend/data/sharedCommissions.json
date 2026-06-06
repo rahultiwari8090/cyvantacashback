@@ -1,0 +1,53 @@
+[
+  {
+    "id": "sc1",
+    "userId": "u1",
+    "userName": "Rahul Sharma",
+    "linkId": "sl1",
+    "productName": "boAt Rockerz Headphones",
+    "store": "Amazon",
+    "purchaseAmount": 29.99,
+    "commissionRate": 5,
+    "commissionAmount": 1.5,
+    "userSharePercent": 70,
+    "buyerSharePercent": 30,
+    "userCommissionAmount": 1.05,
+    "buyerCommissionAmount": 0.45,
+    "status": "approved",
+    "date": "2026-05-28"
+  },
+  {
+    "id": "sc2",
+    "userId": "u1",
+    "userName": "Rahul Sharma",
+    "linkId": "sl1",
+    "productName": "boAt Rockerz Headphones",
+    "store": "Amazon",
+    "purchaseAmount": 29.99,
+    "commissionRate": 5,
+    "commissionAmount": 1.5,
+    "userSharePercent": 70,
+    "buyerSharePercent": 30,
+    "userCommissionAmount": 1.05,
+    "buyerCommissionAmount": 0.45,
+    "status": "pending",
+    "date": "2026-05-29"
+  },
+  {
+    "id": "sc3",
+    "userId": "u2",
+    "userName": "Sneha Patel",
+    "linkId": "sl2",
+    "productName": "Adidas UltraBoost Shoes",
+    "store": "Myntra",
+    "purchaseAmount": 110,
+    "commissionRate": 5,
+    "commissionAmount": 5.5,
+    "userSharePercent": 50,
+    "buyerSharePercent": 50,
+    "userCommissionAmount": 2.75,
+    "buyerCommissionAmount": 2.75,
+    "status": "pending",
+    "date": "2026-06-01"
+  }
+]

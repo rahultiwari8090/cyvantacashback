@@ -1,0 +1,36 @@
+{
+  "totalRevenue": 2840,
+  "totalCashbackPaid": 1251.75,
+  "totalWithdrawPaid": 980,
+  "pendingWithdrawals": 150,
+  "transactions": [
+    {
+      "id": "tx1",
+      "desc": "Affiliate Commission (Amazon - conv1)",
+      "type": "credit",
+      "amount": 45,
+      "date": "2026-05-28"
+    },
+    {
+      "id": "tx2",
+      "desc": "User Cashback Payout (Sneha Patel)",
+      "type": "debit",
+      "amount": 20,
+      "date": "2026-05-28"
+    },
+    {
+      "id": "tx3",
+      "desc": "Affiliate Commission (Flipkart - conv3)",
+      "type": "credit",
+      "amount": 112.5,
+      "date": "2026-06-01"
+    },
+    {
+      "id": "tx4",
+      "desc": "Marketing Sponsor Ads",
+      "type": "credit",
+      "amount": 250,
+      "date": "2026-05-20"
+    }
+  ]
+}

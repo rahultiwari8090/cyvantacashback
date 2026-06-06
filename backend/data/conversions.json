@@ -1,0 +1,42 @@
+[
+  {
+    "id": "conv1",
+    "subId": "SUB99281",
+    "clickId": "CLK0982312",
+    "commission": 3,
+    "status": "approved",
+    "date": "2026-05-28",
+    "userName": "Rahul Sharma",
+    "network": "Amazon"
+  },
+  {
+    "id": "conv2",
+    "subId": "SUB87123",
+    "clickId": "CLK04928312",
+    "commission": 13.2,
+    "status": "pending",
+    "date": "2026-05-30",
+    "userName": "Sneha Patel",
+    "network": "Myntra"
+  },
+  {
+    "id": "conv3",
+    "subId": "SUB44102",
+    "clickId": "CLK23910399",
+    "commission": 46.75,
+    "status": "pending",
+    "date": "2026-06-01",
+    "userName": "Amit Verma",
+    "network": "Flipkart"
+  },
+  {
+    "id": "conv4",
+    "subId": "SUB99282",
+    "clickId": "CLK11938210",
+    "commission": 1.05,
+    "status": "rejected",
+    "date": "2026-05-25",
+    "userName": "Rahul Sharma",
+    "network": "Nykaa Beauty"
+  }
+]

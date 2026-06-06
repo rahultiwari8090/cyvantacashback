@@ -1,0 +1,50 @@
+[
+  {
+    "id": "cb1780742525639",
+    "userName": "Pooja Hegde",
+    "productName": "HP Pavilion Touchscreen Laptop",
+    "amount": 46.75,
+    "status": "approved",
+    "date": "2026-06-06"
+  },
+  {
+    "id": "cb1780739552261",
+    "userName": "Rahul Sharma",
+    "productName": "boAt Rockerz 450 Bluetooth Headphones",
+    "amount": 3,
+    "status": "pending",
+    "date": "2026-06-06"
+  },
+  {
+    "id": "cb1",
+    "userName": "Rahul Sharma",
+    "productName": "boAt Rockerz 450 Bluetooth Headphones",
+    "amount": 3,
+    "status": "approved",
+    "date": "2026-05-28"
+  },
+  {
+    "id": "cb2",
+    "userName": "Sneha Patel",
+    "productName": "Adidas UltraBoost 22 Running Shoes",
+    "amount": 13.2,
+    "status": "pending",
+    "date": "2026-05-30"
+  },
+  {
+    "id": "cb3",
+    "userName": "Amit Verma",
+    "productName": "HP Pavilion Touchscreen Laptop",
+    "amount": 46.75,
+    "status": "pending",
+    "date": "2026-06-01"
+  },
+  {
+    "id": "cb4",
+    "userName": "Rahul Sharma",
+    "productName": "Cetaphil Daily Facial Cleanser",
+    "amount": 1.05,
+    "status": "rejected",
+    "date": "2026-05-25"
+  }
+]

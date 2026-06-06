@@ -1,0 +1,37 @@
+[
+  {
+    "clickId": "CLK0982312",
+    "userName": "Rahul Sharma",
+    "productName": "boAt Rockerz 450 Bluetooth Headphones",
+    "network": "Amazon",
+    "date": "2026-05-28"
+  },
+  {
+    "clickId": "CLK04928312",
+    "userName": "Sneha Patel",
+    "productName": "Adidas UltraBoost 22 Running Shoes",
+    "network": "Myntra",
+    "date": "2026-05-30"
+  },
+  {
+    "clickId": "CLK23910399",
+    "userName": "Amit Verma",
+    "productName": "HP Pavilion Touchscreen Laptop",
+    "network": "Flipkart",
+    "date": "2026-06-01"
+  },
+  {
+    "clickId": "CLK11938210",
+    "userName": "Rahul Sharma",
+    "productName": "Cetaphil Daily Facial Cleanser",
+    "network": "Nykaa Beauty",
+    "date": "2026-05-25"
+  },
+  {
+    "clickId": "CLK77382910",
+    "userName": "Pooja Hegde",
+    "productName": "boAt Rockerz 450 Bluetooth Headphones",
+    "network": "Amazon",
+    "date": "2026-06-02"
+  }
+]

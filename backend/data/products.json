@@ -1,0 +1,56 @@
+[
+  {
+    "id": "1",
+    "name": "boAt Rockerz 450 Bluetooth Headphones",
+    "platform": "Amazon",
+    "price": 29.99,
+    "cashbackValue": 10,
+    "image": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300",
+    "status": "active"
+  },
+  {
+    "id": "2",
+    "name": "Adidas UltraBoost 22 Running Shoes",
+    "platform": "Myntra",
+    "price": 110,
+    "cashbackValue": 12,
+    "image": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300",
+    "status": "active"
+  },
+  {
+    "id": "3",
+    "name": "HP Pavilion Touchscreen Laptop",
+    "platform": "Flipkart",
+    "price": 549.99,
+    "cashbackValue": 8.5,
+    "image": "https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w=300",
+    "status": "active"
+  },
+  {
+    "id": "4",
+    "name": "Cetaphil Daily Facial Cleanser",
+    "platform": "Nykaa Beauty",
+    "price": 14.99,
+    "cashbackValue": 7,
+    "image": "https://images.unsplash.com/photo-1608248597481-496100c8c836?w=300",
+    "status": "inactive"
+  },
+  {
+    "name": "rahul",
+    "platform": "Amazon",
+    "price": 455,
+    "cashbackValue": 12,
+    "image": "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300",
+    "status": "active",
+    "id": "1780739533653"
+  },
+  {
+    "name": "sumsang TV",
+    "platform": "Myntra",
+    "price": 56985,
+    "cashbackValue": 10,
+    "image": "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300",
+    "status": "active",
+    "id": "1780742603108"
+  }
+]

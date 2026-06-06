@@ -1,0 +1,34 @@
+[
+  {
+    "id": "sl1",
+    "userId": "u1",
+    "userName": "Rahul Sharma",
+    "productName": "boAt Rockerz Headphones",
+    "store": "Amazon",
+    "productUrl": "https://amazon.in/dp/example",
+    "shortUrl": "https://cyvanta.cashback/share/sl1",
+    "clicksCount": 24,
+    "conversionsCount": 2,
+    "totalEarnings": 3,
+    "userSharePercent": 70,
+    "buyerSharePercent": 30,
+    "status": "active",
+    "date": "2026-05-25"
+  },
+  {
+    "id": "sl2",
+    "userId": "u2",
+    "userName": "Sneha Patel",
+    "productName": "Adidas UltraBoost Shoes",
+    "store": "Myntra",
+    "productUrl": "https://myntra.com/shoes/example",
+    "shortUrl": "https://cyvanta.cashback/share/sl2",
+    "clicksCount": 15,
+    "conversionsCount": 1,
+    "totalEarnings": 5.5,
+    "userSharePercent": 50,
+    "buyerSharePercent": 50,
+    "status": "active",
+    "date": "2026-05-28"
+  }
+]

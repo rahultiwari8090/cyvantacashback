@@ -1,17 +1,7 @@
-/**
- * Spring Boot API Client Service Layer
- * 
- * Configured for Spring Boot backend running on http://localhost:8080/api
- * Features a local mock toggle so the frontend works out-of-the-box in development.
- * 
- * To switch to Spring Boot backend, set localStorage.setItem('api_use_mock', 'false')
- * or modify the USE_MOCK variable below to false.
- */
-
+ 
 const BASE_URL = 'http://localhost:8080/api';
-
-// By default, use mock data. Set to false to connect to your real Spring Boot server.
-const USE_MOCK = typeof localStorage !== 'undefined' ? localStorage.getItem('api_use_mock') !== 'false' : true;
+ 
+const USE_MOCK = typeof localStorage !== 'undefined' ? localStorage.getItem('api_use_mock') === 'true' : false;
 
 console.log(`[API Service] Running in ${USE_MOCK ? 'MOCK' : 'SPRING BOOT LIVE'} mode.`);
 
@@ -194,6 +184,27 @@ export const apiProducts = {
     if (USE_MOCK) return Promise.resolve([...mockProducts]);
     return request('/products');
   },
+  sync: (syncData) => {
+    if (USE_MOCK) {
+      // Offline fallback simulator
+      return Promise.resolve({
+        success: true,
+        logs: [
+          `[MOCK CLIENT] Preparing request payload headers for ${syncData.platform} API...`,
+          `[MOCK CLIENT] Authenticating using AWS Signature V4 / Client API tokens...`,
+          `[MOCK CLIENT] Querying GET /paapi5/searchitems?Keywords=${encodeURIComponent(syncData.keyword)}...`,
+          `[MOCK CLIENT] Mapped offline products to Cyvanta schema.`
+        ],
+        products: [
+          { id: 'mock-1', name: `Sync: ${syncData.keyword} Pro`, price: 4999, platform: syncData.platform, cashbackValue: 10.0, image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300', status: 'active' }
+        ]
+      });
+    }
+    return request('/products/sync', {
+      method: 'POST',
+      body: JSON.stringify(syncData),
+    });
+  },
   create: (product) => {
     if (USE_MOCK) {
       const newProd = { ...product, id: Date.now().toString() };
@@ -254,7 +265,7 @@ export const apiProducts = {
   }
 };
 
-// 3. Tracked Orders (Product Tracking) APIs
+ 
 export const apiTracking = {
   getAll: () => {
     if (USE_MOCK) return Promise.resolve([...mockTrackedOrders]);
@@ -270,7 +281,7 @@ export const apiTracking = {
         cashbackId: cashbackId
       };
       
-      // Update local tracking mock
+     
       mockTrackedOrders.unshift(newTrack);
 
       // Dynamically add a matching mock cashback

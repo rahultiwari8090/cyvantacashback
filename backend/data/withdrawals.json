@@ -1,0 +1,29 @@
+[
+  {
+    "id": "w1",
+    "userName": "Rahul Sharma",
+    "coins": 5000,
+    "amount": 50,
+    "upiId": "rahul@okaxis",
+    "status": "pending",
+    "date": "2026-05-31"
+  },
+  {
+    "id": "w2",
+    "userName": "Sneha Patel",
+    "coins": 2000,
+    "amount": 20,
+    "upiId": "sneha@oksbi",
+    "status": "approved",
+    "date": "2026-05-28"
+  },
+  {
+    "id": "w3",
+    "userName": "Amit Verma",
+    "coins": 10000,
+    "amount": 100,
+    "upiId": "amitv@paytm",
+    "status": "pending",
+    "date": "2026-06-01"
+  }
+]

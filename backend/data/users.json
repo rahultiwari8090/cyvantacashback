@@ -1,0 +1,82 @@
+[
+  {
+    "id": "u1",
+    "name": "Rahul Sharma",
+    "email": "rahul.sharma@gmail.com",
+    "phone": "+91 9876543210",
+    "referralCode": "RAHUL50",
+    "referredBy": "None",
+    "joinDate": "2026-04-12",
+    "status": "active",
+    "sharedCommissionRate": null,
+    "wallet": {
+      "confirmed": 50,
+      "pending": 1.05,
+      "referral": 0
+    }
+  },
+  {
+    "id": "u2",
+    "name": "Sneha Patel",
+    "email": "sneha.patel@gmail.com",
+    "phone": "+91 8765432109",
+    "referralCode": "SNEHA12",
+    "referredBy": "RAHUL50",
+    "joinDate": "2026-04-18",
+    "status": "active",
+    "sharedCommissionRate": null,
+    "wallet": {
+      "confirmed": 20,
+      "pending": 2.75,
+      "referral": 0
+    }
+  },
+  {
+    "id": "u3",
+    "name": "Amit Verma",
+    "email": "amit.verma@gmail.com",
+    "phone": "+91 7654321098",
+    "referralCode": "AMIT99",
+    "referredBy": "RAHUL50",
+    "joinDate": "2026-04-20",
+    "status": "active",
+    "sharedCommissionRate": null,
+    "wallet": {
+      "confirmed": 0,
+      "pending": 0,
+      "referral": 0
+    }
+  },
+  {
+    "id": "u4",
+    "name": "Pooja Hegde",
+    "email": "pooja.hegde@gmail.com",
+    "phone": "+91 6543210987",
+    "referralCode": "POOJA45",
+    "referredBy": "SNEHA12",
+    "joinDate": "2026-04-22",
+    "status": "active",
+    "sharedCommissionRate": null,
+    "wallet": {
+      "confirmed": 0,
+      "pending": 0,
+      "referral": 0
+    }
+  },
+  {
+    "id": "u5",
+    "name": "Rohan Joshi",
+    "email": "rohan.joshi@gmail.com",
+    "phone": "+91 5432109876",
+    "referralCode": "ROHAN88",
+    "referredBy": "None",
+    "joinDate": "2026-05-01",
+    "status": "blocked",
+    "sharedCommissionRate": null,
+    "wallet": {
+      "confirmed": 0,
+      "pending": 0,
+      "referral": 0
+    }
+  }
+]
