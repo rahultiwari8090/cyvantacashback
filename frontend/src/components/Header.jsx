@@ -125,10 +125,14 @@ export default function Header({
 
           {currentUser ? (
             <div className="user-profile-badge" onClick={() => setView('dashboard')}>
-              <div className="user-avatar">{currentUser.name[0].toUpperCase()}</div>
+              <div className="user-avatar">{currentUser.name ? currentUser.name[0].toUpperCase() : 'U'}</div>
               <div className="user-info">
-                <span className="user-name">Hey, {currentUser.name}</span>
-                <span className="user-wallet">₹{currentUser.wallet.confirmed.toFixed(2)}</span>
+                <span className="user-name">Hey, {currentUser.name || 'User'}</span>
+                <span className="user-wallet">
+                  {currentUser.wallet && currentUser.wallet.confirmed !== undefined 
+                    ? `₹${currentUser.wallet.confirmed.toFixed(2)}` 
+                    : (currentUser.role === 'ADMIN' || currentUser.isAdmin ? 'Admin' : '₹0.00')}
+                </span>
               </div>
               <ChevronDown size={14} style={{ color: 'var(--text)', opacity: 0.5 }} />
             </div>

@@ -251,11 +251,12 @@ const generatePriceComparisons = (deal) => {
 export default function App() {
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(() => {
     const session = sessionStorage.getItem('admin_session');
-    if (session === null) {
-      sessionStorage.setItem('admin_session', 'active');
-      return true;
-    }
     return session === 'active';
+  });
+
+  const [currentUser, setCurrentUser] = useState(() => {
+    const storedUser = localStorage.getItem('user_session');
+    return storedUser ? JSON.parse(storedUser) : null;
   });
 
   const getInitialView = () => {
@@ -287,7 +288,6 @@ export default function App() {
   const [selectedStoreId, setSelectedStoreId] = useState(null);
   const [activeCategory, setActiveCategory] = useState('all');
   const [theme, setTheme] = useState('light');
-  const [currentUser, setCurrentUser] = useState(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
 
@@ -465,8 +465,10 @@ export default function App() {
       <div id="root">
         <Notification notifications={notifications} removeNotification={removeNotification} />
         <AdminLogin
-          onLoginSuccess={() => {
+          onLoginSuccess={(adminUser) => {
             sessionStorage.setItem('admin_session', 'active');
+            localStorage.setItem('user_session', JSON.stringify(adminUser));
+            setCurrentUser(adminUser);
             setIsAdminLoggedIn(true);
             setView('admin-panel');
           }}
@@ -482,6 +484,7 @@ export default function App() {
       <div id="root">
         <Notification notifications={notifications} removeNotification={removeNotification} />
         <AdminPanel
+          currentUser={currentUser}
           onLogout={() => {
             sessionStorage.removeItem('admin_session');
             setIsAdminLoggedIn(false);

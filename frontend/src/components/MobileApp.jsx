@@ -93,9 +93,9 @@ export default function MobileApp({
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [comparisonDeal, setComparisonDeal] = useState(null);
 
-  // Get current user's wallet info (or fallback if guest)
+  // Get current user's wallet info (or fallback if guest/admin)
   const isGuest = !currentUser;
-  const user = currentUser || {
+  const user = currentUser ? { ...currentUser, wallet: currentUser.wallet || { confirmed: 0.00, pending: 0.00, referral: 0.00 } } : {
     name: 'Guest User',
     wallet: { confirmed: 0.00, pending: 0.00, referral: 0.00 }
   };

@@ -43,7 +43,7 @@ import {
   apiSharedCommissions
 } from '../services/api';
 
-export default function AdminPanel({ onLogout, theme, toggleTheme, onAddNotification }) {
+export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, onAddNotification }) {
   const getInitialTab = () => {
     const hash = window.location.hash;
     if (hash === '#/admin/users') return 'users';
@@ -199,7 +199,9 @@ export default function AdminPanel({ onLogout, theme, toggleTheme, onAddNotifica
     return () => clearInterval(interval);
   }, [trackedOrders]);
 
-  const mockAdminEmail = "admin@cyvanta.com";
+  const adminEmail = currentUser ? currentUser.email : "admin@cyvanta.com";
+  const adminName = currentUser ? currentUser.name : "Administrator";
+  const adminInitials = currentUser && currentUser.name ? currentUser.name.substring(0, 2).toUpperCase() : "AD";
 
   // Sidebar menu configuration mapping
   const menuItems = [
@@ -410,6 +412,17 @@ export default function AdminPanel({ onLogout, theme, toggleTheme, onAddNotifica
     }
   };
 
+  const editUser = async (id, userData) => {
+    try {
+      const updatedUser = await apiUsers.update(id, userData);
+      setUsers((prev) => prev.map((u) => (u.id === id ? updatedUser : u)));
+      onAddNotification('User details updated successfully.', 'success');
+    } catch (err) {
+      console.error(err);
+      onAddNotification('Failed to update user details.', 'error');
+    }
+  };
+
   const approveSharedCommission = async (id, amount) => {
     try {
       const updated = await apiSharedCommissions.updateStatus(id, 'approved', amount);
@@ -495,6 +508,7 @@ export default function AdminPanel({ onLogout, theme, toggleTheme, onAddNotifica
           <AdminUsers
             users={users}
             setUsers={setUsers}
+            onEditUser={editUser}
             onAddNotification={onAddNotification}
           />
         );
@@ -707,10 +721,10 @@ export default function AdminPanel({ onLogout, theme, toggleTheme, onAddNotifica
 
             {/* Admin Profile */}
             <div className="admin-profile-badge">
-              <div className="admin-avatar">AD</div>
+              <div className="admin-avatar">{adminInitials}</div>
               <div className="admin-profile-info">
-                <span className="admin-profile-name">Administrator</span>
-                <span className="admin-profile-email">{mockAdminEmail}</span>
+                <span className="admin-profile-name">{adminName}</span>
+                <span className="admin-profile-email">{adminEmail}</span>
               </div>
             </div>
 

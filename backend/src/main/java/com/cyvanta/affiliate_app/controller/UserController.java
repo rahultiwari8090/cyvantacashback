@@ -38,6 +38,21 @@ public class UserController {
         }).orElse(ResponseEntity.notFound().build());
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<User> updateUser(@PathVariable String id, @RequestBody User updatedUser) {
+        return userRepository.findById(id).map(user -> {
+            if (updatedUser.getName() != null) user.setName(updatedUser.getName());
+            if (updatedUser.getEmail() != null) user.setEmail(updatedUser.getEmail());
+            if (updatedUser.getPhone() != null) user.setPhone(updatedUser.getPhone());
+            if (updatedUser.getStatus() != null) user.setStatus(updatedUser.getStatus());
+            
+            // Handle null explicitly if sharedCommissionRate is meant to be reset
+            user.setSharedCommissionRate(updatedUser.getSharedCommissionRate());
+            
+            return ResponseEntity.ok(userRepository.save(user));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
     // --- User Registration ---
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@RequestBody Map<String, String> body) {

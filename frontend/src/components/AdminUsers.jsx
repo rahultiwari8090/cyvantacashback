@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Search, Filter, ShieldCheck, ShieldAlert, Eye, Edit2 } from 'lucide-react';
 import { AdminTable, AdminModal, AdminFormInput, AdminFormSelect } from './AdminComponents';
 
-export default function AdminUsers({ users, setUsers, onAddNotification }) {
+export default function AdminUsers({ users, setUsers, onEditUser, onAddNotification }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -55,22 +55,32 @@ export default function AdminUsers({ users, setUsers, onAddNotification }) {
       return;
     }
 
-    setUsers((prev) =>
-      prev.map((u) =>
-        u.id === editUser.id
-          ? {
-              ...u,
-              name: editName,
-              email: editEmail,
-              phone: editMobile,
-              status: editStatus,
-              sharedCommissionRate: editSharedCommRate.trim() === '' ? null : parseFloat(editSharedCommRate),
-            }
-          : u
-      )
-    );
+    if (onEditUser) {
+      onEditUser(editUser.id, {
+        name: editName,
+        email: editEmail,
+        phone: editMobile,
+        status: editStatus,
+        sharedCommissionRate: editSharedCommRate.trim() === '' ? null : parseFloat(editSharedCommRate),
+      });
+    } else {
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === editUser.id
+            ? {
+                ...u,
+                name: editName,
+                email: editEmail,
+                phone: editMobile,
+                status: editStatus,
+                sharedCommissionRate: editSharedCommRate.trim() === '' ? null : parseFloat(editSharedCommRate),
+              }
+            : u
+        )
+      );
+      onAddNotification('User details updated locally.', 'success');
+    }
 
-    onAddNotification('User details updated successfully.', 'success');
     setIsEditModalOpen(false);
   };
 

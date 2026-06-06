@@ -1,21 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { Mail, Lock, ShieldAlert } from 'lucide-react';
+import { apiUsers } from '../services/api';
 
 export default function AdminLogin({ onLoginSuccess, onAddNotification, setView }) {
-  const [email, setEmail] = useState('admin@cyvanta.com');
-  const [password, setPassword] = useState('admin123');
-  const [rememberMe, setRememberMe] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [adminConfig, setAdminConfig] = useState(null);
 
-  // Load saved email on mount
+  // Load admin config from backend on mount
   useEffect(() => {
+    fetchAdminConfig();
+    
+    // Load saved email
     const savedEmail = localStorage.getItem('remember_admin_email');
     if (savedEmail) {
       setEmail(savedEmail);
       setRememberMe(true);
     }
   }, []);
+
+  // Fetch admin configuration from backend
+  const fetchAdminConfig = async () => {
+    try {
+      // GET /api/admin/config - Returns admin email hint
+      const response = await fetch('http://localhost:8080/api/admin/config');
+      const data = await response.json();
+      setAdminConfig(data);
+    } catch (error) {
+      console.log('Admin config not available, using default');
+    }
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -34,25 +51,33 @@ export default function AdminLogin({ onLoginSuccess, onAddNotification, setView 
 
     setLoading(true);
 
-    setTimeout(() => {
-      if (email === 'admin@cyvanta.com' && password === 'admin123') {
+    // Call backend API for admin login
+    apiUsers.adminLogin(email, password)
+      .then((adminUser) => {
         if (rememberMe) {
           localStorage.setItem('remember_admin_email', email);
         } else {
           localStorage.removeItem('remember_admin_email');
         }
+        
+        // Store admin session
+        localStorage.setItem('admin_session', JSON.stringify(adminUser));
+        localStorage.setItem('is_admin', 'true');
+        
         onAddNotification('Admin authentication successful! Access granted.', 'success');
-        onLoginSuccess();
-      } else {
-        setError('Invalid admin credentials. Please try again.');
-        onAddNotification('Authentication failed: Incorrect email or password.', 'error');
-      }
-      setLoading(false);
-    }, 1000);
+        onLoginSuccess(adminUser);
+        setLoading(false);
+      })
+      .catch((error) => {
+        console.error('Admin login error:', error);
+        setError(error.message || 'Invalid admin credentials. Please try again.');
+        onAddNotification('Authentication failed: ' + (error.message || 'Incorrect email or password.'), 'error');
+        setLoading(false);
+      });
   };
 
   const handleForgot = () => {
-    onAddNotification('Password reset link has been dispatched to admin mailbox.', 'info');
+    onAddNotification('Contact super admin for password reset.', 'info');
   };
 
   return (
@@ -76,7 +101,7 @@ export default function AdminLogin({ onLoginSuccess, onAddNotification, setView 
             <Mail size={18} />
             <input
               type="text"
-              placeholder="Admin Email (admin@cyvanta.com)"
+              placeholder={adminConfig?.emailHint || "Admin Email"}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={loading}
@@ -87,7 +112,7 @@ export default function AdminLogin({ onLoginSuccess, onAddNotification, setView 
             <Lock size={18} />
             <input
               type="password"
-              placeholder="Admin Password (admin123)"
+              placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
@@ -113,6 +138,25 @@ export default function AdminLogin({ onLoginSuccess, onAddNotification, setView 
             {loading ? 'Verifying Credentials...' : 'Sign In to Dashboard'}
           </button>
         </form>
+
+        {/* Admin Credentials Hint from Backend */}
+        {adminConfig && (
+          <div style={{ 
+            marginTop: '20px', 
+            padding: '12px', 
+            backgroundColor: '#1f2937', 
+            borderRadius: '8px',
+            fontSize: '12px',
+            color: '#9ca3af'
+          }}>
+            <p style={{ margin: '0 0 6px 0', fontWeight: '600' }}>Admin Credentials:</p>
+            <p style={{ margin: '0' }}>Email: <code style={{ color: '#60a5fa' }}>{adminConfig.adminEmail}</code></p>
+            <p style={{ margin: '4px 0 0 0' }}>Password: <code style={{ color: '#60a5fa' }}>{adminConfig.adminPassword}</code></p>
+            <p style={{ margin: '8px 0 0 0', fontSize: '11px', color: '#6b7280' }}>
+              (Credentials stored securely in backend MongoDB)
+            </p>
+          </div>
+        )}
 
         <div style={{ marginTop: '24px', textAlign: 'center' }}>
           <button

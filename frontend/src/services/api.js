@@ -2,18 +2,18 @@
  * Spring Boot API Client Service Layer
  * 
  * Configured for Spring Boot backend running on http://localhost:8080/api
- * Features a local mock toggle so the frontend works out-of-the-box in development.
+ * By default, connects to the real backend with MongoDB Atlas data.
  * 
- * To switch to Spring Boot backend, set localStorage.setItem('api_use_mock', 'false')
- * or modify the USE_MOCK variable below to false.
+ * To switch to mock data for development: set localStorage.setItem('api_use_mock', 'true')
+ * To connect to real backend: set localStorage.setItem('api_use_mock', 'false')
  */
 
-const BASE_URL = 'http://localhost:8080/api';
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
-// By default, use mock data. Set to false to connect to your real Spring Boot server.
-const USE_MOCK = typeof localStorage !== 'undefined' ? localStorage.getItem('api_use_mock') === 'true' : false;
+// Force using real backend by default in development. Set VITE_API_USE_MOCK=true to use mock data.
+const USE_MOCK = import.meta.env.VITE_API_USE_MOCK === 'true' ? true : false;
 
-console.log(`[API Service] Running in ${USE_MOCK ? 'MOCK' : 'SPRING BOOT LIVE'} mode.`);
+console.log(`[API Service] Running in ${USE_MOCK ? 'MOCK' : `BACKEND (${BASE_URL})`} mode.`);
 
 // --- IN-MEMORY MOCK DATABASE (For fallback / mockup development) ---
 let mockUsers = [
@@ -160,6 +160,12 @@ async function request(url, options = {}) {
     },
   };
 
+  // When using the real backend, enable CORS mode and include credentials (cookies)
+  if (!USE_MOCK) {
+    config.mode = options.mode || 'cors';
+    config.credentials = options.credentials || 'include';
+  }
+
   const response = await fetch(`${BASE_URL}${url}`, config);
   if (!response.ok) {
     const errorText = await response.text();
@@ -176,6 +182,72 @@ export const apiUsers = {
     if (USE_MOCK) return Promise.resolve([...mockUsers]);
     return request('/users');
   },
+  login: (email, password) => {
+    if (USE_MOCK) {
+      const user = mockUsers.find(u => u.email === email);
+      if (user) {
+        return Promise.resolve({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          referralCode: user.referralCode,
+          referredBy: user.referredBy,
+          status: user.status,
+          joinDate: user.joinDate,
+          wallet: { confirmed: 100.50, pending: 25.00, referral: 5.00 },
+          isAdmin: false
+        });
+      }
+      return Promise.reject(new Error('User not found'));
+    }
+    return request('/users/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+  },
+  adminLogin: (email, password) => {
+    if (USE_MOCK) {
+      // For mock, admin is any user with name containing "Admin"
+      const adminUser = mockUsers.find(u => u.email === email && u.name.toLowerCase().includes('admin'));
+      if (adminUser) {
+        return Promise.resolve({
+          id: adminUser.id,
+          name: adminUser.name,
+          email: adminUser.email,
+          role: 'ADMIN',
+          isAdmin: true,
+          status: adminUser.status
+        });
+      }
+      return Promise.reject(new Error('Admin not found or invalid credentials'));
+    }
+    return request('/users/admin/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+  },
+  register: (name, email, password, phone = '', referredBy = null) => {
+    if (USE_MOCK) {
+      const newUser = {
+        id: 'u' + Date.now(),
+        name,
+        email,
+        phone,
+        referralCode: 'REF' + Math.random().toString(36).substring(7).toUpperCase(),
+        referredBy: referredBy || 'None',
+        joinDate: new Date().toISOString().split('T')[0],
+        status: 'active',
+        wallet: { confirmed: 0, pending: 0, referral: 0 }
+      };
+      mockUsers.push(newUser);
+      return Promise.resolve(newUser);
+    }
+    return request('/users/register', {
+      method: 'POST',
+      body: JSON.stringify({ name, email, password, phone, referredBy }),
+    });
+  },
   updateStatus: (id, status) => {
     if (USE_MOCK) {
       mockUsers = mockUsers.map(u => u.id === id ? { ...u, status } : u);
@@ -184,6 +256,16 @@ export const apiUsers = {
     return request(`/users/${id}/status`, {
       method: 'PUT',
       body: JSON.stringify({ status }),
+    });
+  },
+  update: (id, userData) => {
+    if (USE_MOCK) {
+      mockUsers = mockUsers.map(u => u.id === id ? { ...u, ...userData } : u);
+      return Promise.resolve(mockUsers.find(u => u.id === id));
+    }
+    return request(`/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(userData),
     });
   }
 };

@@ -1,32 +1,63 @@
 import React, { useState } from 'react';
 import { X, Lock, Mail, User } from 'lucide-react';
+import { apiUsers } from '../services/api';
 
 export default function AuthModal({ isOpen, onClose, onLogin }) {
   const [activeTab, setActiveTab] = useState('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   if (!isOpen) return null;
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setError('');
+    setLoading(true);
+
     if (activeTab === 'login') {
-      if (!email || !password) return;
-      onLogin({
-        name: email.split('@')[0],
-        email: email,
-        wallet: { confirmed: 250.0, pending: 120.0, referral: 75.0 },
-      });
+      if (!email || !password) {
+        setError('Please fill in all fields');
+        setLoading(false);
+        return;
+      }
+      
+      // Call backend login API
+      apiUsers.login(email, password)
+        .then((userData) => {
+          localStorage.setItem('user_session', JSON.stringify(userData));
+          localStorage.setItem('is_admin', 'false');
+          onLogin(userData);
+          onClose();
+          setLoading(false);
+        })
+        .catch((err) => {
+          setError(err.message || 'Login failed. Please try again.');
+          setLoading(false);
+        });
     } else {
-      if (!name || !email || !password) return;
-      onLogin({
-        name: name,
-        email: email,
-        wallet: { confirmed: 0.0, pending: 50.0, referral: 0.0 }, // New signup bonus!
-      });
+      if (!name || !email || !password) {
+        setError('Please fill in all fields');
+        setLoading(false);
+        return;
+      }
+      
+      // Call backend register API
+      apiUsers.register(name, email, password)
+        .then((userData) => {
+          localStorage.setItem('user_session', JSON.stringify(userData));
+          localStorage.setItem('is_admin', 'false');
+          onLogin(userData);
+          onClose();
+          setLoading(false);
+        })
+        .catch((err) => {
+          setError(err.message || 'Registration failed. Please try again.');
+          setLoading(false);
+        });
     }
-    onClose();
   };
 
   return (
@@ -39,17 +70,37 @@ export default function AuthModal({ isOpen, onClose, onLogin }) {
         <div className="auth-tabs">
           <div
             className={`auth-tab ${activeTab === 'login' ? 'active' : ''}`}
-            onClick={() => setActiveTab('login')}
+            onClick={() => {
+              setActiveTab('login');
+              setError('');
+            }}
           >
             Log In
           </div>
           <div
             className={`auth-tab ${activeTab === 'signup' ? 'active' : ''}`}
-            onClick={() => setActiveTab('signup')}
+            onClick={() => {
+              setActiveTab('signup');
+              setError('');
+            }}
           >
             Sign Up
           </div>
         </div>
+
+        {error && (
+          <div style={{
+            padding: '10px',
+            marginBottom: '12px',
+            backgroundColor: '#fee2e2',
+            color: '#dc2626',
+            borderRadius: '4px',
+            fontSize: '13px',
+            textAlign: 'center'
+          }}>
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="auth-form">
           {activeTab === 'signup' && (
@@ -73,6 +124,7 @@ export default function AuthModal({ isOpen, onClose, onLogin }) {
                   style={{ paddingLeft: '36px', width: '100%' }}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                  disabled={loading}
                   required
                 />
               </div>
@@ -99,6 +151,7 @@ export default function AuthModal({ isOpen, onClose, onLogin }) {
                 style={{ paddingLeft: '36px', width: '100%' }}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
                 required
               />
             </div>
@@ -124,13 +177,14 @@ export default function AuthModal({ isOpen, onClose, onLogin }) {
                 style={{ paddingLeft: '36px', width: '100%' }}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
                 required
               />
             </div>
           </div>
 
-          <button type="submit" className="btn-auth-submit">
-            {activeTab === 'login' ? 'Continue & Claim Cashback' : 'Join Now & Get ₹5.00 Bonus'}
+          <button type="submit" className="btn-auth-submit" disabled={loading}>
+            {loading ? 'Processing...' : (activeTab === 'login' ? 'Continue & Claim Cashback' : 'Join Now & Get ₹5.00 Bonus')}
           </button>
 
           <p style={{ fontSize: '12px', textAlign: 'center', marginTop: '8px', color: 'var(--text)' }}>
