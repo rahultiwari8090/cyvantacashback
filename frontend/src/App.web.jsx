@@ -178,6 +178,9 @@ export default function App() {
     if (hash === '#/dashboard') {
       return 'dashboard';
     }
+    if (hash === '#/store') {
+      return 'store';
+    }
 
     const path = window.location.pathname;
     if (path === '/admin/login') {
@@ -188,6 +191,9 @@ export default function App() {
     }
     if (path === '/dashboard') {
       return 'dashboard';
+    }
+    if (path === '/store') {
+      return 'store';
     }
     return 'home';
   };
