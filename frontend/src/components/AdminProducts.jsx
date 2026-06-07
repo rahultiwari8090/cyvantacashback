@@ -208,31 +208,35 @@ export default function AdminProducts({ products, categories = [], onAddProduct,
         setPreviewProducts(formatted);
         setSelectedPreviewIds(new Set(formatted.map(p => p.id)));
       } else {
-        const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        const cleanText = rawText.replace(/^\uFEFF/, '');
+        const lines = cleanText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
         if (lines.length < 2) {
           throw new Error('CSV must contain a header row and at least one data row.');
         }
         
-        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-        const nameIdx = headers.indexOf('name');
+        const cleanStr = (s) => s ? s.trim().replace(/^["']|["']$/g, '') : '';
+        const headers = lines[0].split(',').map(h => cleanStr(h).toLowerCase());
+        const nameIdx = headers.indexOf('name') !== -1 ? headers.indexOf('name') : headers.indexOf('title');
         const priceIdx = headers.indexOf('price');
         
         if (nameIdx === -1 || priceIdx === -1) {
-          throw new Error('CSV headers must include at least "name" and "price" columns.');
+          throw new Error(`CSV headers must include at least "name" (or "title") and "price" columns. Found headers: ${headers.join(', ')}`);
         }
         
         const platformIdx = headers.indexOf('platform');
         const cashbackIdx = headers.indexOf('cashbackvalue') !== -1 ? headers.indexOf('cashbackvalue') : headers.indexOf('cashback');
-        const imageIdx = headers.indexOf('imageurl') !== -1 ? headers.indexOf('imageurl') : headers.indexOf('image');
+        const imageIdx = headers.indexOf('imageurl') !== -1 ? headers.indexOf('imageurl') : (headers.indexOf('image_url') !== -1 ? headers.indexOf('image_url') : headers.indexOf('image'));
         const statusIdx = headers.indexOf('status');
         
         const formatted = [];
         for (let i = 1; i < lines.length; i++) {
-          const cols = lines[i].split(',').map(c => c.trim());
+          // Basic split by comma. Note: Doesn't handle commas inside quoted strings.
+          const cols = lines[i].split(',').map(c => cleanStr(c));
           if (cols.length < headers.length) continue;
           
           const name = cols[nameIdx];
-          const price = parseFloat(cols[priceIdx]);
+          const priceStr = cols[priceIdx].replace(/[^0-9.]/g, ''); // strip any currency symbols just in case
+          const price = parseFloat(priceStr);
           
           if (!name || isNaN(price)) {
             throw new Error(`Data format error on line ${i + 1}.`);
@@ -244,8 +248,8 @@ export default function AdminProducts({ products, categories = [], onAddProduct,
             platform: platformIdx !== -1 ? cols[platformIdx] : 'Amazon',
             price: price,
             cashbackValue: cashbackIdx !== -1 ? parseFloat(cols[cashbackIdx] || 10) : 10,
-            image: imageIdx !== -1 ? cols[imageIdx] : 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300',
-            status: statusIdx !== -1 ? cols[statusIdx] : 'active'
+            image: imageIdx !== -1 && cols[imageIdx] ? cols[imageIdx] : 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300',
+            status: statusIdx !== -1 && cols[statusIdx] ? cols[statusIdx] : 'active'
           });
         }
         
@@ -761,38 +765,78 @@ export default function AdminProducts({ products, categories = [], onAddProduct,
                     onChange={(e) => setRawFormat(e.target.value)}
                     options={[
                       { value: 'json', label: 'Structured JSON Array' },
-                      { value: 'csv', label: 'Standard Comma-separated (CSV)' }
+                      { value: 'csv', label: 'Standard Comma-separated (CSV)' },
+                      { value: 'upload', label: 'Upload File (.csv, .json)' }
                     ]}
                   />
                 </div>
               </div>
 
-              <div>
-                <label style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-bold)', display: 'block', marginBottom: '6px' }}>
-                  Paste Products Code/Text
-                </label>
-                <textarea
-                  value={rawText}
-                  onChange={(e) => setRawText(e.target.value)}
-                  placeholder={
-                    rawFormat === 'json'
-                      ? '[\n  {\n    "name": "Headphones X",\n    "platform": "Amazon",\n    "price": 2999,\n    "cashbackValue": 10,\n    "image": ""\n  }\n]'
-                      : 'name, platform, price, cashbackvalue, imageurl\nHeadphones X, Amazon, 2999, 10, '
-                  }
-                  style={{
-                    width: '100%',
-                    height: '120px',
-                    fontFamily: 'monospace',
-                    fontSize: '12px',
-                    padding: '8px',
-                    borderRadius: '6px',
-                    border: '1px solid var(--border)',
+              {rawFormat === 'upload' ? (
+                <div>
+                  <label style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-bold)', display: 'block', marginBottom: '6px' }}>
+                    Upload Products File
+                  </label>
+                  <div style={{
+                    border: '2px dashed var(--border)',
+                    borderRadius: '8px',
+                    padding: '30px',
+                    textAlign: 'center',
                     backgroundColor: 'var(--bg)',
-                    color: 'var(--text)',
-                    resize: 'vertical'
-                  }}
-                />
-              </div>
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '12px'
+                  }}>
+                    <input
+                      type="file"
+                      accept=".csv,.json"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (!file) return;
+                        if (file.name.endsWith('.csv')) setRawFormat('csv');
+                        else if (file.name.endsWith('.json')) setRawFormat('json');
+                        const reader = new FileReader();
+                        reader.onload = (evt) => {
+                          setRawText(evt.target.result);
+                        };
+                        reader.readAsText(file);
+                      }}
+                      style={{ fontSize: '14px', color: 'var(--text)' }}
+                    />
+                    <span style={{ fontSize: '12px', color: 'var(--text)' }}>
+                      Select a .csv or .json file to automatically load its contents.
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-bold)', display: 'block', marginBottom: '6px' }}>
+                    Paste Products Code/Text
+                  </label>
+                  <textarea
+                    value={rawText}
+                    onChange={(e) => setRawText(e.target.value)}
+                    placeholder={
+                      rawFormat === 'json'
+                        ? '[\n  {\n    "name": "Headphones X",\n    "platform": "Amazon",\n    "price": 2999,\n    "cashbackValue": 10,\n    "image": ""\n  }\n]'
+                        : 'name, platform, price, cashbackvalue, imageurl\nHeadphones X, Amazon, 2999, 10, '
+                    }
+                    style={{
+                      width: '100%',
+                      height: '120px',
+                      fontFamily: 'monospace',
+                      fontSize: '12px',
+                      padding: '8px',
+                      borderRadius: '6px',
+                      border: '1px solid var(--border)',
+                      backgroundColor: 'var(--bg)',
+                      color: 'var(--text)',
+                      resize: 'vertical'
+                    }}
+                  />
+                </div>
+              )}
 
               {/* Template Tip Box */}
               <div style={{ fontSize: '11px', color: 'var(--text)', padding: '8px', backgroundColor: 'var(--bg)', borderLeft: '3px solid var(--primary)', borderRadius: '4px' }}>

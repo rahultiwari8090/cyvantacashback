@@ -458,6 +458,7 @@ export default function App() {
           id: p.id,
           title: p.name,
           name: p.name,
+          platform: platform,
           retailPrice,
           dealPrice,
           cashbackEarned,
@@ -615,7 +616,7 @@ export default function App() {
 
             {/* Deals Grid */}
             <TopDeals
-              deals={dynamicDeals}
+              deals={dynamicDeals.slice(0, 8)}
               onGrabDeal={handleGrabProductDeal}
             />
 
@@ -635,6 +636,14 @@ export default function App() {
             store={selectedStore}
             onBack={() => setView('home')}
             onAddNotification={addNotification}
+            deals={dynamicDeals.filter(d => {
+              if (d.platform && d.platform.toLowerCase() === selectedStore.name.toLowerCase()) return true;
+              if (d.comparisons) {
+                return d.comparisons.some(c => c.platform && c.platform.toLowerCase() === selectedStore.name.toLowerCase());
+              }
+              return false;
+            })}
+            onGrabDeal={handleGrabProductDeal}
           />
         )}
 

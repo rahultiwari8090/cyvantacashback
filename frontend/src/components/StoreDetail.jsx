@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Clock, Copy, Check, Info, ShieldAlert, Sparkles, ExternalLink } from 'lucide-react';
+import TopDeals from './TopDeals';
 
-export default function StoreDetail({ store, onBack, onAddNotification }) {
+export default function StoreDetail({ store, onBack, onAddNotification, deals, onGrabDeal }) {
   const [copiedCouponId, setCopiedCouponId] = useState(null);
   const [activatingDealId, setActivatingDealId] = useState(null);
 
@@ -161,6 +162,16 @@ export default function StoreDetail({ store, onBack, onAddNotification }) {
           </div>
         </div>
       </div>
+      
+      {/* Related Products/Deals */}
+      {deals && deals.length > 0 && (
+        <div style={{ marginTop: '40px' }}>
+          <h3 className="section-title" style={{ fontSize: '22px', marginBottom: '16px', paddingLeft: '16px' }}>
+            Top Products on {store.name}
+          </h3>
+          <TopDeals deals={deals} onGrabDeal={onGrabDeal} />
+        </div>
+      )}
     </div>
   );
 }
