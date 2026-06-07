@@ -1059,6 +1059,50 @@
   .admin-profile-email {
     display: none;
   }
+  
+  /* Additional Responsive Rules */
+  .admin-form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .admin-modal-content {
+    width: 95%;
+    margin: 10px;
+    max-height: calc(100vh - 20px);
+  }
+  
+  .admin-table-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .admin-table-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+  
+  .admin-search-input {
+    width: 100%;
+  }
+  .admin-search-input:focus {
+    width: 100%;
+  }
+  .admin-search-input-wrapper {
+    width: 100%;
+    margin-bottom: 10px;
+  }
+  
+  .admin-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-table th, .admin-table td {
+    padding: 12px 16px;
+    font-size: 13px;
+  }
 }
 
 /* Product Purchase Tracking Styles */

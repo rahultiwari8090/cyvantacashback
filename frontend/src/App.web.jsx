@@ -12,6 +12,7 @@ import Dashboard from './components/Dashboard';
 import AuthModal from './components/AuthModal';
 import Notification from './components/Notification';
 import Footer from './components/Footer';
+import CheckoutModal from './components/CheckoutModal';
 import AdminLogin from './components/AdminLogin';
 import AdminPanel from './components/AdminPanel';
 import MobileApp from './components/MobileApp';
@@ -51,7 +52,7 @@ const STORES_DATA = [
   {
     id: 'flipkart',
     name: 'Flipkart',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/7/7a/Flipkart_logo.svg',
+    logo: 'https://www.google.com/s2/favicons?sz=256&domain=flipkart.com',
     cashbackRate: '8.5%',
     description: 'Leading platform for mobile electronics, large home appliances, books, and home decors.',
     category: 'electronics',
@@ -64,7 +65,7 @@ const STORES_DATA = [
   {
     id: 'ajio',
     name: 'Ajio',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/c/c9/Ajio_Logo.svg',
+    logo: 'https://www.google.com/s2/favicons?sz=256&domain=ajio.com',
     cashbackRate: '15%',
     description: 'Sleek luxury fashion and handpicked streetwear brands from independent designers.',
     category: 'fashion',
@@ -77,7 +78,7 @@ const STORES_DATA = [
   {
     id: 'nykaa',
     name: 'Nykaa Beauty',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/5/5b/Nykaa_Logo.svg',
+    logo: 'https://www.google.com/s2/favicons?sz=256&domain=nykaa.com',
     cashbackRate: '7%',
     description: 'Premium cosmetic brands, organic lipsticks, haircare, and skin treatment formulas.',
     category: 'health',
@@ -90,7 +91,7 @@ const STORES_DATA = [
   {
     id: 'makemytrip',
     name: 'MakeMyTrip',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/f/fb/MakeMyTrip_Logo.svg',
+    logo: 'https://www.google.com/s2/favicons?sz=256&domain=makemytrip.com',
     cashbackRate: '9%',
     description: 'Book domestic flights, international vacations, hotels, and intercity cab packages.',
     category: 'travel',
@@ -130,7 +131,7 @@ const DEALS_DATA = [
     dealPrice: 549.99,
     cashbackEarned: 46.75, // 8.5% of deal price
     category: 'electronics',
-    storeLogo: 'https://upload.wikimedia.org/wikipedia/commons/7/7a/Flipkart_logo.svg',
+    storeLogo: 'https://www.google.com/s2/favicons?sz=256&domain=flipkart.com',
     image: 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w=300',
   },
   {
@@ -140,7 +141,7 @@ const DEALS_DATA = [
     dealPrice: 14.99,
     cashbackEarned: 1.05, // 7% of deal price
     category: 'health',
-    storeLogo: 'https://upload.wikimedia.org/wikipedia/commons/5/5b/Nykaa_Logo.svg',
+    storeLogo: 'https://www.google.com/s2/favicons?sz=256&domain=nykaa.com',
     image: 'https://images.unsplash.com/photo-1608248597481-496100c8c836?w=300',
   },
 ];
@@ -201,11 +202,11 @@ const mapProductsToDeals = (productsList) => {
 
 const STORES_INFO = [
   { platform: 'Amazon', logo: 'https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg', cashbackPercent: 10.0 },
-  { platform: 'Flipkart', logo: 'https://upload.wikimedia.org/wikipedia/commons/7/7a/Flipkart_logo.svg', cashbackPercent: 8.5 },
+  { platform: 'Flipkart', logo: 'https://www.google.com/s2/favicons?sz=256&domain=flipkart.com', cashbackPercent: 8.5 },
   { platform: 'Myntra', logo: 'https://upload.wikimedia.org/wikipedia/commons/b/bc/Myntra_Logo.png', cashbackPercent: 12.0 },
-  { platform: 'Ajio', logo: 'https://upload.wikimedia.org/wikipedia/commons/c/c9/Ajio_Logo.svg', cashbackPercent: 15.0 },
-  { platform: 'Nykaa Beauty', logo: 'https://upload.wikimedia.org/wikipedia/commons/5/5b/Nykaa_Logo.svg', cashbackPercent: 7.0 },
-  { platform: 'MakeMyTrip', logo: 'https://upload.wikimedia.org/wikipedia/commons/f/fb/MakeMyTrip_Logo.svg', cashbackPercent: 9.0 }
+  { platform: 'Ajio', logo: 'https://www.google.com/s2/favicons?sz=256&domain=ajio.com', cashbackPercent: 15.0 },
+  { platform: 'Nykaa Beauty', logo: 'https://www.google.com/s2/favicons?sz=256&domain=nykaa.com', cashbackPercent: 7.0 },
+  { platform: 'MakeMyTrip', logo: 'https://www.google.com/s2/favicons?sz=256&domain=makemytrip.com', cashbackPercent: 9.0 }
 ];
 
 const generatePriceComparisons = (deal) => {
@@ -249,6 +250,17 @@ const generatePriceComparisons = (deal) => {
 };
 
 export default function App() {
+  // Add Admitad ownership verification meta tag dynamically
+  useEffect(() => {
+    let meta = document.querySelector('meta[name="verify-admitad"]');
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.name = 'verify-admitad';
+      meta.content = 'fdcf363535';
+      document.head.appendChild(meta);
+    }
+  }, []);
+
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(() => {
     const session = sessionStorage.getItem('admin_session');
     return session === 'active';
@@ -297,6 +309,11 @@ export default function App() {
   const [withdrawRequests, setWithdrawRequests] = useState([]);
   const [products, setProducts] = useState([]);
   const [activeComparisonDeal, setActiveComparisonDeal] = useState(null);
+  const [sharingDealId, setSharingDealId] = useState(null);
+  
+  // Checkout states
+  const [checkoutDeal, setCheckoutDeal] = useState(null);
+  const [checkoutStore, setCheckoutStore] = useState(null);
 
   // Load initial tracked orders, withdrawal requests, and products to sync between views
   useEffect(() => {
@@ -433,10 +450,38 @@ export default function App() {
 
   const executeGrabDealTracked = (dealItem, storeItem) => {
     setActiveComparisonDeal(null);
-    addNotification(`Activating secure cashback tracker on ${storeItem.platform} for ${dealItem.title || dealItem.name}...`, 'success');
-    setTimeout(() => {
-      addNotification(`Redirecting to secure merchant cart... Save ₹${storeItem.cashbackEarned.toFixed(2)}!`, 'info');
-    }, 1800);
+    setSharingDealId(null);
+    
+    // Instead of redirecting immediately, open native checkout modal
+    setCheckoutDeal(dealItem);
+    setCheckoutStore(storeItem);
+  };
+
+  const finalizeCheckout = async (dealItem, storeItem) => {
+    setCheckoutDeal(null);
+    setCheckoutStore(null);
+    
+    // Create actual tracking entry in the database
+    if (currentUser) {
+      try {
+        const newTracking = await apiTracking.create({
+          userName: currentUser.name,
+          platform: storeItem.platform,
+          productName: dealItem.title || dealItem.name,
+          price: storeItem.dealPrice,
+          cashbackAmount: storeItem.cashbackEarned,
+          status: 'ordered',
+          orderDate: new Date().toISOString().split('T')[0],
+          returnWindowDays: 7
+        });
+        setTrackedOrders(prev => [newTracking, ...prev]);
+        addNotification(`Order placed successfully! ₹${storeItem.cashbackEarned.toFixed(2)} cashback is tracking.`, 'success');
+      } catch (err) {
+        console.error('Failed to register tracking:', err);
+      }
+    } else {
+      addNotification('Note: You bought as a Guest. Login next time to earn cashback!', 'info');
+    }
   };
 
   const handleLogin = (userProfile) => {
@@ -644,6 +689,16 @@ export default function App() {
         onLogin={handleLogin}
       />
 
+      {/* Checkout Modal (Meesho/Flipkart Style) */}
+      {checkoutDeal && checkoutStore && (
+        <CheckoutModal
+          deal={checkoutDeal}
+          store={checkoutStore}
+          onClose={() => { setCheckoutDeal(null); setCheckoutStore(null); }}
+          onPlaceOrder={finalizeCheckout}
+        />
+      )}
+
       {/* Price Comparison Modal */}
       {activeComparisonDeal && (
         <div style={{
@@ -793,32 +848,124 @@ export default function App() {
                     </div>
 
                     {/* Right Price & CTA */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginTop: '6px' }}>
                         <span style={{ fontSize: '11px', color: 'var(--text)' }}>Effective Price:</span>
                         <span style={{ fontSize: '18px', fontWeight: '800', color: isBestValue ? 'var(--secondary)' : 'var(--text-bold)' }}>
                           ₹{item.effectivePrice.toFixed(2)}
                         </span>
                       </div>
                       
-                      <button
-                        onClick={() => executeGrabDealTracked(activeComparisonDeal, item)}
-                        style={{
-                          backgroundColor: isBestValue ? 'var(--secondary)' : 'var(--primary)',
-                          color: '#fff',
-                          border: 'none',
-                          padding: '8px 14px',
-                          borderRadius: '6px',
-                          fontWeight: '600',
-                          fontSize: '13px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                        }}
-                      >
-                        Buy & Earn
-                      </button>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', position: 'relative' }}>
+                        <button
+                          onClick={() => executeGrabDealTracked(activeComparisonDeal, item)}
+                          style={{
+                            backgroundColor: isBestValue ? 'var(--secondary)' : 'var(--primary)',
+                            color: '#fff',
+                            border: 'none',
+                            padding: '8px 14px',
+                            borderRadius: '6px',
+                            fontWeight: '600',
+                            fontSize: '13px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '100px'
+                          }}
+                        >
+                          Buy & Earn
+                        </button>
+                        
+                        <button
+                          onClick={() => setSharingDealId(sharingDealId === item.platform ? null : item.platform)}
+                          style={{
+                            backgroundColor: 'transparent',
+                            color: 'var(--text-bold)',
+                            border: '1px solid var(--border)',
+                            padding: '6px 14px',
+                            borderRadius: '6px',
+                            fontWeight: '600',
+                            fontSize: '11px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '100px',
+                            gap: '4px'
+                          }}
+                        >
+                          🔗 Refer / Share
+                        </button>
+
+                        {/* Custom Social Share Popover */}
+                        {sharingDealId === item.platform && (
+                          <div style={{
+                            position: 'absolute',
+                            top: '100%',
+                            right: 0,
+                            marginTop: '10px',
+                            backgroundColor: 'var(--card-bg)',
+                            border: '1px solid var(--border)',
+                            borderRadius: '12px',
+                            boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+                            padding: '16px',
+                            zIndex: 10,
+                            width: '220px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '12px',
+                            animation: 'fadeIn 0.2s ease',
+                            transformOrigin: 'top right'
+                          }}>
+                            <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text)', letterSpacing: '0.5px' }}>SHARE DEAL VIA</span>
+                            
+                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
+                              {/* WhatsApp */}
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                                <button onClick={() => addNotification('Opening WhatsApp...', 'info')} style={{ background: '#25D366', color: '#fff', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 4px 10px rgba(37, 211, 102, 0.3)', transition: 'transform 0.2s' }} onMouseOver={e => e.currentTarget.style.transform='scale(1.05)'} onMouseOut={e => e.currentTarget.style.transform='scale(1)'}>
+                                  <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+                                </button>
+                                <span style={{ fontSize: '9px', color: 'var(--text-bold)', fontWeight: '600' }}>WhatsApp</span>
+                              </div>
+
+                              {/* Facebook */}
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                                <button onClick={() => addNotification('Opening Facebook...', 'info')} style={{ background: '#1877F2', color: '#fff', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 4px 10px rgba(24, 119, 242, 0.3)', transition: 'transform 0.2s' }} onMouseOver={e => e.currentTarget.style.transform='scale(1.05)'} onMouseOut={e => e.currentTarget.style.transform='scale(1)'}>
+                                  <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                                </button>
+                                <span style={{ fontSize: '9px', color: 'var(--text-bold)', fontWeight: '600' }}>Facebook</span>
+                              </div>
+
+                              {/* Telegram */}
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                                <button onClick={() => addNotification('Opening Telegram...', 'info')} style={{ background: '#0088cc', color: '#fff', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 4px 10px rgba(0, 136, 204, 0.3)', transition: 'transform 0.2s' }} onMouseOver={e => e.currentTarget.style.transform='scale(1.05)'} onMouseOut={e => e.currentTarget.style.transform='scale(1)'}>
+                                  <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M11.944 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0a12 12 0 00-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 01.171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.892-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+                                </button>
+                                <span style={{ fontSize: '9px', color: 'var(--text-bold)', fontWeight: '600' }}>Telegram</span>
+                              </div>
+                            </div>
+                            
+                            <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '4px 0' }} />
+
+                            <button 
+                              onClick={() => {
+                                navigator.clipboard.writeText(`Get ₹${item.cashbackEarned.toFixed(2)} cashback on ${item.platform} via Cyvanta! Link: https://cyvanta.cashback/deal/${activeComparisonDeal.id}`);
+                                setSharingDealId(null);
+                                addNotification('Deal link copied to clipboard!', 'success');
+                              }}
+                              style={{
+                                background: 'var(--bg)', border: '1px solid var(--border)', padding: '10px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', color: 'var(--text-bold)', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'background 0.2s'
+                              }}
+                              onMouseOver={e => e.currentTarget.style.background='var(--border)'} 
+                              onMouseOut={e => e.currentTarget.style.background='var(--bg)'}
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                              Copy Referral Link
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );

@@ -20,7 +20,7 @@ const HERO_SLIDES = [
     cta: 'Shop Electronics Now',
     storeName: 'Flipkart Electronics',
     cashbackRate: '8.5%',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/7/7a/Flipkart_logo.svg',
+    logo: 'https://www.google.com/s2/favicons?sz=256&domain=flipkart.com',
   },
   {
     id: 3,
@@ -30,7 +30,7 @@ const HERO_SLIDES = [
     cta: 'Invite Friends Now',
     storeName: 'Ajio Deals',
     cashbackRate: '15%',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/c/c9/Ajio_Logo.svg',
+    logo: 'https://www.google.com/s2/favicons?sz=256&domain=ajio.com',
   },
 ];
 

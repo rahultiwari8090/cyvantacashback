@@ -182,6 +182,7 @@ export const apiUsers = {
     if (USE_MOCK) return Promise.resolve([...mockUsers]);
     return request('/users');
   },
+<<<<<<< Updated upstream
   login: (email, password) => {
     if (USE_MOCK) {
       const user = mockUsers.find(u => u.email === email);
@@ -246,6 +247,13 @@ export const apiUsers = {
     return request('/users/register', {
       method: 'POST',
       body: JSON.stringify({ name, email, password, phone, referredBy }),
+=======
+  login: (userProfile) => {
+    if (USE_MOCK) return Promise.resolve(userProfile);
+    return request('/users/login', {
+      method: 'POST',
+      body: JSON.stringify(userProfile),
+>>>>>>> Stashed changes
     });
   },
   updateStatus: (id, status) => {
