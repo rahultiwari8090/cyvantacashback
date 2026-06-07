@@ -5,18 +5,39 @@ import { AdminTable } from './AdminComponents';
 export default function AdminReferrals({ users }) {
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Derive mock metrics
-  const totalReferrals = 182;
-  const totalBonus = 455.00;
-  const topReferrer = "Rahul Sharma (42 Invites)";
+  // Dynamic metrics calculation
+  const referralCounts = {};
+  let totalReferrals = 0;
 
-  const leaderboard = [
-    { rank: 1, user: 'Rahul Sharma', earnings: 540.00, invites: 42 },
-    { rank: 2, user: 'Sneha Patel', earnings: 320.00, invites: 25 },
-    { rank: 3, user: 'Amit Verma', earnings: 210.00, invites: 18 },
-    { rank: 4, user: 'Pooja Hegde', earnings: 180.00, invites: 15 },
-    { rank: 5, user: 'Rohan Joshi', earnings: 125.00, invites: 10 },
-  ];
+  users.forEach((u) => {
+    if (u.referredBy && u.referredBy !== 'None') {
+      totalReferrals++;
+      referralCounts[u.referredBy] = (referralCounts[u.referredBy] || 0) + 1;
+    }
+  });
+
+  // Build leaderboard
+  let leaderboardMap = [];
+  users.forEach((u) => {
+    const invites = referralCounts[u.referralCode] || 0;
+    if (invites > 0) {
+      leaderboardMap.push({
+        user: u.name,
+        invites: invites,
+        earnings: invites * 50.00 // Dynamic bonus estimation
+      });
+    }
+  });
+
+  // Sort and rank
+  leaderboardMap.sort((a, b) => b.invites - a.invites);
+  const leaderboard = leaderboardMap.slice(0, 10).map((item, index) => ({
+    rank: index + 1,
+    ...item
+  }));
+
+  const totalBonus = leaderboardMap.reduce((sum, item) => sum + item.earnings, 0);
+  const topReferrer = leaderboard.length > 0 ? `${leaderboard[0].user} (${leaderboard[0].invites} Invites)` : "No referrers yet";
 
   const headers = ['Rank', 'User / Referrer', 'Invites Settled', 'Total Bonus Earnings'];
 

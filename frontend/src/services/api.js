@@ -42,6 +42,15 @@ let mockProducts = [
   { id: '4', name: 'Cetaphil Daily Facial Cleanser', platform: 'Nykaa Beauty', price: 14.99, cashbackValue: 7.0, image: 'https://images.unsplash.com/photo-1608248597481-496100c8c836?w=300', status: 'inactive' },
 ];
 
+let mockCategories = [
+  { id: 'c1', name: 'Electronics', icon: 'Smartphone', status: 'active', created: '2026-05-10' },
+  { id: 'c2', name: 'Fashion', icon: 'Shirt', status: 'active', created: '2026-05-11' },
+];
+
+let mockDeals = [
+  { id: 'd1', name: 'Amazon Electronics Flash Deal', image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300', offerText: 'Up to 50% Off', link: 'https://amazon.to/abcde', cashback: '10%', status: 'active' },
+];
+
 let mockCashbackList = [
   { id: 'cb1', userName: 'Rahul Sharma', productName: 'boAt Rockerz 450 Bluetooth Headphones', amount: 3.00, status: 'approved', date: '2026-05-28' },
   { id: 'cb2', userName: 'Sneha Patel', productName: 'Adidas UltraBoost 22 Running Shoes', amount: 13.20, status: 'pending', date: '2026-05-30' },
@@ -776,6 +785,82 @@ export const apiSharedCommissions = {
     return request(`/shared-commissions/${id}/status`, {
       method: 'PUT',
       body: JSON.stringify({ status, amount }),
+    });
+  }
+};
+
+// 11. Categories APIs
+export const apiCategories = {
+  getAll: () => {
+    if (USE_MOCK) return Promise.resolve([...mockCategories]);
+    return request('/categories');
+  },
+  create: (category) => {
+    if (USE_MOCK) {
+      const newCategory = { ...category, id: 'c' + Date.now(), created: new Date().toISOString().split('T')[0] };
+      mockCategories.push(newCategory);
+      return Promise.resolve(newCategory);
+    }
+    return request('/categories', {
+      method: 'POST',
+      body: JSON.stringify(category),
+    });
+  },
+  update: (category) => {
+    if (USE_MOCK) {
+      mockCategories = mockCategories.map(c => c.id === category.id ? category : c);
+      return Promise.resolve(category);
+    }
+    return request(`/categories/${category.id}`, {
+      method: 'PUT',
+      body: JSON.stringify(category),
+    });
+  },
+  delete: (id) => {
+    if (USE_MOCK) {
+      mockCategories = mockCategories.filter(c => c.id !== id);
+      return Promise.resolve({ success: true });
+    }
+    return request(`/categories/${id}`, {
+      method: 'DELETE',
+    });
+  }
+};
+
+// 12. Deals APIs
+export const apiDeals = {
+  getAll: () => {
+    if (USE_MOCK) return Promise.resolve([...mockDeals]);
+    return request('/deals');
+  },
+  create: (deal) => {
+    if (USE_MOCK) {
+      const newDeal = { ...deal, id: 'd' + Date.now() };
+      mockDeals.push(newDeal);
+      return Promise.resolve(newDeal);
+    }
+    return request('/deals', {
+      method: 'POST',
+      body: JSON.stringify(deal),
+    });
+  },
+  update: (deal) => {
+    if (USE_MOCK) {
+      mockDeals = mockDeals.map(d => d.id === deal.id ? deal : d);
+      return Promise.resolve(deal);
+    }
+    return request(`/deals/${deal.id}`, {
+      method: 'PUT',
+      body: JSON.stringify(deal),
+    });
+  },
+  delete: (id) => {
+    if (USE_MOCK) {
+      mockDeals = mockDeals.filter(d => d.id !== id);
+      return Promise.resolve({ success: true });
+    }
+    return request(`/deals/${id}`, {
+      method: 'DELETE',
     });
   }
 };

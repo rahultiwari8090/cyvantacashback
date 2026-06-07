@@ -30,6 +30,8 @@ import AdminReferrals from './AdminReferrals';
 import AdminSettings from './AdminSettings';
 import AdminTracking from './AdminTracking';
 import AdminSharedCommissions from './AdminSharedCommissions';
+import AdminCategories from './AdminCategories';
+import AdminDeals from './AdminDeals';
 import {
   apiUsers,
   apiProducts,
@@ -40,7 +42,9 @@ import {
   apiFinance,
   apiSettings,
   apiSharedLinks,
-  apiSharedCommissions
+  apiSharedCommissions,
+  apiCategories,
+  apiDeals
 } from '../services/api';
 
 export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, onAddNotification }) {
@@ -56,6 +60,8 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
     if (hash === '#/admin/settings') return 'settings';
     if (hash === '#/admin/tracking') return 'tracking';
     if (hash === '#/admin/shared-commissions') return 'shared-commissions';
+    if (hash === '#/admin/categories') return 'categories';
+    if (hash === '#/admin/deals') return 'deals';
 
     const path = window.location.pathname;
     if (path === '/admin/users') return 'users';
@@ -65,9 +71,11 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
     if (path === '/admin/click-logs') return 'click-logs';
     if (path === '/admin/conversions') return 'conversions';
     if (path === '/admin/referrals') return 'referrals';
-    if (path === '/admin/settings') return 'settings';
-    if (path === '/admin/tracking') return 'tracking';
-    if (path === '/admin/shared-commissions') return 'shared-commissions';
+    if (hash === '#/admin/settings') return 'settings';
+    if (hash === '#/admin/tracking') return 'tracking';
+    if (hash === '#/admin/shared-commissions') return 'shared-commissions';
+    if (hash === '#/admin/categories') return 'categories';
+    if (hash === '#/admin/deals') return 'deals';
     return 'dashboard';
   };
 
@@ -114,6 +122,8 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
   const [conversions, setConversions] = useState([]);
   const [sharedLinks, setSharedLinks] = useState([]);
   const [sharedCommissions, setSharedCommissions] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [deals, setDeals] = useState([]);
   const [finance, setFinance] = useState({
     totalRevenue: 0.00,
     totalCashbackPaid: 0.00,
@@ -138,7 +148,9 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
           financeData,
           settingsData,
           sharedLinksData,
-          sharedCommissionsData
+          sharedCommissionsData,
+          categoriesData,
+          dealsData
         ] = await Promise.all([
           apiUsers.getAll(),
           apiProducts.getAll(),
@@ -150,7 +162,9 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
           apiFinance.getData(),
           apiSettings.get(),
           apiSharedLinks.getAll(),
-          apiSharedCommissions.getAll()
+          apiSharedCommissions.getAll(),
+          apiCategories.getAll(),
+          apiDeals.getAll()
         ]);
 
         setUsers(usersData);
@@ -164,6 +178,8 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
         setGlobalSettings(settingsData);
         setSharedLinks(sharedLinksData);
         setSharedCommissions(sharedCommissionsData);
+        setCategories(categoriesData);
+        setDeals(dealsData);
       } catch (err) {
         console.error('Failed to load Spring Boot dashboard APIs:', err);
         onAddNotification('Failed to sync data with backend.', 'error');
@@ -215,6 +231,8 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
     { id: 'conversions', label: 'Conversions', icon: CheckSquare },
     { id: 'shared-commissions', label: 'Shared Commissions', icon: Share2 },
     { id: 'referrals', label: 'Referrals', icon: Share2 },
+    { id: 'categories', label: 'Categories', icon: ShoppingBag },
+    { id: 'deals', label: 'Deals', icon: Gift },
     { id: 'settings', label: 'Settings', icon: SettingsIcon },
   ];
 
@@ -487,6 +505,61 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
     }
   };
 
+  const addCategory = async (cat) => {
+    try {
+      const newCat = await apiCategories.create(cat);
+      setCategories((prev) => [...prev, newCat]);
+      onAddNotification('Category added successfully.', 'success');
+    } catch (err) {
+      console.error(err);
+      onAddNotification('Failed to add category.', 'error');
+    }
+  };
+
+  const editCategory = async (cat) => {
+    try {
+      const updatedCat = await apiCategories.update(cat);
+      setCategories((prev) => prev.map((c) => (c.id === updatedCat.id ? updatedCat : c)));
+      onAddNotification('Category updated successfully.', 'success');
+    } catch (err) {
+      console.error(err);
+      onAddNotification('Failed to update category.', 'error');
+    }
+  };
+
+  const deleteCategory = async (id) => {
+    try {
+      await apiCategories.delete(id);
+      setCategories((prev) => prev.filter((c) => c.id !== id));
+      onAddNotification('Category deleted successfully.', 'success');
+    } catch (err) {
+      console.error(err);
+      onAddNotification('Failed to delete category.', 'error');
+    }
+  };
+
+  const addDeal = async (deal) => {
+    try {
+      const newDeal = await apiDeals.create(deal);
+      setDeals((prev) => [...prev, newDeal]);
+      onAddNotification('Deal added successfully.', 'success');
+    } catch (err) {
+      console.error(err);
+      onAddNotification('Failed to add deal.', 'error');
+    }
+  };
+
+  const deleteDeal = async (id) => {
+    try {
+      await apiDeals.delete(id);
+      setDeals((prev) => prev.filter((d) => d.id !== id));
+      onAddNotification('Deal deleted successfully.', 'success');
+    } catch (err) {
+      console.error(err);
+      onAddNotification('Failed to delete deal.', 'error');
+    }
+  };
+
   // Render active route panel
   const renderContent = () => {
     switch (activeTab) {
@@ -573,6 +646,23 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
             onRejectCommission={rejectSharedCommission}
             onAdjustCommission={adjustSharedCommission}
             onAddNotification={onAddNotification}
+          />
+        );
+      case 'categories':
+        return (
+          <AdminCategories
+            categories={categories}
+            onAddCategory={addCategory}
+            onEditCategory={editCategory}
+            onDeleteCategory={deleteCategory}
+          />
+        );
+      case 'deals':
+        return (
+          <AdminDeals
+            deals={deals}
+            onAddDeal={addDeal}
+            onDeleteDeal={deleteDeal}
           />
         );
       case 'settings':
