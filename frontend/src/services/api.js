@@ -188,7 +188,10 @@ async function request(url, options = {}) {
     }
     throw new Error(errorMessage);
   }
-  return response.json();
+  
+  if (response.status === 204) return null;
+  const text = await response.text();
+  return text ? JSON.parse(text) : null;
 }
 
 // --- API ACTIONS DEFINITIONS ---
