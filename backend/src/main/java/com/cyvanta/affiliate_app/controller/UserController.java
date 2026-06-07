@@ -160,6 +160,12 @@ public ResponseEntity<?> loginAdmin(@RequestBody Map<String, String> body) {
                     .body(Map.of("error", "Invalid credentials"));
         }
 
+        if (user.getRole() != User.Role.ADMIN) {
+            System.out.println("NOT AN ADMIN");
+            return ResponseEntity.status(403)
+                    .body(Map.of("error", "Access denied. Admin role required."));
+        }
+
         System.out.println("PASSWORD MATCHED");
 
         return ResponseEntity.ok(Map.of(

@@ -169,7 +169,15 @@ async function request(url, options = {}) {
   const response = await fetch(`${BASE_URL}${url}`, config);
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(errorText || `API error: ${response.status}`);
+    let errorMessage = errorText || `API error: ${response.status}`;
+    try {
+      const errObj = JSON.parse(errorText);
+      if (errObj.error) errorMessage = errObj.error;
+      else if (errObj.message) errorMessage = errObj.message;
+    } catch (e) {
+      // Ignore parse error, use raw text
+    }
+    throw new Error(errorMessage);
   }
   return response.json();
 }

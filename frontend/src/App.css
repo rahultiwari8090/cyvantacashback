@@ -1759,6 +1759,13 @@
   .how-steps-container {
     grid-template-columns: 1fr;
   }
+  .wallet-banner {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .referral-card {
+    grid-template-columns: 1fr;
+  }
   .footer-grid {
     grid-template-columns: repeat(2, 1fr);
   }
