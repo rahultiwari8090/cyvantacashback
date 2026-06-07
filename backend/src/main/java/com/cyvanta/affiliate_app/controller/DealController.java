@@ -34,6 +34,7 @@ public class DealController {
             deal.setLink(dealDetails.getLink());
             deal.setCashback(dealDetails.getCashback());
             deal.setStatus(dealDetails.getStatus());
+            deal.setComparisons(dealDetails.getComparisons());
             return ResponseEntity.ok(dealRepository.save(deal));
         }).orElse(ResponseEntity.notFound().build());
     }

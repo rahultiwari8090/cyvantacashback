@@ -8,6 +8,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -29,4 +30,17 @@ public class Deal {
     
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    private List<DealComparison> comparisons;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class DealComparison {
+        private String platform;
+        private Double listedPrice;
+        private Double cashbackPercent;
+        private String link;
+    }
 }

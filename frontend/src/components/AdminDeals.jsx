@@ -12,7 +12,22 @@ export default function AdminDeals({ deals, onAddDeal, onDeleteDeal }) {
   const [dealOffer, setDealOffer] = useState('');
   const [dealUrl, setDealUrl] = useState('');
   const [dealCashback, setDealCashback] = useState('');
+  const [comparisons, setComparisons] = useState([]);
   const [formError, setFormError] = useState('');
+
+  const handleAddComparison = () => {
+    setComparisons([...comparisons, { platform: 'Amazon', listedPrice: '', cashbackPercent: '', link: '' }]);
+  };
+
+  const handleComparisonChange = (index, field, value) => {
+    const newComps = [...comparisons];
+    newComps[index][field] = value;
+    setComparisons(newComps);
+  };
+
+  const handleRemoveComparison = (index) => {
+    setComparisons(comparisons.filter((_, i) => i !== index));
+  };
 
   const openAddModal = () => {
     setDealName('');
@@ -20,6 +35,7 @@ export default function AdminDeals({ deals, onAddDeal, onDeleteDeal }) {
     setDealOffer('');
     setDealUrl('');
     setDealCashback('');
+    setComparisons([]);
     setFormError('');
     setIsModalOpen(true);
   };
@@ -39,6 +55,11 @@ export default function AdminDeals({ deals, onAddDeal, onDeleteDeal }) {
       offerText: dealOffer,
       link: dealUrl || 'https://google.com',
       cashback: dealCashback,
+      comparisons: comparisons.map(c => ({
+        ...c,
+        listedPrice: parseFloat(c.listedPrice) || 0,
+        cashbackPercent: parseFloat(c.cashbackPercent) || 0
+      }))
     });
 
     setIsModalOpen(false);
@@ -164,6 +185,64 @@ export default function AdminDeals({ deals, onAddDeal, onDeleteDeal }) {
             value={dealImg}
             onChange={(e) => setDealImg(e.target.value)}
           />
+
+          <div style={{ marginTop: '20px', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <h4 style={{ fontSize: '14px', margin: 0 }}>Price Comparisons</h4>
+              <button type="button" className="admin-btn admin-btn-secondary" onClick={handleAddComparison} style={{ padding: '4px 8px', fontSize: '12px' }}>
+                <Plus size={12} /> Add Store Variant
+              </button>
+            </div>
+            {comparisons.length === 0 ? (
+              <p style={{ fontSize: '12px', color: 'var(--text)' }}>No price comparisons added.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {comparisons.map((comp, idx) => (
+                  <div key={idx} style={{ padding: '12px', backgroundColor: 'var(--bg)', borderRadius: '6px', border: '1px solid var(--border)', position: 'relative' }}>
+                    <button type="button" onClick={() => handleRemoveComparison(idx)} style={{ position: 'absolute', top: '8px', right: '8px', background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}>
+                      <Trash2 size={14} />
+                    </button>
+                    <div className="admin-form-row">
+                      <AdminFormInput
+                        label="Platform"
+                        id={`comp-plat-${idx}`}
+                        type="text"
+                        placeholder="Amazon"
+                        value={comp.platform}
+                        onChange={(e) => handleComparisonChange(idx, 'platform', e.target.value)}
+                      />
+                      <AdminFormInput
+                        label="Listed Price"
+                        id={`comp-price-${idx}`}
+                        type="number"
+                        placeholder="59.99"
+                        value={comp.listedPrice}
+                        onChange={(e) => handleComparisonChange(idx, 'listedPrice', e.target.value)}
+                      />
+                    </div>
+                    <div className="admin-form-row">
+                      <AdminFormInput
+                        label="Cashback (%)"
+                        id={`comp-cb-${idx}`}
+                        type="number"
+                        placeholder="10.0"
+                        value={comp.cashbackPercent}
+                        onChange={(e) => handleComparisonChange(idx, 'cashbackPercent', e.target.value)}
+                      />
+                      <AdminFormInput
+                        label="Store Link"
+                        id={`comp-link-${idx}`}
+                        type="url"
+                        placeholder="https://..."
+                        value={comp.link}
+                        onChange={(e) => handleComparisonChange(idx, 'link', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </form>
       </AdminModal>
     </div>

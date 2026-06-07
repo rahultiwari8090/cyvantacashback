@@ -15,7 +15,7 @@ import Footer from './components/Footer';
 import AdminLogin from './components/AdminLogin';
 import AdminPanel from './components/AdminPanel';
 import MobileApp from './components/MobileApp';
-import { apiTracking, apiWithdrawals, apiProducts } from './services/api';
+import { apiTracking, apiWithdrawals, apiProducts, apiDeals, apiSharedLinks } from './services/api';
 import './index.css';
 import './App.css';
 
@@ -154,99 +154,7 @@ const STORES_LOGO_MAP = {
   'MakeMyTrip': 'https://upload.wikimedia.org/wikipedia/commons/f/fb/MakeMyTrip_Logo.svg'
 };
 
-const mapProductsToDeals = (productsList) => {
-  if (!productsList || productsList.length === 0) {
-    return DEALS_DATA;
-  }
-  const activeProducts = productsList.filter(p => p.status === 'active');
-  if (activeProducts.length === 0) {
-    return DEALS_DATA;
-  }
-  return activeProducts.map(p => {
-    const platform = p.platform || 'Amazon';
-    const storeLogo = STORES_LOGO_MAP[platform] || STORES_LOGO_MAP['Amazon'];
-    
-    let category = 'electronics';
-    const lowerName = p.name.toLowerCase();
-    const lowerPlatform = platform.toLowerCase();
-    
-    if (lowerPlatform === 'myntra' || lowerPlatform === 'ajio' || lowerName.includes('shoes') || lowerName.includes('clothing') || lowerName.includes('boots') || lowerName.includes('wear')) {
-      category = 'fashion';
-    } else if (lowerPlatform === 'nykaa beauty' || lowerName.includes('cleanser') || lowerName.includes('cream') || lowerName.includes('facial') || lowerName.includes('beauty')) {
-      category = 'health';
-    } else if (lowerPlatform === 'makemytrip' || lowerName.includes('flight') || lowerName.includes('hotel') || lowerName.includes('trip')) {
-      category = 'travel';
-    } else if (lowerName.includes('headphones') || lowerName.includes('laptop') || lowerName.includes('phone') || lowerName.includes('tv') || lowerName.includes('speaker')) {
-      category = 'electronics';
-    } else if (lowerPlatform === 'amazon') {
-      category = 'grocery';
-    }
-    
-    const dealPrice = p.price;
-    const retailPrice = parseFloat((dealPrice * 1.5).toFixed(2));
-    const cashbackEarned = parseFloat(((dealPrice * p.cashbackValue) / 100).toFixed(2));
-    
-    return {
-      id: p.id,
-      title: p.name,
-      retailPrice,
-      dealPrice,
-      cashbackEarned,
-      category,
-      storeLogo,
-      image: p.image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300'
-    };
-  });
-};
-
-const STORES_INFO = [
-  { platform: 'Amazon', logo: 'https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg', cashbackPercent: 10.0 },
-  { platform: 'Flipkart', logo: 'https://upload.wikimedia.org/wikipedia/commons/7/7a/Flipkart_logo.svg', cashbackPercent: 8.5 },
-  { platform: 'Myntra', logo: 'https://upload.wikimedia.org/wikipedia/commons/b/bc/Myntra_Logo.png', cashbackPercent: 12.0 },
-  { platform: 'Ajio', logo: 'https://upload.wikimedia.org/wikipedia/commons/c/c9/Ajio_Logo.svg', cashbackPercent: 15.0 },
-  { platform: 'Nykaa Beauty', logo: 'https://upload.wikimedia.org/wikipedia/commons/5/5b/Nykaa_Logo.svg', cashbackPercent: 7.0 },
-  { platform: 'MakeMyTrip', logo: 'https://upload.wikimedia.org/wikipedia/commons/f/fb/MakeMyTrip_Logo.svg', cashbackPercent: 9.0 }
-];
-
-const generatePriceComparisons = (deal) => {
-  if (!deal) return [];
-  
-  let platforms = ['Amazon', 'Flipkart'];
-  if (deal.category === 'fashion') {
-    platforms = ['Myntra', 'Ajio', 'Flipkart', 'Amazon'];
-  } else if (deal.category === 'health') {
-    platforms = ['Nykaa Beauty', 'Amazon', 'Flipkart'];
-  } else if (deal.category === 'travel') {
-    platforms = ['MakeMyTrip', 'Amazon'];
-  } else {
-    platforms = ['Amazon', 'Flipkart', 'Myntra', 'Ajio'];
-  }
-
-  return platforms.map(platformName => {
-    const store = STORES_INFO.find(s => s.platform === platformName) || STORES_INFO[0];
-    
-    let dealPrice = deal.dealPrice;
-    if (platformName !== deal.platform) {
-      const hash = platformName.split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
-      const percentDiff = ((hash % 21) - 10) / 100; // -10% to +10%
-      dealPrice = parseFloat((deal.dealPrice * (1 + percentDiff)).toFixed(2));
-    }
-    
-    const cashbackValue = store.cashbackPercent;
-    const cashbackEarned = parseFloat(((dealPrice * cashbackValue) / 100).toFixed(2));
-    const effectivePrice = parseFloat((dealPrice - cashbackEarned).toFixed(2));
-    
-    return {
-      platform: platformName,
-      logo: store.logo,
-      dealPrice,
-      cashbackPercent: cashbackValue,
-      cashbackEarned,
-      effectivePrice,
-      isOriginal: platformName === deal.platform
-    };
-  }).sort((a, b) => a.effectivePrice - b.effectivePrice);
-};
+// Removed hardcoded price comparisons as they now come from DB.
 
 export default function App() {
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(() => {
@@ -296,20 +204,23 @@ export default function App() {
   const [trackedOrders, setTrackedOrders] = useState([]);
   const [withdrawRequests, setWithdrawRequests] = useState([]);
   const [products, setProducts] = useState([]);
+  const [dealsData, setDealsData] = useState([]);
   const [activeComparisonDeal, setActiveComparisonDeal] = useState(null);
 
   // Load initial tracked orders, withdrawal requests, and products to sync between views
   useEffect(() => {
     const syncAppStates = async () => {
       try {
-        const [tracking, withdrawals, productsData] = await Promise.all([
+        const [tracking, withdrawals, productsData, dbDeals] = await Promise.all([
           apiTracking.getAll(),
           apiWithdrawals.getAll(),
-          apiProducts.getAll()
+          apiProducts.getAll(),
+          apiDeals.getAll()
         ]);
         setTrackedOrders(tracking);
         setWithdrawRequests(withdrawals);
         setProducts(productsData);
+        setDealsData(dbDeals);
       } catch (err) {
         console.error('Failed to sync states:', err);
       }
@@ -436,7 +347,30 @@ export default function App() {
     addNotification(`Activating secure cashback tracker on ${storeItem.platform} for ${dealItem.title || dealItem.name}...`, 'success');
     setTimeout(() => {
       addNotification(`Redirecting to secure merchant cart... Save ₹${storeItem.cashbackEarned.toFixed(2)}!`, 'info');
+      if (storeItem.link) {
+        window.open(storeItem.link, '_blank');
+      }
     }, 1800);
+  };
+
+  const handleReferLink = async (deal, item) => {
+    if (!currentUser) {
+      addNotification('Please login to generate a referral link', 'error');
+      setIsAuthModalOpen(true);
+      return;
+    }
+    
+    try {
+      await apiSharedLinks.create({
+        referrerId: currentUser.id,
+        productId: deal.id,
+        platform: item.platform,
+        originalUrl: item.link || 'https://google.com'
+      });
+      addNotification(`Referral link for ${item.platform} created! Ready to share.`, 'success');
+    } catch (err) {
+      addNotification('Failed to generate referral link.', 'error');
+    }
   };
 
   const handleLogin = (userProfile) => {
@@ -457,8 +391,87 @@ export default function App() {
 
   const selectedStore = STORES_DATA.find((s) => s.id === selectedStoreId);
 
-  // Map and cache dynamic product deals
-  const dynamicDeals = React.useMemo(() => mapProductsToDeals(products), [products]);
+  // Format deals for display
+  const dynamicDeals = React.useMemo(() => {
+    let combinedDeals = [];
+    
+    if (dealsData && dealsData.length > 0) {
+      const explicitDeals = dealsData.filter(d => d.status === 'active').map(d => {
+        let lowestListedPrice = 0;
+        let highestCashbackPercent = 0;
+        
+        if (d.comparisons && d.comparisons.length > 0) {
+          lowestListedPrice = Math.min(...d.comparisons.map(c => c.listedPrice || 0));
+          highestCashbackPercent = Math.max(...d.comparisons.map(c => c.cashbackPercent || 0));
+        }
+        
+        const dealPrice = lowestListedPrice > 0 ? lowestListedPrice : 0;
+        const retailPrice = dealPrice > 0 ? parseFloat((dealPrice * 1.5).toFixed(2)) : 0;
+        const cashbackEarned = dealPrice > 0 ? parseFloat(((dealPrice * highestCashbackPercent) / 100).toFixed(2)) : 0;
+        
+        return {
+          ...d,
+          title: d.name,
+          category: 'electronics', // Default category for deals
+          storeLogo: STORES_LOGO_MAP['Amazon'],
+          retailPrice,
+          dealPrice,
+          cashbackEarned,
+        };
+      });
+      combinedDeals = [...combinedDeals, ...explicitDeals];
+    }
+
+    if (products && products.length > 0) {
+      const productDeals = products.filter(p => p.status === 'active').map(p => {
+        const platform = p.platform || 'Amazon';
+        const storeLogo = STORES_LOGO_MAP[platform] || STORES_LOGO_MAP['Amazon'];
+        
+        let category = 'electronics';
+        const lowerName = p.name.toLowerCase();
+        const lowerPlatform = platform.toLowerCase();
+        
+        if (lowerPlatform === 'myntra' || lowerPlatform === 'ajio' || lowerName.includes('shoes') || lowerName.includes('clothing') || lowerName.includes('boots') || lowerName.includes('wear')) {
+          category = 'fashion';
+        } else if (lowerPlatform === 'nykaa beauty' || lowerName.includes('cleanser') || lowerName.includes('cream') || lowerName.includes('facial') || lowerName.includes('beauty')) {
+          category = 'health';
+        } else if (lowerPlatform === 'makemytrip' || lowerName.includes('flight') || lowerName.includes('hotel') || lowerName.includes('trip')) {
+          category = 'travel';
+        } else if (lowerName.includes('headphones') || lowerName.includes('laptop') || lowerName.includes('phone') || lowerName.includes('tv') || lowerName.includes('speaker')) {
+          category = 'electronics';
+        } else if (lowerPlatform === 'amazon') {
+          category = 'grocery';
+        }
+        
+        const dealPrice = p.price;
+        const retailPrice = parseFloat((dealPrice * 1.5).toFixed(2));
+        const cashbackEarned = parseFloat(((dealPrice * p.cashbackValue) / 100).toFixed(2));
+        
+        const comparison = {
+          platform: platform,
+          listedPrice: dealPrice,
+          cashbackPercent: p.cashbackValue,
+          link: p.affiliateUrl || 'https://google.com'
+        };
+        
+        return {
+          id: p.id,
+          title: p.name,
+          name: p.name,
+          retailPrice,
+          dealPrice,
+          cashbackEarned,
+          category,
+          storeLogo,
+          image: p.image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300',
+          comparisons: [comparison]
+        };
+      });
+      combinedDeals = [...combinedDeals, ...productDeals];
+    }
+
+    return combinedDeals;
+  }, [dealsData, products]);
 
   if (currentView === 'admin-login') {
     return (
@@ -735,11 +748,31 @@ export default function App() {
               flexDirection: 'column',
               gap: '12px'
             }}>
-              {generatePriceComparisons(activeComparisonDeal).map((item, index) => {
+              {(!activeComparisonDeal.comparisons || activeComparisonDeal.comparisons.length === 0) ? (
+                <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text)' }}>
+                  No active comparisons available for this deal.
+                </div>
+              ) : [...activeComparisonDeal.comparisons]
+                .map(comp => {
+                  const dealPrice = comp.listedPrice || 0;
+                  const cashbackEarned = parseFloat(((dealPrice * (comp.cashbackPercent || 0)) / 100).toFixed(2));
+                  const effectivePrice = dealPrice - cashbackEarned;
+                  return {
+                    platform: comp.platform,
+                    logo: STORES_LOGO_MAP[comp.platform] || STORES_LOGO_MAP['Amazon'],
+                    dealPrice,
+                    cashbackPercent: comp.cashbackPercent || 0,
+                    cashbackEarned,
+                    effectivePrice,
+                    link: comp.link
+                  };
+                })
+                .sort((a, b) => a.effectivePrice - b.effectivePrice)
+                .map((item, index) => {
                 const isBestValue = index === 0;
                 return (
                   <div
-                    key={item.platform}
+                    key={item.platform + index}
                     style={{
                       border: isBestValue ? '2px solid var(--secondary)' : '1px solid var(--border)',
                       borderRadius: '8px',
@@ -801,24 +834,45 @@ export default function App() {
                         </span>
                       </div>
                       
-                      <button
-                        onClick={() => executeGrabDealTracked(activeComparisonDeal, item)}
-                        style={{
-                          backgroundColor: isBestValue ? 'var(--secondary)' : 'var(--primary)',
-                          color: '#fff',
-                          border: 'none',
-                          padding: '8px 14px',
-                          borderRadius: '6px',
-                          fontWeight: '600',
-                          fontSize: '13px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                        }}
-                      >
-                        Buy & Earn
-                      </button>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <button
+                          onClick={() => executeGrabDealTracked(activeComparisonDeal, item)}
+                          style={{
+                            backgroundColor: isBestValue ? 'var(--secondary)' : 'var(--primary)',
+                            color: '#fff',
+                            border: 'none',
+                            padding: '8px 14px',
+                            borderRadius: '6px',
+                            fontWeight: '600',
+                            fontSize: '13px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                          }}
+                        >
+                          Buy & Earn
+                        </button>
+                        <button
+                          onClick={() => handleReferLink(activeComparisonDeal, item)}
+                          style={{
+                            backgroundColor: 'transparent',
+                            color: 'var(--text)',
+                            border: '1px solid var(--border)',
+                            padding: '6px 14px',
+                            borderRadius: '6px',
+                            fontWeight: '600',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          Refer / Share
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
