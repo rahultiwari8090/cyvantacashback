@@ -4,7 +4,7 @@ import MobileApp from './components/MobileApp';
 import AuthModal from './components/AuthModal';
 import Notification from './components/Notification';
 import StoreDetail from './components/StoreDetail';
-import { apiTracking, apiWithdrawals, apiProducts } from './services/api';
+import { apiTracking, apiWithdrawals, apiProducts, apiUsers } from './services/api';
 
 // --- MOCK DATA ---
 const STORES_DATA = [
@@ -227,9 +227,15 @@ export default function App() {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   };
 
-  const handleLogin = (userProfile) => {
-    setCurrentUser(userProfile);
-    addNotification(`Logged in successfully as ${userProfile.name}!`, 'success');
+  const handleLogin = async (userProfile) => {
+    try {
+      await apiUsers.login(userProfile);
+      setCurrentUser(userProfile);
+      addNotification(`Logged in successfully as ${userProfile.name}!`, 'success');
+    } catch (e) {
+      console.error(e);
+      addNotification('Failed to login to server.', 'error');
+    }
   };
 
   const handleLogout = () => {

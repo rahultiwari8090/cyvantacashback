@@ -12,6 +12,7 @@ import Dashboard from './components/Dashboard';
 import AuthModal from './components/AuthModal';
 import Notification from './components/Notification';
 import Footer from './components/Footer';
+import CheckoutModal from './components/CheckoutModal';
 import AdminLogin from './components/AdminLogin';
 import AdminPanel from './components/AdminPanel';
 import MobileApp from './components/MobileApp';
@@ -51,7 +52,7 @@ const STORES_DATA = [
   {
     id: 'flipkart',
     name: 'Flipkart',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/7/7a/Flipkart_logo.svg',
+    logo: 'https://www.google.com/s2/favicons?sz=256&domain=flipkart.com',
     cashbackRate: '8.5%',
     description: 'Leading platform for mobile electronics, large home appliances, books, and home decors.',
     category: 'electronics',
@@ -64,7 +65,7 @@ const STORES_DATA = [
   {
     id: 'ajio',
     name: 'Ajio',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/c/c9/Ajio_Logo.svg',
+    logo: 'https://www.google.com/s2/favicons?sz=256&domain=ajio.com',
     cashbackRate: '15%',
     description: 'Sleek luxury fashion and handpicked streetwear brands from independent designers.',
     category: 'fashion',
@@ -77,7 +78,7 @@ const STORES_DATA = [
   {
     id: 'nykaa',
     name: 'Nykaa Beauty',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/5/5b/Nykaa_Logo.svg',
+    logo: 'https://www.google.com/s2/favicons?sz=256&domain=nykaa.com',
     cashbackRate: '7%',
     description: 'Premium cosmetic brands, organic lipsticks, haircare, and skin treatment formulas.',
     category: 'health',
@@ -90,7 +91,7 @@ const STORES_DATA = [
   {
     id: 'makemytrip',
     name: 'MakeMyTrip',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/f/fb/MakeMyTrip_Logo.svg',
+    logo: 'https://www.google.com/s2/favicons?sz=256&domain=makemytrip.com',
     cashbackRate: '9%',
     description: 'Book domestic flights, international vacations, hotels, and intercity cab packages.',
     category: 'travel',
@@ -130,7 +131,7 @@ const DEALS_DATA = [
     dealPrice: 549.99,
     cashbackEarned: 46.75, // 8.5% of deal price
     category: 'electronics',
-    storeLogo: 'https://upload.wikimedia.org/wikipedia/commons/7/7a/Flipkart_logo.svg',
+    storeLogo: 'https://www.google.com/s2/favicons?sz=256&domain=flipkart.com',
     image: 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w=300',
   },
   {
@@ -140,7 +141,7 @@ const DEALS_DATA = [
     dealPrice: 14.99,
     cashbackEarned: 1.05, // 7% of deal price
     category: 'health',
-    storeLogo: 'https://upload.wikimedia.org/wikipedia/commons/5/5b/Nykaa_Logo.svg',
+    storeLogo: 'https://www.google.com/s2/favicons?sz=256&domain=nykaa.com',
     image: 'https://images.unsplash.com/photo-1608248597481-496100c8c836?w=300',
   },
 ];
@@ -154,9 +155,112 @@ const STORES_LOGO_MAP = {
   'MakeMyTrip': 'https://upload.wikimedia.org/wikipedia/commons/f/fb/MakeMyTrip_Logo.svg'
 };
 
-// Removed hardcoded price comparisons as they now come from DB.
+const mapProductsToDeals = (productsList) => {
+  if (!productsList || productsList.length === 0) {
+    return DEALS_DATA;
+  }
+  const activeProducts = productsList.filter(p => p.status === 'active');
+  if (activeProducts.length === 0) {
+    return DEALS_DATA;
+  }
+  return activeProducts.map(p => {
+    const platform = p.platform || 'Amazon';
+    const storeLogo = STORES_LOGO_MAP[platform] || STORES_LOGO_MAP['Amazon'];
+    
+    let category = 'electronics';
+    const lowerName = p.name.toLowerCase();
+    const lowerPlatform = platform.toLowerCase();
+    
+    if (lowerPlatform === 'myntra' || lowerPlatform === 'ajio' || lowerName.includes('shoes') || lowerName.includes('clothing') || lowerName.includes('boots') || lowerName.includes('wear')) {
+      category = 'fashion';
+    } else if (lowerPlatform === 'nykaa beauty' || lowerName.includes('cleanser') || lowerName.includes('cream') || lowerName.includes('facial') || lowerName.includes('beauty')) {
+      category = 'health';
+    } else if (lowerPlatform === 'makemytrip' || lowerName.includes('flight') || lowerName.includes('hotel') || lowerName.includes('trip')) {
+      category = 'travel';
+    } else if (lowerName.includes('headphones') || lowerName.includes('laptop') || lowerName.includes('phone') || lowerName.includes('tv') || lowerName.includes('speaker')) {
+      category = 'electronics';
+    } else if (lowerPlatform === 'amazon') {
+      category = 'grocery';
+    }
+    
+    const dealPrice = p.price;
+    const retailPrice = parseFloat((dealPrice * 1.5).toFixed(2));
+    const cashbackEarned = parseFloat(((dealPrice * p.cashbackValue) / 100).toFixed(2));
+    
+    return {
+      id: p.id,
+      title: p.name,
+      retailPrice,
+      dealPrice,
+      cashbackEarned,
+      category,
+      storeLogo,
+      image: p.image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300'
+    };
+  });
+};
+
+const STORES_INFO = [
+  { platform: 'Amazon', logo: 'https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg', cashbackPercent: 10.0 },
+  { platform: 'Flipkart', logo: 'https://upload.wikimedia.org/wikipedia/commons/7/7a/Flipkart_logo.svg', cashbackPercent: 8.5 },
+  { platform: 'Myntra', logo: 'https://upload.wikimedia.org/wikipedia/commons/b/bc/Myntra_Logo.png', cashbackPercent: 12.0 },
+  { platform: 'Ajio', logo: 'https://upload.wikimedia.org/wikipedia/commons/c/c9/Ajio_Logo.svg', cashbackPercent: 15.0 },
+  { platform: 'Nykaa Beauty', logo: 'https://upload.wikimedia.org/wikipedia/commons/5/5b/Nykaa_Logo.svg', cashbackPercent: 7.0 },
+  { platform: 'MakeMyTrip', logo: 'https://upload.wikimedia.org/wikipedia/commons/f/fb/MakeMyTrip_Logo.svg', cashbackPercent: 9.0 }
+];
+
+const generatePriceComparisons = (deal) => {
+  if (!deal) return [];
+  
+  let platforms = ['Amazon', 'Flipkart'];
+  if (deal.category === 'fashion') {
+    platforms = ['Myntra', 'Ajio', 'Flipkart', 'Amazon'];
+  } else if (deal.category === 'health') {
+    platforms = ['Nykaa Beauty', 'Amazon', 'Flipkart'];
+  } else if (deal.category === 'travel') {
+    platforms = ['MakeMyTrip', 'Amazon'];
+  } else {
+    platforms = ['Amazon', 'Flipkart', 'Myntra', 'Ajio'];
+  }
+
+  return platforms.map(platformName => {
+    const store = STORES_INFO.find(s => s.platform === platformName) || STORES_INFO[0];
+    
+    let dealPrice = deal.dealPrice;
+    if (platformName !== deal.platform) {
+      const hash = platformName.split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
+      const percentDiff = ((hash % 21) - 10) / 100; // -10% to +10%
+      dealPrice = parseFloat((deal.dealPrice * (1 + percentDiff)).toFixed(2));
+    }
+    
+    const cashbackValue = store.cashbackPercent;
+    const cashbackEarned = parseFloat(((dealPrice * cashbackValue) / 100).toFixed(2));
+    const effectivePrice = parseFloat((dealPrice - cashbackEarned).toFixed(2));
+    
+    return {
+      platform: platformName,
+      logo: store.logo,
+      dealPrice,
+      cashbackPercent: cashbackValue,
+      cashbackEarned,
+      effectivePrice,
+      isOriginal: platformName === deal.platform
+    };
+  }).sort((a, b) => a.effectivePrice - b.effectivePrice);
+};
 
 export default function App() {
+  // Add Admitad ownership verification meta tag dynamically
+  useEffect(() => {
+    let meta = document.querySelector('meta[name="verify-admitad"]');
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.name = 'verify-admitad';
+      meta.content = 'fdcf363535';
+      document.head.appendChild(meta);
+    }
+  }, []);
+
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(() => {
     const session = sessionStorage.getItem('admin_session');
     return session === 'active';
@@ -212,6 +316,11 @@ export default function App() {
   const [products, setProducts] = useState([]);
   const [dealsData, setDealsData] = useState([]);
   const [activeComparisonDeal, setActiveComparisonDeal] = useState(null);
+  const [sharingDealId, setSharingDealId] = useState(null);
+  
+  // Checkout states
+  const [checkoutDeal, setCheckoutDeal] = useState(null);
+  const [checkoutStore, setCheckoutStore] = useState(null);
 
   // Load initial tracked orders, withdrawal requests, and products to sync between views
   useEffect(() => {
@@ -353,9 +462,6 @@ export default function App() {
     addNotification(`Activating secure cashback tracker on ${storeItem.platform} for ${dealItem.title || dealItem.name}...`, 'success');
     setTimeout(() => {
       addNotification(`Redirecting to secure merchant cart... Save ₹${storeItem.cashbackEarned.toFixed(2)}!`, 'info');
-      if (storeItem.link) {
-        window.open(storeItem.link, '_blank');
-      }
     }, 1800);
   };
 
@@ -672,6 +778,16 @@ export default function App() {
         onLogin={handleLogin}
       />
 
+      {/* Checkout Modal (Meesho/Flipkart Style) */}
+      {checkoutDeal && checkoutStore && (
+        <CheckoutModal
+          deal={checkoutDeal}
+          store={checkoutStore}
+          onClose={() => { setCheckoutDeal(null); setCheckoutStore(null); }}
+          onPlaceOrder={finalizeCheckout}
+        />
+      )}
+
       {/* Price Comparison Modal */}
       {activeComparisonDeal && (
         <div style={{
@@ -841,53 +957,32 @@ export default function App() {
                     </div>
 
                     {/* Right Price & CTA */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginTop: '6px' }}>
                         <span style={{ fontSize: '11px', color: 'var(--text)' }}>Effective Price:</span>
                         <span style={{ fontSize: '18px', fontWeight: '800', color: isBestValue ? 'var(--secondary)' : 'var(--text-bold)' }}>
                           ₹{item.effectivePrice.toFixed(2)}
                         </span>
                       </div>
                       
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <button
-                          onClick={() => executeGrabDealTracked(activeComparisonDeal, item)}
-                          style={{
-                            backgroundColor: isBestValue ? 'var(--secondary)' : 'var(--primary)',
-                            color: '#fff',
-                            border: 'none',
-                            padding: '8px 14px',
-                            borderRadius: '6px',
-                            fontWeight: '600',
-                            fontSize: '13px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                          }}
-                        >
-                          Buy & Earn
-                        </button>
-                        <button
-                          onClick={() => handleReferLink(activeComparisonDeal, item)}
-                          style={{
-                            backgroundColor: 'transparent',
-                            color: 'var(--text)',
-                            border: '1px solid var(--border)',
-                            padding: '6px 14px',
-                            borderRadius: '6px',
-                            fontWeight: '600',
-                            fontSize: '12px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '4px'
-                          }}
-                        >
-                          Refer / Share
-                        </button>
-                      </div>
+                      <button
+                        onClick={() => executeGrabDealTracked(activeComparisonDeal, item)}
+                        style={{
+                          backgroundColor: isBestValue ? 'var(--secondary)' : 'var(--primary)',
+                          color: '#fff',
+                          border: 'none',
+                          padding: '8px 14px',
+                          borderRadius: '6px',
+                          fontWeight: '600',
+                          fontSize: '13px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        Buy & Earn
+                      </button>
                     </div>
                   </div>
                 );
