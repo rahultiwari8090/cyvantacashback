@@ -26,6 +26,16 @@ public class TrackedOrder {
     private Double cashbackAmount;
     private String status; // pending, completed, return_active, shipped, returned
     
+    // New detailed tracking fields
+    private String clickId;
+    private String productImage;
+    private String affiliateUrl;
+    private String category;
+    private Double cashbackPercent;
+    private String paymentMethod;
+    private String deviceName;
+    private String ipAddress;
+    
     private LocalDate orderDate;
     private LocalDate confirmedDate;
     private LocalDate shippedDate;
