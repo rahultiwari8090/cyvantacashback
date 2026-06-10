@@ -28,6 +28,13 @@ public class SharedCommission {
     private Double buyerSharePercent;
     private Double userCommissionAmount;
     private Double buyerCommissionAmount;
+    private Double adminCommissionPercent;
+    private Double adminCommissionAmount;
+    private String buyerId;
+    private String buyerName;
+    private String shareId;
+    private String clickId;
+    private String orderId;
     private String status; // pending, approved, rejected
     private LocalDate date;
 }

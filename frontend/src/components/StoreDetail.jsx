@@ -22,7 +22,7 @@ export default function StoreDetail({ store, onBack, onAddNotification, deals, o
 
   const handleActivateDeal = (coupon) => {
     setActivatingDealId(coupon.id);
-    onAddNotification(`Activating ${store.cashbackRate} Cashback Tracker...`, 'success');
+    onAddNotification(`Activating Tracker...`, 'success');
     
     setTimeout(() => {
       setActivatingDealId(null);
@@ -55,8 +55,8 @@ export default function StoreDetail({ store, onBack, onAddNotification, deals, o
         </div>
         <div className="store-detail-info">
           <div className="store-detail-title-row">
-            <h2 className="store-detail-name">{store.name} Coupons & Cashback</h2>
-            <span className="store-detail-tag">Up to {store.cashbackRate} Cashback</span>
+            <h2 className="store-detail-name">{store.name} Coupons & Deals</h2>
+            <span className="store-detail-tag">Up to {store.cashbackRate} Commission</span>
           </div>
           <p className="store-detail-desc">{store.description}</p>
           <div className="store-detail-meta-pills">
@@ -77,10 +77,10 @@ export default function StoreDetail({ store, onBack, onAddNotification, deals, o
             className="section-title"
             style={{ fontSize: '20px', marginBottom: '8px', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}
           >
-            Active Coupons & Promotional Codes ({store.coupons.length})
+            Active Coupons & Promotional Codes ({store.coupons ? store.coupons.length : 0})
           </h3>
 
-          {store.coupons.map((coupon) => (
+          {store.coupons && store.coupons.map((coupon) => (
             <div key={coupon.id} className="coupon-card animate-fade">
               <div className="coupon-details">
                 <span className={`coupon-type-badge ${coupon.code ? 'code' : 'deal'}`}>
@@ -135,7 +135,7 @@ export default function StoreDetail({ store, onBack, onAddNotification, deals, o
         {/* Sidebar Guidelines */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div className="store-sidebar-card">
-            <h3>How to earn Cashback?</h3>
+            <h3>How tracking works?</h3>
             <ul className="sidebar-terms-list">
               <li>Always start your session by clicking out from Cyvanta.</li>
               <li>Only add items to your cart <strong>after</strong> clicking out.</li>
@@ -156,8 +156,8 @@ export default function StoreDetail({ store, onBack, onAddNotification, deals, o
               <ShieldAlert size={20} /> Important Terms
             </h3>
             <p style={{ fontSize: '13px', color: 'var(--text)', lineHeight: 1.5 }}>
-              Cashback is not paid on bulk purchases, wholesale transactions, or cancelled/returned orders.
-              Cashback tracking may take up to 48 hours to display as "Pending" in your Cyvanta wallet.
+              Commissions are not paid on bulk purchases, wholesale transactions, or cancelled/returned orders.
+              Tracking may take up to 48 hours to confirm with the merchant.
             </p>
           </div>
         </div>

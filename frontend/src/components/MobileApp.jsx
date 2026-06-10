@@ -100,7 +100,7 @@ export default function MobileApp({
     wallet: { confirmed: 0.00, pending: 0.00, referral: 0.00 }
   };
 
-  const refLink = `https://cyvanta.cashback/join?ref=${user.name.toLowerCase().replace(' ', '')}`;
+  const refLink = `${window.location.origin}/join?ref=${user.name.toLowerCase().replace(' ', '')}`;
 
   // Filter tracked orders for the logged-in user
   const userTrackedOrders = trackedOrders.filter(o => o.userName === user.name);
@@ -121,6 +121,12 @@ export default function MobileApp({
     onAddNotification(`Activating cashback tracker on ${storeItem.platform} for ${dealItem.title || dealItem.name}...`, 'success');
     setTimeout(() => {
       onAddNotification(`Redirected to merchant! Shop completed.`, 'info');
+      const link = storeItem?.link || dealItem?.affiliateUrl || dealItem?.link;
+      if (link) {
+        window.open(link, '_blank');
+      } else {
+        window.open('https://google.com', '_blank');
+      }
     }, 1500);
   };
 

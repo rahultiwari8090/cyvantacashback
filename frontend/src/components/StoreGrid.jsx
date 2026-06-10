@@ -7,7 +7,7 @@ export default function StoreGrid({ stores, onStoreSelect }) {
       <div className="section-header">
         <div className="section-title-wrap">
           <ShieldCheck className="section-icon" size={24} />
-          <h3 className="section-title">Popular Cashback Retailers</h3>
+          <h3 className="section-title">Popular Retailers</h3>
         </div>
       </div>
 
@@ -25,7 +25,7 @@ export default function StoreGrid({ stores, onStoreSelect }) {
             </div>
 
             <div className="store-meta">
-              <span className="store-cashback-badge">Up to {store.cashbackRate} Cashback</span>
+              <span className="store-cashback-badge">Up to {store.cashbackRate} Commission</span>
               <p className="store-description">{store.description}</p>
             </div>
 

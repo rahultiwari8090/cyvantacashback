@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, Search, Filter, Edit2, Download, Terminal, Settings } from 'lucide-react';
 import { AdminTable, AdminModal, AdminFormInput, AdminFormSelect, AdminFormSwitch } from './AdminComponents';
+import { apiUpload } from '../services/api';
 
 // Mock Generator for Affiliate API responses
 const generateMockAffiliateProducts = (platform, keyword, category, limit) => {
@@ -73,6 +74,7 @@ const generateMockAffiliateProducts = (platform, keyword, category, limit) => {
     platform: platform,
     price: item.price,
     cashbackValue: cashbackVal,
+    affiliateUrl: `https://mock.affiliate.link/${platform.toLowerCase()}/${idx}`,
     image: item.image,
     status: 'active'
   }));
@@ -117,7 +119,11 @@ export default function AdminProducts({ products, categories = [], onAddProduct,
   const [prodPlatform, setProdPlatform] = useState('Amazon');
   const [prodPrice, setProdPrice] = useState('');
   const [prodCashbackValue, setProdCashbackValue] = useState('');
+  const [prodAffiliateUrl, setProdAffiliateUrl] = useState('');
   const [prodImage, setProdImage] = useState('');
+  const [imageFile, setImageFile] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [prodCategory, setProdCategory] = useState('electronics');
   const [prodActive, setProdActive] = useState(true);
   const [formError, setFormError] = useState('');
 
@@ -195,6 +201,7 @@ export default function AdminProducts({ products, categories = [], onAddProduct,
             platform: item.platform || 'Amazon',
             price: parseFloat(item.price),
             cashbackValue: parseFloat(item.cashbackValue || 10),
+            affiliateUrl: item.affiliateUrl || item.link || '',
             image: item.image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300',
             status: item.status || 'active'
           };
@@ -225,6 +232,7 @@ export default function AdminProducts({ products, categories = [], onAddProduct,
         
         const platformIdx = headers.indexOf('platform');
         const cashbackIdx = headers.indexOf('cashbackvalue') !== -1 ? headers.indexOf('cashbackvalue') : headers.indexOf('cashback');
+        const affiliateUrlIdx = headers.indexOf('affiliateurl') !== -1 ? headers.indexOf('affiliateurl') : headers.indexOf('link');
         const imageIdx = headers.indexOf('imageurl') !== -1 ? headers.indexOf('imageurl') : (headers.indexOf('image_url') !== -1 ? headers.indexOf('image_url') : headers.indexOf('image'));
         const statusIdx = headers.indexOf('status');
         
@@ -248,6 +256,7 @@ export default function AdminProducts({ products, categories = [], onAddProduct,
             platform: platformIdx !== -1 ? cols[platformIdx] : 'Amazon',
             price: price,
             cashbackValue: cashbackIdx !== -1 ? parseFloat(cols[cashbackIdx] || 10) : 10,
+            affiliateUrl: affiliateUrlIdx !== -1 && cols[affiliateUrlIdx] ? cols[affiliateUrlIdx] : '',
             image: imageIdx !== -1 && cols[imageIdx] ? cols[imageIdx] : 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300',
             status: statusIdx !== -1 && cols[statusIdx] ? cols[statusIdx] : 'active'
           });
@@ -308,7 +317,10 @@ export default function AdminProducts({ products, categories = [], onAddProduct,
     setProdPlatform('Amazon');
     setProdPrice('');
     setProdCashbackValue('');
+    setProdAffiliateUrl('');
     setProdImage('https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300');
+    setImageFile(null);
+    setProdCategory('electronics');
     setProdActive(true);
     setFormError('');
     setIsModalOpen(true);
@@ -320,46 +332,79 @@ export default function AdminProducts({ products, categories = [], onAddProduct,
     setProdPlatform(item.platform);
     setProdPrice(item.price.toString());
     setProdCashbackValue(item.cashbackValue.toString());
+    setProdAffiliateUrl(item.affiliateUrl || '');
     setProdImage(item.image);
+    setImageFile(null);
+    setProdCategory(item.category || 'electronics');
     setProdActive(item.status === 'active');
     setFormError('');
     setIsModalOpen(true);
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     setFormError('');
 
     if (!prodName.trim() || !prodPrice || !prodCashbackValue) {
-      setFormError('Please fill in Name, Price, and Cashback Value.');
+      setFormError('Please fill in Name, Price, and Commission Rate.');
       return;
     }
 
-    const payload = {
-      name: prodName,
-      platform: prodPlatform,
-      price: parseFloat(prodPrice),
-      cashbackValue: parseFloat(prodCashbackValue),
-      image: prodImage || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300',
-      status: prodActive ? 'active' : 'inactive',
-    };
+    setIsUploading(true);
+    let finalImageUrl = prodImage;
 
-    if (editItem) {
-      onEditProduct({ ...editItem, ...payload });
-    } else {
-      onAddProduct(payload);
+    try {
+      if (imageFile) {
+        const uploadRes = await apiUpload.uploadImage(imageFile);
+        finalImageUrl = uploadRes.url;
+      }
+
+      const payload = {
+        name: prodName,
+        platform: prodPlatform,
+        price: parseFloat(prodPrice),
+        cashbackValue: parseFloat(prodCashbackValue),
+        affiliateUrl: prodAffiliateUrl,
+        image: finalImageUrl || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300',
+        category: prodCategory,
+        status: prodActive ? 'active' : 'inactive',
+      };
+
+      if (editItem) {
+        onEditProduct({ ...editItem, ...payload });
+      } else {
+        onAddProduct(payload);
+      }
+
+      setIsModalOpen(false);
+    } catch (err) {
+      setFormError(err.message || 'Failed to upload image or save product.');
+    } finally {
+      setIsUploading(false);
     }
+  };
 
-    setIsModalOpen(false);
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProdImage(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const filteredProducts = products.filter((p) => {
-    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const q = searchQuery.toLowerCase();
+    const matchesSearch = p.name.toLowerCase().includes(q) || 
+                          (p.category && p.category.toLowerCase().includes(q));
     const matchesPlatform = platformFilter === 'all' || p.platform.toLowerCase() === platformFilter.toLowerCase();
     return matchesSearch && matchesPlatform;
   });
 
-  const headers = ['Image', 'Product Name', 'Platform', 'Price', 'Cashback', 'Status', 'Actions'];
+  const headers = ['Image', 'Product Name', 'Platform', 'Category', 'Price', 'Commission', 'Status', 'Actions'];
 
   const renderRow = (item, idx) => (
     <tr key={item.id} className="animate-fade">
@@ -378,6 +423,11 @@ export default function AdminProducts({ products, categories = [], onAddProduct,
       </td>
       <td>
         <span style={{ fontSize: '13px', fontWeight: '500' }}>{item.platform}</span>
+      </td>
+      <td>
+        <span style={{ fontSize: '12px', background: 'var(--bg)', padding: '2px 8px', borderRadius: '4px', textTransform: 'capitalize', color: 'var(--text)' }}>
+          {item.category || 'Electronics'}
+        </span>
       </td>
       <td style={{ fontWeight: '600', color: 'var(--text-bold)' }}>₹{item.price.toFixed(2)}</td>
       <td style={{ color: 'var(--secondary)', fontWeight: '600' }}>
@@ -411,7 +461,7 @@ export default function AdminProducts({ products, categories = [], onAddProduct,
       <div className="admin-page-header">
         <div className="admin-page-title">
           <h2>Product Management</h2>
-          <p>Add, edit, and delete store products and configure cashbacks</p>
+          <p>Add, edit, and delete store products and configure commission rates</p>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
           <button className="admin-btn admin-btn-secondary" onClick={openBulkModal}>
@@ -491,11 +541,11 @@ export default function AdminProducts({ products, categories = [], onAddProduct,
         title={editItem ? 'Edit Product' : 'Add New Product'}
         footer={
           <>
-            <button className="admin-btn admin-btn-secondary" onClick={() => setIsModalOpen(false)}>
+            <button className="admin-btn admin-btn-secondary" onClick={() => setIsModalOpen(false)} disabled={isUploading}>
               Cancel
             </button>
-            <button className="admin-btn admin-btn-primary" onClick={handleSave}>
-              {editItem ? 'Save Changes' : 'Add Product'}
+            <button className="admin-btn admin-btn-primary" onClick={handleSave} disabled={isUploading}>
+              {isUploading ? 'Uploading...' : (editItem ? 'Save Changes' : 'Add Product')}
             </button>
           </>
         }
@@ -531,6 +581,22 @@ export default function AdminProducts({ products, categories = [], onAddProduct,
             ]}
           />
 
+          <AdminFormSelect
+            label="Category"
+            id="prod-category"
+            value={prodCategory}
+            onChange={(e) => setProdCategory(e.target.value)}
+            options={[
+              { value: 'electronics', label: 'Electronics' },
+              { value: 'fashion', label: 'Fashion' },
+              { value: 'clothing', label: 'Clothing' },
+              { value: 'health', label: 'Health' },
+              { value: 'beauty', label: 'Beauty' },
+              { value: 'grocery', label: 'Grocery & Essentials' },
+              { value: 'travel', label: 'Travel & Bookings' },
+            ]}
+          />
+
           <div className="admin-form-row">
             <AdminFormInput
               label="Price (₹) *"
@@ -543,7 +609,7 @@ export default function AdminProducts({ products, categories = [], onAddProduct,
             />
 
             <AdminFormInput
-              label="Cashback Value (%) *"
+              label="Commission Rate (%) *"
               id="prod-cb-value"
               type="number"
               step="0.1"
@@ -554,13 +620,39 @@ export default function AdminProducts({ products, categories = [], onAddProduct,
           </div>
 
           <AdminFormInput
-            label="Image URL"
-            id="prod-img"
+            label="Affiliate URL"
+            id="prod-affiliate-url"
             type="text"
-            placeholder="https://images.unsplash.com/..."
-            value={prodImage}
-            onChange={(e) => setProdImage(e.target.value)}
+            placeholder="e.g., https://amzn.to/..."
+            value={prodAffiliateUrl}
+            onChange={(e) => setProdAffiliateUrl(e.target.value)}
           />
+
+          <div className="admin-form-group">
+            <label>Product Image (Upload or URL)</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="admin-form-input"
+            />
+            {prodImage && (
+              <div style={{ marginTop: '10px' }}>
+                <img src={prodImage} alt="Preview" style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border)' }} />
+              </div>
+            )}
+            <div style={{ fontSize: '11px', color: 'var(--text)', marginTop: '4px' }}>
+              Or you can paste an image URL below:
+            </div>
+            <input
+              type="text"
+              placeholder="https://images.unsplash.com/..."
+              value={prodImage}
+              onChange={(e) => setProdImage(e.target.value)}
+              className="admin-form-input"
+              style={{ marginTop: '8px' }}
+            />
+          </div>
 
           <AdminFormSwitch
             label="Active / Display on feeds"
@@ -670,7 +762,9 @@ export default function AdminProducts({ products, categories = [], onAddProduct,
                     options={[
                       { value: 'electronics', label: 'Electronics' },
                       { value: 'fashion', label: 'Fashion' },
-                      { value: 'health', label: 'Health & Beauty' },
+                      { value: 'clothing', label: 'Clothing' },
+                      { value: 'health', label: 'Health' },
+                      { value: 'beauty', label: 'Beauty' },
                       { value: 'grocery', label: 'Food & Grocery' },
                       { value: 'travel', label: 'Travel & Flights' }
                     ]}
@@ -913,7 +1007,7 @@ export default function AdminProducts({ products, categories = [], onAddProduct,
                       <th style={{ padding: '8px 12px' }}>Name</th>
                       <th style={{ padding: '8px 12px', width: '80px' }}>Platform</th>
                       <th style={{ padding: '8px 12px', width: '70px' }}>Price</th>
-                      <th style={{ padding: '8px 12px', width: '70px' }}>Cashback</th>
+                      <th style={{ padding: '8px 12px', width: '70px' }}>Commission</th>
                     </tr>
                   </thead>
                   <tbody>

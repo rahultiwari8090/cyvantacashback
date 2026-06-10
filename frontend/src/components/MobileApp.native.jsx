@@ -10,7 +10,8 @@ import {
   Share,
   Modal,
   SafeAreaView,
-  Dimensions
+  Dimensions,
+  Linking
 } from 'react-native';
 import {
   Home,
@@ -240,7 +241,7 @@ export default function MobileApp({
     wallet: { confirmed: 0.00, pending: 0.00, referral: 0.00 }
   };
 
-  const refLink = `https://cyvanta.cashback/join?ref=${user.name.toLowerCase().replace(' ', '')}`;
+  const refLink = `${window.location.origin}/join?ref=${user.name.toLowerCase().replace(' ', '')}`;
   const userTrackedOrders = trackedOrders.filter(o => o.userName === user.name);
 
   const handleShareLink = async () => {
@@ -265,6 +266,12 @@ export default function MobileApp({
     onAddNotification(`Activating cashback tracker on ${storeItem.platform} for ${dealItem.title || dealItem.name}...`, 'success');
     setTimeout(() => {
       onAddNotification(`Redirected to merchant! Shop completed.`, 'info');
+      const link = storeItem?.link || dealItem?.affiliateUrl || dealItem?.link;
+      if (link) {
+        Linking.openURL(link).catch(err => console.error("Couldn't load page", err));
+      } else {
+        Linking.openURL('https://google.com').catch(err => console.error("Couldn't load page", err));
+      }
     }, 1500);
   };
 

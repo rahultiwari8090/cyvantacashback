@@ -70,29 +70,45 @@ export default function AdminSharedCommissions({
     return matchesSearch && matchesStatus;
   });
 
-  const commHeaders = ['Date', 'User / Creator', 'Product Name', 'Store', 'Sale Price', 'Rate Used', 'Commission (You / Buyer)', 'Status', 'Actions'];
+  const commHeaders = ['Date', 'Sharer / Buyer', 'Product / Store', 'Lifecycle Tracking', 'Total Sale', 'Commission Split', 'Status', 'Actions'];
   const linkHeaders = ['Date Created', 'Creator Name', 'Product Name', 'Store', 'Split (Creator/Buyer)', 'Destination Link', 'Clicks', 'Conversions', 'Total Creator Paid'];
 
   const renderCommRow = (item, idx) => (
     <tr key={item.id} className="animate-fade">
       <td style={{ fontSize: '13px' }}>{item.date}</td>
-      <td style={{ fontWeight: '600', color: 'var(--text-bold)' }}>{item.userName}</td>
-      <td style={{ fontWeight: '500' }}>{item.productName}</td>
       <td>
-        <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', backgroundColor: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-bold)', fontWeight: 600 }}>
+        <div style={{ fontWeight: '600', color: 'var(--text-bold)' }}>{item.userName} <span style={{ fontSize: '10px', fontWeight: 'normal' }}>(Sharer)</span></div>
+        {item.buyerName && <div style={{ fontSize: '12px', color: 'var(--text)' }}>{item.buyerName} <span style={{ fontSize: '10px' }}>(Buyer)</span></div>}
+      </td>
+      <td>
+        <div style={{ fontWeight: '500' }}>{item.productName}</div>
+        <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', backgroundColor: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-bold)', fontWeight: 600, display: 'inline-block', marginTop: '4px' }}>
           {item.store}
         </span>
       </td>
-      <td>₹{item.purchaseAmount.toFixed(2)}</td>
-      <td>{item.commissionRate}%</td>
       <td>
-        <div>
-          <span style={{ fontWeight: '700', color: item.status === 'approved' ? '#10b981' : 'var(--text-bold)' }}>
-            ₹{item.userCommissionAmount !== undefined ? item.userCommissionAmount.toFixed(2) : item.commissionAmount.toFixed(2)}
-          </span> <span style={{ fontSize: '10px', color: 'var(--text)' }}>(You)</span>
+        <div style={{ fontSize: '11px', color: 'var(--text)' }}>Share ID: <strong style={{ color: 'var(--text-bold)' }}>{item.shareId || item.linkId}</strong></div>
+        {item.clickId && <div style={{ fontSize: '11px', color: 'var(--text)' }}>Click ID: <strong style={{ color: 'var(--primary)' }}>{item.clickId}</strong></div>}
+        {item.orderId && <div style={{ fontSize: '11px', color: 'var(--text)' }}>Order ID: <strong style={{ color: '#10b981' }}>{item.orderId}</strong></div>}
+      </td>
+      <td>
+        <div style={{ fontWeight: 'bold' }}>₹{item.purchaseAmount.toFixed(2)}</div>
+        <div style={{ fontSize: '10px', color: 'var(--text)' }}>Rate: {item.commissionRate}%</div>
+      </td>
+      <td>
+        <div style={{ fontWeight: '700', color: item.status === 'approved' ? '#10b981' : 'var(--text-bold)', fontSize: '13px' }}>
+          Total: ₹{item.commissionAmount.toFixed(2)}
         </div>
-        <div style={{ fontSize: '11px', color: 'var(--text)', marginTop: '2px' }}>
-          ₹{item.buyerCommissionAmount !== undefined ? item.buyerCommissionAmount.toFixed(2) : '0.00'} <span style={{ fontSize: '9px' }}>(Buyer)</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '4px' }}>
+          <span style={{ fontSize: '11px', color: 'var(--text)' }}>
+            Sharer: <strong style={{ color: 'var(--text-bold)' }}>₹{item.userCommissionAmount !== undefined ? item.userCommissionAmount.toFixed(2) : item.commissionAmount.toFixed(2)}</strong> ({item.userSharePercent}%)
+          </span>
+          <span style={{ fontSize: '11px', color: 'var(--text)' }}>
+            Buyer: <strong style={{ color: 'var(--text-bold)' }}>₹{item.buyerCommissionAmount !== undefined ? item.buyerCommissionAmount.toFixed(2) : '0.00'}</strong> ({item.buyerSharePercent || 0}%)
+          </span>
+          <span style={{ fontSize: '11px', color: 'var(--text)' }}>
+            Admin: <strong style={{ color: 'var(--text-bold)' }}>₹{item.adminCommissionAmount !== undefined ? item.adminCommissionAmount.toFixed(2) : '0.00'}</strong> ({item.adminCommissionPercent || 0}%)
+          </span>
         </div>
       </td>
       <td>
@@ -352,10 +368,11 @@ export default function AdminSharedCommissions({
             />
 
             <div style={{ margin: '12px 0', padding: '10px 12px', backgroundColor: 'rgba(var(--primary-rgb), 0.04)', border: '1px solid var(--border)', borderRadius: '6px' }}>
-              <span style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: 700, color: 'var(--primary)', display: 'block', marginBottom: '6px' }}>Adjusted Split Preview</span>
+              <span style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: 700, color: 'var(--primary)', display: 'block', marginBottom: '6px' }}>Adjusted 3-Way Split Preview</span>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-bold)' }}>
-                <span>Creator gets: <strong>₹{((parseFloat(adjustAmount) || 0) * (selectedComm.userSharePercent || 100) / 100).toFixed(2)}</strong> ({selectedComm.userSharePercent || 100}%)</span>
+                <span>Sharer gets: <strong>₹{((parseFloat(adjustAmount) || 0) * (selectedComm.userSharePercent || 100) / 100).toFixed(2)}</strong> ({selectedComm.userSharePercent || 100}%)</span>
                 <span>Buyer gets: <strong>₹{((parseFloat(adjustAmount) || 0) * (selectedComm.buyerSharePercent || 0) / 100).toFixed(2)}</strong> ({selectedComm.buyerSharePercent || 0}%)</span>
+                <span>Admin gets: <strong>₹{((parseFloat(adjustAmount) || 0) * (selectedComm.adminCommissionPercent || 0) / 100).toFixed(2)}</strong> ({selectedComm.adminCommissionPercent || 0}%)</span>
               </div>
             </div>
             

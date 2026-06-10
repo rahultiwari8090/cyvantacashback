@@ -21,6 +21,11 @@ public class ClickLog {
     private String userName;
     private String productName;
     private String network;
+    private String shareId;
+    private String sharerId;
+    private String buyerId;
+    private String deviceName;
+    private String ipAddress;
     private LocalDate date;
 
     // Frontend expects "clickId" in the response JSON

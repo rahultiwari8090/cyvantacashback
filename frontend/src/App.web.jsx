@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { X, Check } from 'lucide-react';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import CategoryGrid from './components/CategoryGrid';
 import StoreGrid from './components/StoreGrid';
 import TopDeals from './components/TopDeals';
-import CashbackCalculator from './components/CashbackCalculator';
 import HowItWorks from './components/HowItWorks';
 import Testimonials from './components/Testimonials';
 import StoreDetail from './components/StoreDetail';
@@ -16,49 +16,10 @@ import CheckoutModal from './components/CheckoutModal';
 import AdminLogin from './components/AdminLogin';
 import AdminPanel from './components/AdminPanel';
 import MobileApp from './components/MobileApp';
-import { apiTracking, apiWithdrawals, apiProducts, apiDeals, apiSharedLinks } from './services/api';
+import { apiTracking, apiWithdrawals, apiProducts, apiDeals, apiSharedLinks, apiStores, apiBanners } from './services/api';
 import './index.css';
 import './App.css';
 
-const generatePriceComparisons = (deal) => {
-  if (!deal) return [];
-  
-  let platforms = ['Amazon', 'Flipkart'];
-  if (deal.category === 'fashion') {
-    platforms = ['Myntra', 'Ajio', 'Flipkart', 'Amazon'];
-  } else if (deal.category === 'health') {
-    platforms = ['Nykaa Beauty', 'Amazon', 'Flipkart'];
-  } else if (deal.category === 'travel') {
-    platforms = ['MakeMyTrip', 'Amazon'];
-  } else {
-    platforms = ['Amazon', 'Flipkart', 'Myntra', 'Ajio'];
-  }
-
-  return platforms.map(platformName => {
-    const store = STORES_INFO.find(s => s.platform === platformName) || STORES_INFO[0];
-    
-    let dealPrice = deal.dealPrice;
-    if (platformName !== deal.platform) {
-      const hash = platformName.split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
-      const percentDiff = ((hash % 21) - 10) / 100; // -10% to +10%
-      dealPrice = parseFloat((deal.dealPrice * (1 + percentDiff)).toFixed(2));
-    }
-    
-    const cashbackValue = store.cashbackPercent;
-    const cashbackEarned = parseFloat(((dealPrice * cashbackValue) / 100).toFixed(2));
-    const effectivePrice = parseFloat((dealPrice - cashbackEarned).toFixed(2));
-    
-    return {
-      platform: platformName,
-      logo: store.logo,
-      dealPrice,
-      cashbackPercent: cashbackValue,
-      cashbackEarned,
-      effectivePrice,
-      isOriginal: platformName === deal.platform
-    };
-  }).sort((a, b) => a.effectivePrice - b.effectivePrice);
-};
 
 export default function App() {
   // Add Admitad ownership verification meta tag dynamically
@@ -79,7 +40,12 @@ export default function App() {
 
   const [currentUser, setCurrentUser] = useState(() => {
     const storedUser = localStorage.getItem('user_session');
-    return storedUser ? JSON.parse(storedUser) : null;
+    try {
+      return storedUser ? JSON.parse(storedUser) : null;
+    } catch (e) {
+      console.error('Failed to parse user session:', e);
+      return null;
+    }
   });
 
   const getInitialView = () => {
@@ -96,8 +62,14 @@ export default function App() {
     if (hash === '#/store') {
       return 'store';
     }
+    if (hash.startsWith('#/share/')) {
+      return 'share-landing';
+    }
 
     const path = window.location.pathname;
+    if (path.startsWith('/share/')) {
+      return 'share-landing';
+    }
     if (path === '/admin/login') {
       return 'admin-login';
     }
@@ -126,27 +98,39 @@ export default function App() {
   const [withdrawRequests, setWithdrawRequests] = useState([]);
   const [products, setProducts] = useState([]);
   const [dealsData, setDealsData] = useState([]);
+  const [storesData, setStoresData] = useState([]);
+  const [bannersData, setBannersData] = useState([]);
   const [activeComparisonDeal, setActiveComparisonDeal] = useState(null);
   const [sharingDealId, setSharingDealId] = useState(null);
   
   // Checkout states
   const [checkoutDeal, setCheckoutDeal] = useState(null);
   const [checkoutStore, setCheckoutStore] = useState(null);
+  const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
+  const [checkoutItem, setCheckoutItem] = useState(null);
+  const [checkoutStep, setCheckoutStep] = useState(1); // 1: Details, 2: Success
 
-  // Load initial tracked orders, withdrawal requests, and products to sync between views
+  // Share Modal states
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [generatedShareData, setGeneratedShareData] = useState(null);
+
   useEffect(() => {
     const syncAppStates = async () => {
       try {
-        const [tracking, withdrawals, productsData, dbDeals] = await Promise.all([
-          apiTracking.getAll(),
-          apiWithdrawals.getAll(),
-          apiProducts.getAll(),
-          apiDeals.getAll()
+        const [tracking, withdrawals, productsData, dbDeals, storesRes, activeBanners] = await Promise.all([
+          apiTracking.getAll().catch(e => { console.warn('Tracking failed:', e); return []; }),
+          apiWithdrawals.getAll().catch(e => { console.warn('Withdrawals failed:', e); return []; }),
+          apiProducts.getAll().catch(e => { console.warn('Products failed:', e); return []; }),
+          apiDeals.getAll().catch(e => { console.warn('Deals failed:', e); return []; }),
+          apiStores.getAll().catch(e => { console.warn('Stores failed:', e); return []; }),
+          apiBanners.getActive().catch(e => { console.warn('Banners failed:', e); return []; })
         ]);
-        setTrackedOrders(tracking);
-        setWithdrawRequests(withdrawals);
-        setProducts(productsData);
-        setDealsData(dbDeals);
+        setTrackedOrders(tracking || []);
+        setWithdrawRequests(withdrawals || []);
+        setProducts(productsData || []);
+        setDealsData(dbDeals || []);
+        setStoresData(storesRes || []);
+        setBannersData(activeBanners || []);
       } catch (err) {
         console.error('Failed to sync states:', err);
       }
@@ -270,10 +254,12 @@ export default function App() {
 
   const executeGrabDealTracked = (dealItem, storeItem) => {
     setActiveComparisonDeal(null);
-    addNotification(`Activating secure cashback tracker on ${storeItem.platform} for ${dealItem.title || dealItem.name}...`, 'success');
-    setTimeout(() => {
-      addNotification(`Redirecting to secure merchant cart... Save ₹${storeItem.cashbackEarned.toFixed(2)}!`, 'info');
-    }, 1800);
+    const link = storeItem?.link || dealItem?.affiliateUrl || dealItem?.link;
+    if (link) {
+      window.open(link, '_blank');
+    } else {
+      window.open('https://google.com', '_blank');
+    }
   };
 
   const handleReferLink = async (deal, item) => {
@@ -284,13 +270,17 @@ export default function App() {
     }
     
     try {
-      await apiSharedLinks.create({
-        referrerId: currentUser.id,
-        productId: deal.id,
-        platform: item.platform,
-        originalUrl: item.link || 'https://google.com'
+      const generated = await apiSharedLinks.create({
+        userId: currentUser.id,
+        userName: currentUser.name,
+        productName: deal.title || deal.name,
+        store: item.platform,
+        productUrl: item.link || 'https://google.com',
+        userSharePercent: 50,
+        buyerSharePercent: 50
       });
-      addNotification(`Referral link for ${item.platform} created! Ready to share.`, 'success');
+      setGeneratedShareData(generated);
+      setIsShareModalOpen(true);
     } catch (err) {
       addNotification('Failed to generate referral link.', 'error');
     }
@@ -309,16 +299,20 @@ export default function App() {
 
   // Filter stores by category
   const filteredStores = activeCategory === 'all'
-    ? STORES_DATA
-    : STORES_DATA.filter((s) => s.category === activeCategory);
+    ? storesData
+    : storesData.filter((s) => s.category === activeCategory);
 
-  const selectedStore = STORES_DATA.find((s) => s.id === selectedStoreId);
+  const selectedStore = storesData.find((s) => s.id === selectedStoreId);
 
   // Format deals for display
   const dynamicDeals = React.useMemo(() => {
     let combinedDeals = [];
     
+    const storesLogoMap = storesData.reduce((acc, store) => { acc[store.name] = store.logo; return acc; }, {});
+    
     if (dealsData && dealsData.length > 0) {
+      const fallbackLogo = 'https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg';
+
       const explicitDeals = dealsData.filter(d => d.status === 'active').map(d => {
         let lowestListedPrice = 0;
         let highestCashbackPercent = 0;
@@ -332,15 +326,24 @@ export default function App() {
         const retailPrice = dealPrice > 0 ? parseFloat((dealPrice * 1.5).toFixed(2)) : 0;
         const cashbackEarned = dealPrice > 0 ? parseFloat(((dealPrice * highestCashbackPercent) / 100).toFixed(2)) : 0;
         
-        return {
+        const baseDeal = {
           ...d,
           title: d.name,
           category: 'electronics', // Default category for deals
-          storeLogo: STORES_LOGO_MAP['Amazon'],
+          storeLogo: storesLogoMap['Amazon'] || fallbackLogo,
           retailPrice,
           dealPrice,
           cashbackEarned,
         };
+        if (!baseDeal.comparisons || baseDeal.comparisons.length === 0) {
+            baseDeal.comparisons = [{
+              platform: d.platform || 'Amazon',
+              listedPrice: baseDeal.dealPrice,
+              cashbackPercent: d.cashbackValue || 10,
+              link: d.link || d.affiliateUrl || 'https://google.com'
+            }];
+        }
+        return baseDeal;
       });
       combinedDeals = [...combinedDeals, ...explicitDeals];
     }
@@ -348,36 +351,40 @@ export default function App() {
     if (products && products.length > 0) {
       const productDeals = products.filter(p => p.status === 'active').map(p => {
         const platform = p.platform || 'Amazon';
-        const storeLogo = STORES_LOGO_MAP[platform] || STORES_LOGO_MAP['Amazon'];
+        const fallbackLogo = p.storeId && storesData.find(s => s.id === p.storeId)?.logo 
+          ? storesData.find(s => s.id === p.storeId).logo 
+          : 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300';
+          
+        const storeLogo = storesLogoMap[platform] || storesLogoMap['Amazon'] || fallbackLogo;
         
-        let category = 'electronics';
-        const lowerName = p.name.toLowerCase();
-        const lowerPlatform = platform.toLowerCase();
-        
-        if (lowerPlatform === 'myntra' || lowerPlatform === 'ajio' || lowerName.includes('shoes') || lowerName.includes('clothing') || lowerName.includes('boots') || lowerName.includes('wear')) {
-          category = 'fashion';
-        } else if (lowerPlatform === 'nykaa beauty' || lowerName.includes('cleanser') || lowerName.includes('cream') || lowerName.includes('facial') || lowerName.includes('beauty')) {
-          category = 'health';
-        } else if (lowerPlatform === 'makemytrip' || lowerName.includes('flight') || lowerName.includes('hotel') || lowerName.includes('trip')) {
-          category = 'travel';
-        } else if (lowerName.includes('headphones') || lowerName.includes('laptop') || lowerName.includes('phone') || lowerName.includes('tv') || lowerName.includes('speaker')) {
-          category = 'electronics';
-        } else if (lowerPlatform === 'amazon') {
-          category = 'grocery';
+        let category = p.category;
+        if (!category) {
+            category = 'electronics';
+            const lowerName = p.name ? p.name.toLowerCase() : '';
+            const lowerPlatform = platform ? platform.toLowerCase() : '';
+            
+            if (lowerPlatform === 'myntra' || lowerPlatform === 'ajio' || lowerName.includes('shoes') || lowerName.includes('boots') || lowerName.includes('wear') || lowerName.includes('sneakers')) {
+              category = 'fashion';
+            } else if (lowerName.includes('clothing') || lowerName.includes('shirt') || lowerName.includes('pants')) {
+              category = 'clothing';
+            } else if (lowerPlatform === 'nykaa beauty' || lowerName.includes('cleanser') || lowerName.includes('cream') || lowerName.includes('facial') || lowerName.includes('beauty')) {
+              category = 'beauty';
+            } else if (lowerName.includes('vitamin') || lowerName.includes('supplement') || lowerName.includes('health') || lowerName.includes('medicine')) {
+              category = 'health';
+            } else if (lowerPlatform === 'makemytrip' || lowerName.includes('flight') || lowerName.includes('hotel') || lowerName.includes('trip')) {
+              category = 'travel';
+            } else if (lowerName.includes('headphones') || lowerName.includes('laptop') || lowerName.includes('phone') || lowerName.includes('tv') || lowerName.includes('speaker')) {
+              category = 'electronics';
+            } else if (lowerPlatform === 'amazon') {
+              category = 'grocery';
+            }
         }
         
         const dealPrice = p.price;
         const retailPrice = parseFloat((dealPrice * 1.5).toFixed(2));
         const cashbackEarned = parseFloat(((dealPrice * p.cashbackValue) / 100).toFixed(2));
         
-        const comparison = {
-          platform: platform,
-          listedPrice: dealPrice,
-          cashbackPercent: p.cashbackValue,
-          link: p.affiliateUrl || 'https://google.com'
-        };
-        
-        return {
+        const baseDeal = {
           id: p.id,
           title: p.name,
           name: p.name,
@@ -385,10 +392,38 @@ export default function App() {
           retailPrice,
           dealPrice,
           cashbackEarned,
+          cashbackValue: p.cashbackValue,
           category,
           storeLogo,
+          affiliateUrl: p.affiliateUrl,
           image: p.image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300',
-          comparisons: [comparison]
+        };
+        
+        const sameNameProducts = products.filter(other => 
+            other.status === 'active' && 
+            other.name && p.name && 
+            other.name?.toLowerCase() === p.name?.toLowerCase()
+        );
+
+        let dbComparisons = sameNameProducts.map(other => ({
+             platform: other.platform || 'Amazon',
+             listedPrice: other.price,
+             cashbackPercent: other.cashbackValue || 10,
+             link: other.affiliateUrl || 'https://google.com'
+        }));
+
+        if (dbComparisons.length === 0) {
+           dbComparisons = [{
+             platform: platform,
+             listedPrice: dealPrice,
+             cashbackPercent: p.cashbackValue || 10,
+             link: p.affiliateUrl || 'https://google.com'
+           }];
+        }
+
+        return {
+          ...baseDeal,
+          comparisons: dbComparisons
         };
       });
       combinedDeals = [...combinedDeals, ...productDeals];
@@ -466,7 +501,7 @@ export default function App() {
               trackedOrders={trackedOrders}
               withdrawRequests={withdrawRequests}
               onAddWithdrawalRequest={handleAppWithdrawalRequest}
-              storesData={STORES_DATA}
+              storesData={storesData}
               dealsData={dynamicDeals}
               onAddNotification={addNotification}
               openAuthModal={() => setIsAuthModalOpen(true)}
@@ -489,6 +524,90 @@ export default function App() {
     );
   }
 
+  const renderShareLanding = () => {
+    const path = window.location.pathname.startsWith('/share/') 
+      ? window.location.pathname.split('/share/')[1]
+      : window.location.hash.replace('#/share/', '');
+    
+    const [landingData, setLandingData] = useState(null);
+    const [landingSession, setLandingSession] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+      const fetchShareData = async () => {
+        try {
+          const links = await apiSharedLinks.getAll();
+          const match = links.find(l => l.id === path || l.shortUrl.endsWith(path));
+          if (match) {
+            setLandingData(match);
+            // Record click instantly
+            const clickData = await apiSharedLinks.incrementClicks(match.id);
+            setLandingSession(clickData);
+          }
+        } catch (err) {
+          console.error(err);
+        } finally {
+          setLoading(false);
+        }
+      };
+      if (path) fetchShareData();
+    }, [path]);
+
+    if (loading) return <div style={{ padding: '40px', textAlign: 'center' }}>Loading Referral Details...</div>;
+    if (!landingData) return <div style={{ padding: '40px', textAlign: 'center' }}>Referral Link Expired or Not Found.</div>;
+
+    return (
+      <div className="animate-fade" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '60px 20px', minHeight: '60vh', backgroundColor: 'var(--bg)' }}>
+        <div style={{ maxWidth: '500px', width: '100%', backgroundColor: 'var(--card-bg)', borderRadius: '16px', padding: '32px', textAlign: 'center', border: '1px solid var(--border)', boxShadow: '0 10px 25px rgba(0,0,0,0.05)' }}>
+          <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'var(--secondary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', animation: 'scaleUp 0.5s ease-out' }}>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"></polyline><rect x="2" y="7" width="20" height="5"></rect><line x1="12" y1="22" x2="12" y2="7"></line><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path></svg>
+          </div>
+          <h2 style={{ fontSize: '24px', margin: '0 0 8px 0', color: 'var(--text-bold)' }}>You've been invited!</h2>
+          <p style={{ fontSize: '15px', color: 'var(--text)', margin: '0 0 24px 0', lineHeight: '1.6' }}>
+            <strong>{landingData.userName}</strong> has shared an exclusive deal with you for <strong>{landingData.productName}</strong> from {landingData.store}.
+          </p>
+          <div style={{ padding: '16px', backgroundColor: 'rgba(16, 185, 129, 0.1)', borderRadius: '12px', border: '1px solid rgba(16, 185, 129, 0.2)', marginBottom: '32px' }}>
+            <h4 style={{ margin: '0 0 8px 0', color: 'var(--secondary)', fontSize: '16px' }}>Special Commission Split</h4>
+            <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-bold)' }}>
+              If you purchase using this link, you will automatically earn {landingData.buyerSharePercent}% of the cashback directly into your wallet!
+            </p>
+          </div>
+          <button 
+            className="btn-primary" 
+            style={{ width: '100%', padding: '16px', fontSize: '16px', fontWeight: 'bold' }}
+            onClick={() => {
+              // Open Checkout Modal for this shared product
+              const mockProduct = products.find(p => p.name === landingData.productName) || {
+                id: `prod-${landingData.id}`,
+                name: landingData.productName,
+                image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300',
+                category: 'electronics',
+                title: landingData.productName
+              };
+              const storeMock = {
+                platform: landingData.store,
+                dealPrice: 49.99, // default mock
+                effectivePrice: 49.99,
+                cashbackEarned: 5.0,
+                cashbackPercent: 10,
+                link: landingData.productUrl
+              };
+              if (landingData && landingData.productUrl) {
+                window.open(landingData.productUrl, '_blank');
+              } else if (storeMock && storeMock.link) {
+                window.open(storeMock.link, '_blank');
+              } else {
+                window.open('https://google.com', '_blank');
+              }
+            }}
+          >
+            Grab Deal Now
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div id="root">
       {/* Toast Alert Manager */}
@@ -510,7 +629,7 @@ export default function App() {
         currentUser={currentUser}
         onLogout={handleLogout}
         openAuthModal={() => setIsAuthModalOpen(true)}
-        storesData={STORES_DATA}
+        storesData={storesData}
         onStoreSelect={handleStoreSelect}
       />
 
@@ -519,6 +638,7 @@ export default function App() {
           <>
             {/* Banner Slider */}
             <Hero
+              banners={bannersData}
               onCtaClick={handleCtaRedirect}
               setView={setView}
               currentUser={currentUser}
@@ -543,9 +663,6 @@ export default function App() {
               onGrabDeal={handleGrabProductDeal}
             />
 
-            {/* Interactive Calculator Slider */}
-            <CashbackCalculator />
-
             {/* Business Model Explanation */}
             <HowItWorks />
 
@@ -560,11 +677,7 @@ export default function App() {
             onBack={() => setView('home')}
             onAddNotification={addNotification}
             deals={dynamicDeals.filter(d => {
-              if (d.platform && d.platform.toLowerCase() === selectedStore.name.toLowerCase()) return true;
-              if (d.comparisons) {
-                return d.comparisons.some(c => c.platform && c.platform.toLowerCase() === selectedStore.name.toLowerCase());
-              }
-              return false;
+              return d.platform && selectedStore?.name && d.platform.toLowerCase() === selectedStore.name.toLowerCase();
             })}
             onGrabDeal={handleGrabProductDeal}
           />
@@ -577,6 +690,8 @@ export default function App() {
             setView={setView}
           />
         )}
+
+        {currentView === 'share-landing' && renderShareLanding()}
       </main>
 
       {/* Structured Footer */}
@@ -594,7 +709,7 @@ export default function App() {
         <CheckoutModal
           deal={checkoutDeal}
           store={checkoutStore}
-          onClose={() => { setCheckoutDeal(null); setCheckoutStore(null); }}
+          onClose={() => { setCheckoutDeal(null); setCheckoutStore(null); setCheckoutStoreMeta(null); }}
           onPlaceOrder={finalizeCheckout}
         />
       )}
@@ -636,7 +751,7 @@ export default function App() {
               borderBottom: '1px solid var(--border)'
             }}>
               <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: 'var(--text-bold)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                🔍 Price & Cashback Comparison
+                🔍 Price & Deals Comparison
               </h3>
               <button
                 onClick={() => setActiveComparisonDeal(null)}
@@ -701,8 +816,8 @@ export default function App() {
                   const effectivePrice = dealPrice - cashbackEarned;
                   return {
                     platform: comp.platform,
-                    logo: STORES_LOGO_MAP[comp.platform] || STORES_LOGO_MAP['Amazon'],
-                    dealPrice,
+                    logo: storesData.find(s => s.name === comp.platform)?.logo || 'default-logo-url',
+                    price: comp.listedPrice,
                     cashbackPercent: comp.cashbackPercent || 0,
                     cashbackEarned,
                     effectivePrice,
@@ -759,10 +874,10 @@ export default function App() {
                       />
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                         <span style={{ fontSize: '11px', color: 'var(--text)', textDecoration: 'line-through' }}>
-                          Listed Price: ₹{item.dealPrice.toFixed(2)}
+                          Listed Price: ₹{(item.price || 0).toFixed(2)}
                         </span>
                         <span style={{ fontSize: '12px', color: 'var(--secondary)', fontWeight: '600' }}>
-                          -{item.cashbackPercent}% Cashback (-₹{item.cashbackEarned.toFixed(2)})
+                          -{item.cashbackPercent}% Commission (-₹{item.cashbackEarned.toFixed(2)})
                         </span>
                       </div>
                     </div>
@@ -776,24 +891,48 @@ export default function App() {
                         </span>
                       </div>
                       
-                      <button
-                        onClick={() => executeGrabDealTracked(activeComparisonDeal, item)}
-                        style={{
-                          backgroundColor: isBestValue ? 'var(--secondary)' : 'var(--primary)',
-                          color: '#fff',
-                          border: 'none',
-                          padding: '8px 14px',
-                          borderRadius: '6px',
-                          fontWeight: '600',
-                          fontSize: '13px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                        }}
-                      >
-                        Buy & Earn
-                      </button>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <button
+                          onClick={() => executeGrabDealTracked(activeComparisonDeal, item)}
+                          style={{
+                            backgroundColor: isBestValue ? 'var(--secondary)' : 'var(--primary)',
+                            color: '#fff',
+                            border: 'none',
+                            padding: '8px 14px',
+                            borderRadius: '6px',
+                            fontWeight: '600',
+                            fontSize: '13px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px',
+                            width: '100%',
+                          }}
+                        >
+                          Buy & Earn
+                        </button>
+                        <button
+                          onClick={() => handleReferLink(activeComparisonDeal, item)}
+                          style={{
+                            backgroundColor: 'transparent',
+                            color: 'var(--text-bold)',
+                            border: '1px solid var(--border)',
+                            padding: '8px 14px',
+                            borderRadius: '6px',
+                            fontWeight: '600',
+                            fontSize: '13px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px',
+                            width: '100%',
+                          }}
+                        >
+                          Refer Link
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -827,6 +966,231 @@ export default function App() {
           </div>
         </div>
       )}
+      {/* Checkout Modal */}
+      {isCheckoutModalOpen && checkoutDeal && checkoutItem && (
+        <div className="modal-overlay animate-fade">
+          <div className="modal-content checkout-modal" style={{ maxWidth: '600px', width: '90%', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+            <div className="modal-header">
+              <h3>Secure Checkout</h3>
+                <button className="modal-close" onClick={() => { setIsCheckoutModalOpen(false); setCheckoutStoreMeta(null); }}>
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="modal-body" style={{ overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {checkoutStep === 1 ? (
+                <>
+                  {/* Order Summary */}
+                  <div className="checkout-summary-card" style={{ padding: '16px', backgroundColor: 'var(--bg)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                    <h4 style={{ margin: '0 0 12px 0', fontSize: '15px', color: 'var(--text-bold)' }}>Order Summary</h4>
+                    <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                      <img src={checkoutDeal.image} alt="Product" style={{ width: '60px', height: '60px', objectFit: 'contain', borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'white' }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-bold)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{checkoutDeal.title || checkoutDeal.name}</div>
+                        <div style={{ fontSize: '12px', color: 'var(--text)', marginTop: '4px' }}>Sold by: {checkoutItem.platform}</div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-bold)' }}>₹{checkoutItem.effectivePrice.toFixed(2)}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--secondary)', fontWeight: '600' }}>Includes ₹{checkoutItem.cashbackEarned.toFixed(2)} Commission</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Delivery Details */}
+                  <div className="checkout-section">
+                    <h4 style={{ margin: '0 0 12px 0', fontSize: '15px', color: 'var(--text-bold)' }}>Delivery Address</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <input type="text" placeholder="Full Name" className="admin-form-input" style={{ gridColumn: '1 / -1' }} />
+                      <input type="text" placeholder="Street Address" className="admin-form-input" style={{ gridColumn: '1 / -1' }} />
+                      <input type="text" placeholder="City" className="admin-form-input" />
+                      <input type="text" placeholder="Postal Code" className="admin-form-input" />
+                      <input type="tel" placeholder="Phone Number" className="admin-form-input" style={{ gridColumn: '1 / -1' }} />
+                    </div>
+                  </div>
+
+                  {/* Payment Method */}
+                  <div className="checkout-section">
+                    <h4 style={{ margin: '0 0 12px 0', fontSize: '15px', color: 'var(--text-bold)' }}>Payment Method</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <label className="checkout-payment-option" style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '16px', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', backgroundColor: 'var(--card-bg)' }}>
+                        <input type="radio" name="paymentMethod" defaultChecked style={{ marginTop: '3px' }} />
+                        <div className="payment-option-content" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <span style={{ fontWeight: '600', fontSize: '14px', color: 'var(--text-bold)' }}>Credit/Debit Card</span>
+                          <span style={{ fontSize: '12px', color: 'var(--text)' }}>Visa, MasterCard, RuPay</span>
+                        </div>
+                      </label>
+                      <label className="checkout-payment-option" style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '16px', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', backgroundColor: 'var(--card-bg)' }}>
+                        <input type="radio" name="paymentMethod" style={{ marginTop: '3px' }} />
+                        <div className="payment-option-content" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <span style={{ fontWeight: '600', fontSize: '14px', color: 'var(--text-bold)' }}>UPI (GPay, PhonePe, Paytm)</span>
+                          <span style={{ fontSize: '12px', color: 'var(--text)' }}>Instant secure payment</span>
+                        </div>
+                      </label>
+                      <label className="checkout-payment-option" style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '16px', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', backgroundColor: 'var(--card-bg)' }}>
+                        <input type="radio" name="paymentMethod" style={{ marginTop: '3px' }} />
+                        <div className="payment-option-content" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <span style={{ fontWeight: '600', fontSize: '14px', color: 'var(--text-bold)' }}>Cash on Delivery</span>
+                          <span style={{ fontSize: '12px', color: 'var(--text)' }}>Pay when you receive the product</span>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div style={{ padding: '40px 20px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+                  <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'var(--secondary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'scaleUp 0.5s ease-out' }}>
+                    <Check size={32} />
+                  </div>
+                  <h3 style={{ fontSize: '24px', color: 'var(--text-bold)', margin: 0 }}>Order Confirmed!</h3>
+                  <p style={{ color: 'var(--text)', fontSize: '14px', lineHeight: 1.5, margin: 0 }}>
+                    Your order for <strong>{checkoutDeal.title || checkoutDeal.name}</strong> has been successfully placed with {checkoutItem.platform}.
+                  </p>
+                  <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '12px 16px', borderRadius: '8px', color: 'var(--secondary)', fontSize: '14px', fontWeight: '600', marginTop: '8px' }}>
+                    🎉 You will earn ₹{checkoutItem.cashbackEarned.toFixed(2)} cashback on this order!
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="modal-footer" style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: '12px', backgroundColor: 'var(--card-bg)' }}>
+              {checkoutStep === 1 ? (
+                <>
+                  <button className="btn-secondary" onClick={() => setIsCheckoutModalOpen(false)}>Cancel</button>
+                  <button className="btn-primary" onClick={async () => {
+                    setCheckoutStep(2);
+                    
+                    const orderDateStr = new Date().toISOString().split('T')[0];
+                    const returnExpiryDate = new Date();
+                    returnExpiryDate.setDate(returnExpiryDate.getDate() + 7);
+                    const returnExpiryDateStr = returnExpiryDate.toISOString().split('T')[0];
+                    
+                    // Generate mock device and IP
+                    const devices = [
+                      'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+                      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
+                      'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0)'
+                    ];
+                    const ips = ['192.168.1.1', '10.0.0.5', '172.16.0.4', '104.28.1.1'];
+                    
+                    // Parse selected payment method
+                    const paymentRadios = document.getElementsByName('paymentMethod');
+                    let selectedPayment = 'Credit/Debit Card';
+                    for (const r of paymentRadios) {
+                      if (r.checked) {
+                        const labelText = r.nextElementSibling.querySelector('span').innerText;
+                        selectedPayment = labelText.includes('UPI') ? 'UPI' : (labelText.includes('Cash') ? 'Cash on Delivery' : 'Credit/Debit Card');
+                        break;
+                      }
+                    }
+
+                    const newOrderPayload = {
+                      userId: currentUser ? currentUser.id : 'u1',
+                      userName: currentUser ? currentUser.name : 'Guest User',
+                      productId: checkoutDeal.id || 'N/A',
+                      productName: checkoutDeal.title || checkoutDeal.name,
+                      platform: checkoutItem.platform,
+                      price: checkoutItem.dealPrice,
+                      cashbackAmount: checkoutItem.cashbackEarned,
+                      status: 'pending',
+                      orderDate: orderDateStr,
+                      confirmedDate: orderDateStr,
+                      returnExpiryDate: returnExpiryDateStr,
+                      returnWindowDays: 7,
+                      
+                      // Detailed new tracking metrics
+                      clickId: checkoutStoreMeta && checkoutStoreMeta.clickId ? checkoutStoreMeta.clickId : 'CLK-' + Math.floor(Math.random() * 100000000),
+                      shareId: checkoutStoreMeta && checkoutStoreMeta.shareId ? checkoutStoreMeta.shareId : null,
+                      productImage: checkoutDeal.image,
+                      affiliateUrl: checkoutItem.link || 'N/A',
+                      category: checkoutDeal.category || 'electronics',
+                      cashbackPercent: checkoutItem.cashbackPercent,
+                      paymentMethod: selectedPayment,
+                      deviceName: devices[Math.floor(Math.random() * devices.length)],
+                      ipAddress: ips[Math.floor(Math.random() * ips.length)]
+                    };
+                    
+                    try {
+                      const savedOrder = await apiTracking.create(newOrderPayload);
+                      setTrackedOrders([savedOrder, ...trackedOrders]);
+                      addNotification(`Order placed successfully! ₹${checkoutItem.cashbackEarned.toFixed(2)} cashback is pending.`, 'success');
+                    } catch (err) {
+                      addNotification('Failed to save order tracking metadata.', 'error');
+                      console.error(err);
+                    }
+                  }}>
+                    Confirm & Pay ₹{checkoutItem.effectivePrice.toFixed(2)}
+                  </button>
+                </>
+              ) : (
+                <button className="btn-primary" onClick={() => setIsCheckoutModalOpen(false)}>Continue Shopping</button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Share Modal */}
+      {isShareModalOpen && generatedShareData && (
+        <div className="modal-overlay animate-fade">
+          <div className="modal-content share-modal" style={{ maxWidth: '500px', width: '90%', display: 'flex', flexDirection: 'column' }}>
+            <div className="modal-header">
+              <h3>Share Referral Link</h3>
+              <button className="modal-close" onClick={() => setIsShareModalOpen(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="modal-body" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+                <p style={{ color: 'var(--text)', fontSize: '14px', margin: '0 0 16px 0' }}>
+                  Share this link with your friends! When they purchase <strong>{generatedShareData.productName}</strong> via this link, both of you will earn cashback!
+                </p>
+                <div style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <input 
+                    type="text" 
+                    readOnly 
+                    value={generatedShareData.shortUrl} 
+                    style={{ flex: 1, backgroundColor: 'transparent', border: 'none', color: 'var(--text-bold)', fontSize: '14px', outline: 'none' }} 
+                  />
+                  <button 
+                    className="btn-primary"
+                    onClick={() => {
+                      navigator.clipboard.writeText(generatedShareData.shortUrl);
+                      addNotification('Link copied to clipboard!', 'success');
+                    }}
+                    style={{ padding: '8px 16px', borderRadius: '6px', fontSize: '13px' }}
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <h4 style={{ margin: '0 0 16px 0', fontSize: '14px', color: 'var(--text-bold)', textAlign: 'center' }}>Share directly via</h4>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '16px' }}>
+                  {/* WhatsApp */}
+                  <button onClick={() => window.open(`https://wa.me/?text=Check out this deal: ${generatedShareData.shortUrl}`, '_blank')} style={{ width: '50px', height: '50px', borderRadius: '50%', backgroundColor: '#25D366', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', transition: 'transform 0.2s' }} onMouseOver={e => e.currentTarget.style.transform = 'scale(1.1)'} onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                  </button>
+                  {/* Facebook */}
+                  <button onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${generatedShareData.shortUrl}`, '_blank')} style={{ width: '50px', height: '50px', borderRadius: '50%', backgroundColor: '#1877F2', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', transition: 'transform 0.2s' }} onMouseOver={e => e.currentTarget.style.transform = 'scale(1.1)'} onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>
+                  </button>
+                  {/* Instagram (Copies and opens insta.com since no direct share URL exists) */}
+                  <button onClick={() => { navigator.clipboard.writeText(generatedShareData.shortUrl); window.open('https://instagram.com', '_blank'); addNotification('Link copied! Paste it in your Instagram story.', 'info'); }} style={{ width: '50px', height: '50px', borderRadius: '50%', background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', transition: 'transform 0.2s' }} onMouseOver={e => e.currentTarget.style.transform = 'scale(1.1)'} onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+                  </button>
+                  {/* Snapchat */}
+                  <button onClick={() => window.open(`https://snapchat.com/scan?attachmentUrl=${generatedShareData.shortUrl}`, '_blank')} style={{ width: '50px', height: '50px', borderRadius: '50%', backgroundColor: '#FFFC00', color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', transition: 'transform 0.2s' }} onMouseOver={e => e.currentTarget.style.transform = 'scale(1.1)'} onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 16c-1.2 0-2-.8-2-2a2 2 0 0 1 2-2h.5A6 6 0 0 1 10 5.4a6 6 0 0 1 5.5 6.6H16a2 2 0 0 1 2 2c0 1.2-.8 2-2 2h-.5c-.8 1-2.2 1.6-3.5 1.6s-2.7-.6-3.5-1.6H4z"></path></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

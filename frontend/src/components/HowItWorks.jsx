@@ -7,7 +7,7 @@ export default function HowItWorks() {
       <div className="section-header">
         <div className="section-title-wrap">
           <Info className="section-icon" size={24} />
-          <h3 className="section-title">How Cyvanta Cashback Works</h3>
+          <h3 className="section-title">How Cyvanta Works</h3>
         </div>
       </div>
 
@@ -18,9 +18,9 @@ export default function HowItWorks() {
           <div className="how-step-icon-box">
             <Search size={28} />
           </div>
-          <h4 className="how-step-title">1. Search & Click Out</h4>
+          <h4 className="how-step-title">1. Search & Generate Link</h4>
           <p className="how-step-desc">
-            Search for your favorite store on our site and click "Grab Deal". We will instantly redirect you to their official shopping app or website.
+            Search for your favorite store or product and generate a custom affiliate tracking link.
           </p>
         </div>
 
@@ -30,9 +30,9 @@ export default function HowItWorks() {
           <div className="how-step-icon-box">
             <ShoppingBag size={28} />
           </div>
-          <h4 className="how-step-title">2. Shop Normally</h4>
+          <h4 className="how-step-title">2. Share with Audience</h4>
           <p className="how-step-desc">
-            Place your order normally on the merchant site. Because you clicked out from us, the retailer pays Cyvanta a marketing commission for your order!
+            Share your generated link on social media, with friends, or your audience.
           </p>
         </div>
 
@@ -42,9 +42,9 @@ export default function HowItWorks() {
           <div className="how-step-icon-box">
             <Landmark size={28} />
           </div>
-          <h4 className="how-step-title">3. Get Real Cashback</h4>
+          <h4 className="how-step-title">3. Earn Commissions</h4>
           <p className="how-step-desc">
-            We pass the majority of that commission back to you as "Cashback". Once the return period expires, you can transfer it straight to your Bank Account!
+            When someone clicks your link and makes a purchase, the retailer pays us, and we pay you a direct commission straight to your bank!
           </p>
         </div>
       </div>

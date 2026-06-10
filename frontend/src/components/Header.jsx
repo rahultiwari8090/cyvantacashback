@@ -19,7 +19,7 @@ export default function Header({
   // Filter stores based on search query
   const suggestions = searchQuery.trim()
     ? storesData.filter((store) =>
-        store.name.toLowerCase().includes(searchQuery.toLowerCase())
+        (store.name || '').toLowerCase().includes(searchQuery.toLowerCase())
       )
     : [];
 
@@ -46,7 +46,7 @@ export default function Header({
         <div className="logo-section" onClick={() => setView('home')}>
           <div className="logo-icon">C</div>
           <h1 className="logo-text">
-            Cyvanta<span>Cashback</span>
+            Cyvanta<span>Affiliate</span>
           </h1>
         </div>
 
@@ -78,7 +78,7 @@ export default function Header({
                 >
                   <img src={store.logo} alt={store.name} className="suggestion-img" />
                   <span className="suggestion-text">{store.name}</span>
-                  <span className="suggestion-tag">Up to {store.cashbackRate} Cashback</span>
+                  <span className="suggestion-tag">Up to {store.cashbackRate} Commission</span>
                 </div>
               ))}
             </div>
@@ -129,7 +129,7 @@ export default function Header({
               <div className="user-info">
                 <span className="user-name">Hey, {currentUser.name || 'User'}</span>
                 <span className="user-wallet">
-                  {currentUser.wallet && currentUser.wallet.confirmed !== undefined 
+                  {currentUser.wallet && currentUser.wallet.confirmed != null 
                     ? `₹${currentUser.wallet.confirmed.toFixed(2)}` 
                     : (currentUser.role === 'ADMIN' || currentUser.isAdmin ? 'Admin' : '₹0.00')}
                 </span>

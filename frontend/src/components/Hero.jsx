@@ -1,50 +1,52 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, ArrowRight } from 'lucide-react';
 
-const HERO_SLIDES = [
+const FALLBACK_SLIDES = [
   {
     id: 1,
     tag: 'Limited Time Bonanza',
-    title: 'Earn Real Cashback. <span>Withdraw to Bank.</span>',
-    desc: 'Shop at Amazon, Ajio, Flipkart & 500+ stores via Cyvanta and get paid real cash on top of store discounts!',
+    title: 'Discover Top Deals. <span>Shop Safely.</span>',
+    desc: 'Shop at Amazon, Ajio, Flipkart & 500+ stores via Cyvanta and find the best active deals.',
     cta: 'Browse Top Offers',
     storeName: 'Myntra Fashion',
-    cashbackRate: '12%',
+    dealRate: 'Best Deals',
     logo: 'https://upload.wikimedia.org/wikipedia/commons/b/bc/Myntra_Logo.png',
   },
   {
     id: 2,
     tag: 'Electronics Mega Deal',
-    title: 'Up to <span>8% Cashback</span> on Gadgets & Tech',
-    desc: 'Upgrade your phone, laptop, or home devices. Get guaranteed cashback rates and active merchant coupons.',
+    title: 'Up to <span>80% OFF</span> on Gadgets & Tech',
+    desc: 'Upgrade your phone, laptop, or home devices. Get guaranteed deals and active merchant coupons.',
     cta: 'Shop Electronics Now',
     storeName: 'Flipkart Electronics',
-    cashbackRate: '8.5%',
+    dealRate: 'Top Discounts',
     logo: 'https://www.google.com/s2/favicons?sz=256&domain=flipkart.com',
   },
   {
     id: 3,
-    tag: 'Referral Bonanza',
-    title: 'Refer Friends. <span>Get 10% Forever!</span>',
-    desc: 'Share your personal referral link with friends. Earn a flat 10% of the cashback they earn, for life!',
-    cta: 'Invite Friends Now',
-    storeName: 'Ajio Deals',
-    cashbackRate: '15%',
+    tag: 'Affiliate Program',
+    title: 'Share Links. <span>Earn Commissions!</span>',
+    desc: 'Generate tracking links for any product. Share them and earn a commission when someone buys!',
+    cta: 'Start Earning Now',
+    storeName: 'Cyvanta Affiliate',
+    dealRate: 'Earn Cash',
     logo: 'https://www.google.com/s2/favicons?sz=256&domain=ajio.com',
   },
 ];
 
-export default function Hero({ onCtaClick, setView, currentUser, openAuthModal }) {
+export default function Hero({ banners, onCtaClick, setView, currentUser, openAuthModal }) {
   const [activeSlide, setActiveSlide] = useState(0);
+
+  const displaySlides = banners && banners.length > 0 ? banners : FALLBACK_SLIDES;
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setActiveSlide((prev) => (prev + 1) % HERO_SLIDES.length);
+      setActiveSlide((prev) => (prev + 1) % displaySlides.length);
     }, 6000);
     return () => clearInterval(timer);
-  }, []);
+  }, [displaySlides.length]);
 
-  const slide = HERO_SLIDES[activeSlide];
+  const slide = displaySlides[activeSlide] || displaySlides[0];
 
   const handleCta = () => {
     if (activeSlide === 2) {
@@ -79,18 +81,18 @@ export default function Hero({ onCtaClick, setView, currentUser, openAuthModal }
           <div className="hero-image-card">
             <img src={slide.logo} alt={slide.storeName} className="hero-card-logo" />
             <div className="hero-card-deal">
-              <span className="hero-card-rate">{slide.cashbackRate}</span>
-              <span className="hero-card-desc" style={{ display: 'block' }}>Real Cashback</span>
+              <span className="hero-card-rate">{slide.dealRate}</span>
+              <span className="hero-card-desc" style={{ display: 'block' }}>Verified Deal</span>
             </div>
             <span style={{ fontSize: '11px', color: 'var(--text)', opacity: 0.7 }}>
-              *Payout via Direct Bank Transfer
+              *Tracked Securely
             </span>
           </div>
         </div>
       </div>
 
       <div className="hero-dots">
-        {HERO_SLIDES.map((_, index) => (
+        {displaySlides.map((_, index) => (
           <div
             key={index}
             className={`hero-dot ${index === activeSlide ? 'active' : ''}`}

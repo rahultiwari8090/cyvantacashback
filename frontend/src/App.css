@@ -615,7 +615,6 @@
 }
 
 .btn-card-primary {
-  flex: 1;
   background-color: var(--primary);
   color: white;
   font-weight: 700;
@@ -624,6 +623,7 @@
   font-size: 14px;
   text-align: center;
   transition: background-color 0.2s;
+  margin-top: auto;
 }
 
 .btn-card-primary:hover {

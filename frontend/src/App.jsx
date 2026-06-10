@@ -4,161 +4,77 @@ import MobileApp from './components/MobileApp';
 import AuthModal from './components/AuthModal';
 import Notification from './components/Notification';
 import StoreDetail from './components/StoreDetail';
-import { apiTracking, apiWithdrawals, apiProducts, apiUsers } from './services/api';
+import { apiTracking, apiWithdrawals, apiProducts, apiUsers, apiStores, apiDeals } from './services/api';
 
-// --- MOCK DATA ---
-const STORES_DATA = [
-  {
-    id: 'amazon',
-    name: 'Amazon',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg',
-    cashbackRate: '10%',
-    description: 'Shop groceries, home equipment, kitchen essentials, and electronics with special cash bonuses.',
-    category: 'grocery',
-    isPopular: true,
-  },
-  {
-    id: 'myntra',
-    name: 'Myntra',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/b/bc/Myntra_Logo.png',
-    cashbackRate: '12%',
-    description: 'Explore trendy lifestyle collections, designer clothes, sports sneakers, and cosmetics.',
-    category: 'fashion',
-    isPopular: true,
-  },
-  {
-    id: 'flipkart',
-    name: 'Flipkart',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/7/7a/Flipkart_logo.svg',
-    cashbackRate: '8.5%',
-    description: 'Leading platform for mobile electronics, large home appliances, books, and home decors.',
-    category: 'electronics',
-    isPopular: true,
-  },
-  {
-    id: 'ajio',
-    name: 'Ajio',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/c/c9/Ajio_Logo.svg',
-    cashbackRate: '15%',
-    description: 'Sleek luxury fashion and handpicked streetwear brands from independent designers.',
-    category: 'fashion',
-    isPopular: true,
-  },
-  {
-    id: 'nykaa',
-    name: 'Nykaa Beauty',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/5/5b/Nykaa_Logo.svg',
-    cashbackRate: '7%',
-    description: 'Premium cosmetic brands, organic lipsticks, haircare, and skin treatment formulas.',
-    category: 'health',
-    isPopular: false,
-  },
-  {
-    id: 'makemytrip',
-    name: 'MakeMyTrip',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/f/fb/MakeMyTrip_Logo.svg',
-    cashbackRate: '9%',
-    description: 'Book domestic flights, international vacations, hotels, and intercity cab packages.',
-    category: 'travel',
-    isPopular: false,
-  },
-];
+const mapProductsToDeals = (productsList, dbDealsList, storesData) => {
+  let combinedDeals = [];
+  const storesLogoMap = storesData?.reduce((acc, store) => { acc[store.name] = store.logo; return acc; }, {}) || {};
+  const fallbackLogo = 'https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg';
 
-const DEALS_DATA = [
-  {
-    id: 'd1',
-    title: 'boAt Rockerz 450 Bluetooth On-Ear Headphones with Mic',
-    retailPrice: 59.99,
-    dealPrice: 29.99,
-    cashbackEarned: 3.00,
-    category: 'electronics',
-    storeLogo: 'https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg',
-    image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300',
-  },
-  {
-    id: 'd2',
-    title: 'Adidas UltraBoost 22 Performance Athletic Sports Shoes',
-    retailPrice: 180.00,
-    dealPrice: 110.00,
-    cashbackEarned: 13.20,
-    category: 'fashion',
-    storeLogo: 'https://upload.wikimedia.org/wikipedia/commons/b/bc/Myntra_Logo.png',
-    image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300',
-  },
-  {
-    id: 'd3',
-    title: 'HP Pavilion 15.6" Touchscreen Laptop (Intel Core i5, 16GB RAM)',
-    retailPrice: 799.99,
-    dealPrice: 549.99,
-    cashbackEarned: 46.75,
-    category: 'electronics',
-    storeLogo: 'https://upload.wikimedia.org/wikipedia/commons/7/7a/Flipkart_logo.svg',
-    image: 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w=300',
-  },
-  {
-    id: 'd4',
-    title: 'Cetaphil Daily Facial Cleanser - Hydrating Skincare Gel',
-    retailPrice: 19.99,
-    dealPrice: 14.99,
-    cashbackEarned: 1.05,
-    category: 'health',
-    storeLogo: 'https://upload.wikimedia.org/wikipedia/commons/5/5b/Nykaa_Logo.svg',
-    image: 'https://images.unsplash.com/photo-1608248597481-496100c8c836?w=300',
-  },
-];
-
-const STORES_LOGO_MAP = {
-  'Amazon': 'https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg',
-  'Myntra': 'https://upload.wikimedia.org/wikipedia/commons/b/bc/Myntra_Logo.png',
-  'Flipkart': 'https://upload.wikimedia.org/wikipedia/commons/7/7a/Flipkart_logo.svg',
-  'Ajio': 'https://upload.wikimedia.org/wikipedia/commons/c/c9/Ajio_Logo.svg',
-  'Nykaa Beauty': 'https://upload.wikimedia.org/wikipedia/commons/5/5b/Nykaa_Logo.svg',
-  'MakeMyTrip': 'https://upload.wikimedia.org/wikipedia/commons/f/fb/MakeMyTrip_Logo.svg'
-};
-
-const mapProductsToDeals = (productsList) => {
-  if (!productsList || productsList.length === 0) {
-    return DEALS_DATA;
+  if (dbDealsList && dbDealsList.length > 0) {
+    const explicitDeals = dbDealsList.filter(d => d.status === 'active').map(d => {
+      let lowestListedPrice = 0;
+      let highestCashbackPercent = 0;
+      if (d.comparisons && d.comparisons.length > 0) {
+        lowestListedPrice = Math.min(...d.comparisons.map(c => c.listedPrice || 0));
+        highestCashbackPercent = Math.max(...d.comparisons.map(c => c.cashbackPercent || 0));
+      }
+      const dealPrice = lowestListedPrice > 0 ? lowestListedPrice : 0;
+      const retailPrice = dealPrice > 0 ? parseFloat((dealPrice * 1.5).toFixed(2)) : 0;
+      const cashbackEarned = dealPrice > 0 ? parseFloat(((dealPrice * highestCashbackPercent) / 100).toFixed(2)) : 0;
+      return {
+        ...d,
+        title: d.name,
+        category: 'electronics',
+        storeLogo: storesLogoMap['Amazon'] || fallbackLogo,
+        retailPrice,
+        dealPrice,
+        cashbackEarned,
+      };
+    });
+    combinedDeals = [...combinedDeals, ...explicitDeals];
   }
-  const activeProducts = productsList.filter(p => p.status === 'active');
-  if (activeProducts.length === 0) {
-    return DEALS_DATA;
+
+  if (productsList && productsList.length > 0) {
+    const activeProducts = productsList.filter(p => p.status === 'active');
+    const productDeals = activeProducts.map(p => {
+      const platform = p.platform || 'Amazon';
+      const storeLogo = storesLogoMap[platform] || fallbackLogo;
+      
+      let category = 'electronics';
+      const lowerName = p.name.toLowerCase();
+      const lowerPlatform = platform.toLowerCase();
+      
+      if (lowerPlatform === 'myntra' || lowerPlatform === 'ajio' || lowerName.includes('shoes') || lowerName.includes('clothing') || lowerName.includes('boots') || lowerName.includes('wear')) {
+        category = 'fashion';
+      } else if (lowerPlatform === 'nykaa beauty' || lowerName.includes('cleanser') || lowerName.includes('cream') || lowerName.includes('facial') || lowerName.includes('beauty')) {
+        category = 'health';
+      } else if (lowerPlatform === 'makemytrip' || lowerName.includes('flight') || lowerName.includes('hotel') || lowerName.includes('trip')) {
+        category = 'travel';
+      } else if (lowerName.includes('headphones') || lowerName.includes('laptop') || lowerName.includes('phone') || lowerName.includes('tv') || lowerName.includes('speaker')) {
+        category = 'electronics';
+      } else if (lowerPlatform === 'amazon') {
+        category = 'grocery';
+      }
+      
+      const dealPrice = p.price;
+      const retailPrice = parseFloat((dealPrice * 1.5).toFixed(2));
+      const cashbackEarned = parseFloat(((dealPrice * p.cashbackValue) / 100).toFixed(2));
+      
+      return {
+        id: p.id,
+        title: p.name,
+        retailPrice,
+        dealPrice,
+        cashbackEarned,
+        category,
+        storeLogo,
+        image: p.image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300'
+      };
+    });
+    combinedDeals = [...combinedDeals, ...productDeals];
   }
-  return activeProducts.map(p => {
-    const platform = p.platform || 'Amazon';
-    const storeLogo = STORES_LOGO_MAP[platform] || STORES_LOGO_MAP['Amazon'];
-    
-    let category = 'electronics';
-    const lowerName = p.name.toLowerCase();
-    const lowerPlatform = platform.toLowerCase();
-    
-    if (lowerPlatform === 'myntra' || lowerPlatform === 'ajio' || lowerName.includes('shoes') || lowerName.includes('clothing') || lowerName.includes('boots') || lowerName.includes('wear')) {
-      category = 'fashion';
-    } else if (lowerPlatform === 'nykaa beauty' || lowerName.includes('cleanser') || lowerName.includes('cream') || lowerName.includes('facial') || lowerName.includes('beauty')) {
-      category = 'health';
-    } else if (lowerPlatform === 'makemytrip' || lowerName.includes('flight') || lowerName.includes('hotel') || lowerName.includes('trip')) {
-      category = 'travel';
-    } else if (lowerName.includes('headphones') || lowerName.includes('laptop') || lowerName.includes('phone') || lowerName.includes('tv') || lowerName.includes('speaker')) {
-      category = 'electronics';
-    } else if (lowerPlatform === 'amazon') {
-      category = 'grocery';
-    }
-    
-    const dealPrice = p.price;
-    const retailPrice = parseFloat((dealPrice * 1.5).toFixed(2));
-    const cashbackEarned = parseFloat(((dealPrice * p.cashbackValue) / 100).toFixed(2));
-    
-    return {
-      id: p.id,
-      title: p.name,
-      retailPrice,
-      dealPrice,
-      cashbackEarned,
-      category,
-      storeLogo,
-      image: p.image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300'
-    };
-  });
+  return combinedDeals;
 };
 
 export default function App() {
@@ -168,6 +84,8 @@ export default function App() {
   const [trackedOrders, setTrackedOrders] = useState([]);
   const [withdrawRequests, setWithdrawRequests] = useState([]);
   const [products, setProducts] = useState([]);
+  const [deals, setDeals] = useState([]);
+  const [storesData, setStoresData] = useState([]);
   const [currentView, setCurrentView] = useState('home');
   const [selectedStoreId, setSelectedStoreId] = useState(null);
   const [theme, setTheme] = useState('light');
@@ -179,14 +97,18 @@ export default function App() {
   // Load initial tracked orders, withdrawal requests, and products
   const syncAppStates = async () => {
     try {
-      const [tracking, withdrawals, productsData] = await Promise.all([
+      const [tracking, withdrawals, productsData, dbDeals, storesRes] = await Promise.all([
         apiTracking.getAll(),
         apiWithdrawals.getAll(),
-        apiProducts.getAll()
+        apiProducts.getAll(),
+        apiDeals.getAll(),
+        apiStores.getAll()
       ]);
-      setTrackedOrders(tracking);
-      setWithdrawRequests(withdrawals);
-      setProducts(productsData);
+      setTrackedOrders(tracking || []);
+      setWithdrawRequests(withdrawals || []);
+      setProducts(productsData || []);
+      setDeals(dbDeals || []);
+      setStoresData(storesRes || []);
     } catch (err) {
       console.error('Failed to sync states on native:', err);
     }
@@ -243,10 +165,10 @@ export default function App() {
     addNotification('Logged out successfully.', 'info');
   };
 
-  const selectedStore = STORES_DATA.find((s) => s.id === selectedStoreId);
+  const selectedStore = storesData.find((s) => s.id === selectedStoreId);
 
   // Map and cache dynamic product deals
-  const dynamicDeals = React.useMemo(() => mapProductsToDeals(products), [products]);
+  const dynamicDeals = React.useMemo(() => mapProductsToDeals(products, deals, storesData), [products, deals, storesData]);
 
   return (
     <SafeAreaView style={[styles.container, theme === 'dark' ? styles.containerDark : styles.containerLight]}>
@@ -266,7 +188,7 @@ export default function App() {
           trackedOrders={trackedOrders}
           withdrawRequests={withdrawRequests}
           onAddWithdrawalRequest={handleAppWithdrawalRequest}
-          storesData={STORES_DATA}
+          storesData={storesData}
           dealsData={dynamicDeals}
           onAddNotification={addNotification}
           openAuthModal={() => setIsAuthModalOpen(true)}

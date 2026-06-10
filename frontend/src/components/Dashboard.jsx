@@ -2,12 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Wallet, Link, History, Gift, Copy, Check, ShieldCheck, ArrowUpRight, Share2, Percent, Trash2, Play, ExternalLink, Plus } from 'lucide-react';
 import { apiSharedLinks, apiSharedCommissions, apiSettings } from '../services/api';
 
-const DUMMY_CLICKS = [
-  { id: 1, date: '2026-05-28', store: 'Myntra Fashion', action: 'Outbound Redirect', status: 'Confirmed', amount: '₹14.20' },
-  { id: 2, date: '2026-05-29', store: 'Flipkart Mobiles', action: 'Outbound Redirect', status: 'Pending', amount: '₹35.00' },
-  { id: 3, date: '2026-05-30', store: 'Amazon Deals', action: 'Outbound Redirect', status: 'Pending', amount: '₹4.12' },
-  { id: 4, date: '2026-05-31', store: 'Ajio Fashion', action: 'Outbound Redirect', status: 'Confirmed', amount: '₹12.50' },
-];
+const DUMMY_CLICKS = [];
 
 export default function Dashboard({ currentUser, onAddNotification, setView }) {
   const [activeTab, setActiveTab] = useState('overview');
@@ -25,7 +20,6 @@ export default function Dashboard({ currentUser, onAddNotification, setView }) {
   const [newLinkPrice, setNewLinkPrice] = useState('');
   const [generatedShortUrl, setGeneratedShortUrl] = useState('');
   const [copiedSharedId, setCopiedSharedId] = useState(null);
-  const [splitBuyerPercent, setSplitBuyerPercent] = useState(30);
 
   // Fetch shared links and commissions
   useEffect(() => {
@@ -37,9 +31,9 @@ export default function Dashboard({ currentUser, onAddNotification, setView }) {
           apiSharedCommissions.getByUser(currentUser.id),
           apiSettings.get()
         ]);
-        setSharedLinks(links);
-        setSharedCommissions(comms);
-        setGlobalShareRate(settings.sharedCommissionPercent || 5.0);
+        setSharedLinks(links || []);
+        setSharedCommissions(comms || []);
+        setGlobalShareRate(settings?.sharedCommissionPercent || 5.0);
       } catch (err) {
         console.error('Failed to load shared link data:', err);
       } finally {
@@ -69,15 +63,15 @@ export default function Dashboard({ currentUser, onAddNotification, setView }) {
         productName: newLinkProduct,
         store: newLinkStore,
         productUrl: newLinkUrl,
-        userSharePercent: 100 - splitBuyerPercent,
-        buyerSharePercent: splitBuyerPercent
+        userSharePercent: 100,
+        buyerSharePercent: 0
       });
       setSharedLinks(prev => [newLink, ...prev]);
       setGeneratedShortUrl(newLink.shortUrl);
       setNewLinkProduct('');
       setNewLinkUrl('');
       setNewLinkPrice('');
-      onAddNotification('Shared link generated successfully with custom split!', 'success');
+      onAddNotification('Shared link generated successfully!', 'success');
     } catch (err) {
       console.error(err);
       onAddNotification('Failed to generate shared link.', 'error');
@@ -121,7 +115,7 @@ export default function Dashboard({ currentUser, onAddNotification, setView }) {
     setTimeout(() => setCopiedSharedId(null), 2000);
   };
 
-  const refLink = `https://cyvanta.cashback/join?ref=${currentUser.name.toLowerCase()}`;
+  const refLink = `${window.location.origin}/join?ref=${currentUser.name.toLowerCase()}`;
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(refLink);
@@ -131,16 +125,19 @@ export default function Dashboard({ currentUser, onAddNotification, setView }) {
   };
 
   const handleWithdraw = () => {
-    if (currentUser.wallet.confirmed <= 0) {
-      onAddNotification('Insufficient confirmed cashback to withdraw! Minimum is ₹10.', 'error');
+    const userWallet = currentUser?.wallet || { confirmed: 0, pending: 0, referral: 0 };
+    if (userWallet.confirmed <= 0) {
+      onAddNotification('Insufficient confirmed commission to withdraw! Minimum is ₹10.', 'error');
       return;
     }
     setWithdrawing(true);
-    onAddNotification(`Processing withdrawal request of ₹${currentUser.wallet.confirmed.toFixed(2)}...`, 'info');
+    onAddNotification(`Processing withdrawal request of ₹${userWallet.confirmed.toFixed(2)}...`, 'info');
 
     setTimeout(() => {
-      onAddNotification(`Success! ₹${currentUser.wallet.confirmed.toFixed(2)} transferred to your linked Bank Account.`, 'success');
-      currentUser.wallet.confirmed = 0.0; // reset
+      onAddNotification(`Success! ₹${userWallet.confirmed.toFixed(2)} transferred to your linked Bank Account.`, 'success');
+      if (currentUser && currentUser.wallet) {
+        currentUser.wallet.confirmed = 0.0; // reset
+      }
       setWithdrawing(false);
     }, 2500);
   };
@@ -154,7 +151,7 @@ export default function Dashboard({ currentUser, onAddNotification, setView }) {
             className={`dashboard-menu-item ${activeTab === 'overview' ? 'active' : ''}`}
             onClick={() => setActiveTab('overview')}
           >
-            <Wallet size={18} /> Account Overview
+            <Wallet size={18} /> Commission Wallet
           </div>
           <div
             className={`dashboard-menu-item ${activeTab === 'share-earn' ? 'active' : ''}`}
@@ -168,17 +165,11 @@ export default function Dashboard({ currentUser, onAddNotification, setView }) {
           >
             <Link size={18} /> Refer & Earn 10%
           </div>
-          <div
-            className={`dashboard-menu-item ${activeTab === 'clicks' ? 'active' : ''}`}
-            onClick={() => setActiveTab('clicks')}
-          >
-            <History size={18} /> Click & Shopping History
-          </div>
-        </div>
 
         <div style={{ marginTop: 'auto', borderTop: '1px solid var(--border)', paddingTop: '16px', fontSize: '13px', color: 'var(--text)' }}>
           <span style={{ fontWeight: 600, display: 'block', marginBottom: '4px' }}>Help & Support</span>
           Email: support@cyvanta.com
+        </div>
         </div>
       </div>
 
@@ -191,16 +182,16 @@ export default function Dashboard({ currentUser, onAddNotification, setView }) {
             {/* Wallet values banner */}
             <div className="wallet-banner">
               <div className="wallet-stat">
-                <span className="wallet-stat-label">Confirmed Cashback</span>
-                <span className="wallet-stat-val">₹{currentUser.wallet.confirmed.toFixed(2)}</span>
+                <span className="wallet-stat-label">Confirmed Commission</span>
+                <span className="wallet-stat-val">₹{(currentUser?.wallet?.confirmed || 0).toFixed(2)}</span>
               </div>
               <div className="wallet-stat">
                 <span className="wallet-stat-label">Pending Rewards</span>
-                <span className="wallet-stat-val">₹{currentUser.wallet.pending.toFixed(2)}</span>
+                <span className="wallet-stat-val">₹{(currentUser?.wallet?.pending || 0).toFixed(2)}</span>
               </div>
               <div className="wallet-stat">
                 <span className="wallet-stat-label">Referral Earnings</span>
-                <span className="wallet-stat-val">₹{currentUser.wallet.referral.toFixed(2)}</span>
+                <span className="wallet-stat-val">₹{(currentUser?.wallet?.referral || 0).toFixed(2)}</span>
               </div>
 
               <button
@@ -218,8 +209,8 @@ export default function Dashboard({ currentUser, onAddNotification, setView }) {
               <div className="referral-info">
                 <h3 className="referral-title">Invite friends, get 10% of their earnings for life!</h3>
                 <p style={{ fontSize: '14px', color: 'var(--text)' }}>
-                  When your friends register via your unique referral link and shop, you receive a flat
-                  10% lifetime referral bonus on all cashback they earn!
+                  When your friends register via your unique referral link and share deals, you receive a flat
+                  10% lifetime referral bonus on all commissions they earn!
                 </p>
                 <div className="referral-link-box">
                   <input type="text" readOnly value={refLink} className="referral-link-input" />
@@ -342,28 +333,6 @@ export default function Dashboard({ currentUser, onAddNotification, setView }) {
                   />
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', gridColumn: 'span 2', padding: '12px 16px', backgroundColor: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '8px', marginTop: '4px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <label style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-bold)' }}>Commission Split Sharing</label>
-                    <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--primary)' }}>
-                      Keep: {100 - splitBuyerPercent}% | Give: {splitBuyerPercent}%
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    step="5"
-                    value={splitBuyerPercent}
-                    onChange={e => setSplitBuyerPercent(parseInt(e.target.value, 10))}
-                    style={{ width: '100%', height: '6px', cursor: 'pointer', accentColor: 'var(--primary)' }}
-                  />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text)', marginTop: '4px' }}>
-                    <span>Link Creator (You) keeps {100 - splitBuyerPercent}%</span>
-                    <span>Friend (Buyer) gets {splitBuyerPercent}% cashback</span>
-                  </div>
-                </div>
-
                 <button
                   type="submit"
                   className="btn-primary"
@@ -409,7 +378,6 @@ export default function Dashboard({ currentUser, onAddNotification, setView }) {
                         <th>Date</th>
                         <th>Product Name</th>
                         <th>Store</th>
-                        <th>Split (You / Buyer)</th>
                         <th>Clicks</th>
                         <th>Conversions</th>
                         <th>My Earnings</th>
@@ -425,9 +393,6 @@ export default function Dashboard({ currentUser, onAddNotification, setView }) {
                             <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', backgroundColor: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-bold)', fontWeight: 600 }}>
                               {link.store}
                             </span>
-                          </td>
-                          <td style={{ fontWeight: 500 }}>
-                            {link.userSharePercent !== undefined ? `${link.userSharePercent}%` : '100%'} / {link.buyerSharePercent !== undefined ? `${link.buyerSharePercent}%` : '0%'}
                           </td>
                           <td style={{ fontWeight: 600 }}>{link.clicksCount}</td>
                           <td style={{ fontWeight: 600 }}>{link.conversionsCount}</td>
@@ -484,7 +449,7 @@ export default function Dashboard({ currentUser, onAddNotification, setView }) {
                         <th>Product / Store</th>
                         <th>Order Amount</th>
                         <th>Rate Used</th>
-                        <th>Earned Commission (Split)</th>
+                        <th>Earned Commission</th>
                         <th>Admin Status</th>
                       </tr>
                     </thead>
@@ -503,10 +468,7 @@ export default function Dashboard({ currentUser, onAddNotification, setView }) {
                           <td>
                             <div>
                               <div style={{ fontWeight: 700, color: comm.status === 'approved' ? '#10b981' : 'var(--text-bold)' }}>
-                                ₹{comm.userCommissionAmount !== undefined ? comm.userCommissionAmount.toFixed(2) : comm.commissionAmount.toFixed(2)} <span style={{ fontSize: '10px', fontWeight: 500, color: 'var(--text)' }}>(You)</span>
-                              </div>
-                              <div style={{ fontSize: '11px', color: 'var(--text)', marginTop: '2px' }}>
-                                ₹{comm.buyerCommissionAmount !== undefined ? comm.buyerCommissionAmount.toFixed(2) : '0.00'} <span style={{ fontSize: '9px' }}>(Buyer)</span>
+                                ₹{comm.userCommissionAmount !== undefined ? comm.userCommissionAmount.toFixed(2) : comm.commissionAmount.toFixed(2)}
                               </div>
                             </div>
                           </td>
@@ -554,49 +516,6 @@ export default function Dashboard({ currentUser, onAddNotification, setView }) {
           </div>
         )}
 
-        {activeTab === 'clicks' && (
-          <div className="animate-fade" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <h2 className="section-title">Click & Shopping History</h2>
-            <div className="history-card">
-              <h3>Tracked Store Sessions</h3>
-              <p style={{ fontSize: '13px', color: 'var(--text)' }}>
-                Below are all the shopping sessions you started by clicking out from Cyvanta. Shopping
-                tracking statuses updates automatically every few hours.
-              </p>
-
-              <div className="table-responsive">
-                <table className="history-table">
-                  <thead>
-                    <tr>
-                      <th>Session Date</th>
-                      <th>Merchant Retailer</th>
-                      <th>Recorded Action</th>
-                      <th>Cashback Status</th>
-                      <th>Estimated Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {DUMMY_CLICKS.map((c) => (
-                      <tr key={c.id}>
-                        <td>{c.date}</td>
-                        <td style={{ fontWeight: 600, color: 'var(--text-bold)' }}>{c.store}</td>
-                        <td>{c.action}</td>
-                        <td>
-                          <span className={`history-status ${c.status.toLowerCase()}`}>
-                            {c.status}
-                          </span>
-                        </td>
-                        <td style={{ fontWeight: 700, color: c.status === 'Confirmed' ? 'var(--secondary)' : 'var(--text-bold)' }}>
-                          {c.amount}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

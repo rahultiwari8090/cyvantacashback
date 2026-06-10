@@ -17,8 +17,7 @@ export default function TopDeals({ deals, onGrabDeal }) {
       <div className="deals-grid">
         {deals.map((deal) => {
           // Calculations
-          const discountPercent = Math.round(((deal.retailPrice - deal.dealPrice) / deal.retailPrice) * 100);
-          const finalEffectivePrice = (deal.dealPrice - deal.cashbackEarned).toFixed(2);
+          const discountPercent = Math.round((((deal.retailPrice || 0) - (deal.dealPrice || 0)) / (deal.retailPrice || 1)) * 100);
 
           return (
             <div key={deal.id} className="deal-card animate-fade" style={{ position: 'relative' }}>
@@ -39,22 +38,12 @@ export default function TopDeals({ deals, onGrabDeal }) {
                 <div className="deal-price-section">
                   <div className="deal-retail-row">
                     <span>Retail Price:</span>
-                    <span className="deal-retail-price">₹{deal.retailPrice.toFixed(2)}</span>
+                    <span className="deal-retail-price">₹{(deal.retailPrice || 0).toFixed(2)}</span>
                   </div>
 
                   <div className="deal-discounted-row">
                     <span>Special Price:</span>
-                    <span>₹{deal.dealPrice.toFixed(2)}</span>
-                  </div>
-
-                  <div className="deal-cashback-row">
-                    <span>Cyvanta Cashback:</span>
-                    <span>-₹{deal.cashbackEarned.toFixed(2)}</span>
-                  </div>
-
-                  <div className="deal-effective-row">
-                    <span>Final Effective Price:</span>
-                    <span>₹{finalEffectivePrice}</span>
+                    <span>₹{(deal.dealPrice || 0).toFixed(2)}</span>
                   </div>
                 </div>
 

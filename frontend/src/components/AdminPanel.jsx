@@ -22,21 +22,19 @@ import '../Admin.css';
 import AdminDashboard from './AdminDashboard';
 import AdminUsers from './AdminUsers';
 import AdminProducts from './AdminProducts';
-import AdminCashback from './AdminCashback';
 import AdminWithdrawals from './AdminWithdrawals';
 import AdminClickLogs from './AdminClickLogs';
 import AdminConversions from './AdminConversions';
 import AdminReferrals from './AdminReferrals';
 import AdminSettings from './AdminSettings';
-import AdminTracking from './AdminTracking';
 import AdminSharedCommissions from './AdminSharedCommissions';
 import AdminCategories from './AdminCategories';
 import AdminDeals from './AdminDeals';
+import AdminStores from './AdminStores';
+import AdminBanners from './AdminBanners';
 import {
   apiUsers,
   apiProducts,
-  apiTracking,
-  apiCashback,
   apiWithdrawals,
   apiAnalytics,
   apiFinance,
@@ -44,7 +42,11 @@ import {
   apiSharedLinks,
   apiSharedCommissions,
   apiCategories,
-  apiDeals
+  apiDeals,
+  apiStores,
+  apiBanners,
+  apiCashback,
+  apiTracking
 } from '../services/api';
 
 export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, onAddNotification }) {
@@ -52,30 +54,30 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
     const hash = window.location.hash;
     if (hash === '#/admin/users') return 'users';
     if (hash === '#/admin/products') return 'products';
-    if (hash === '#/admin/cashback') return 'cashback';
     if (hash === '#/admin/withdrawals') return 'withdrawals';
     if (hash === '#/admin/click-logs') return 'click-logs';
     if (hash === '#/admin/conversions') return 'conversions';
     if (hash === '#/admin/referrals') return 'referrals';
     if (hash === '#/admin/settings') return 'settings';
-    if (hash === '#/admin/tracking') return 'tracking';
     if (hash === '#/admin/shared-commissions') return 'shared-commissions';
     if (hash === '#/admin/categories') return 'categories';
     if (hash === '#/admin/deals') return 'deals';
+    if (hash === '#/admin/stores') return 'stores';
+    if (hash === '#/admin/banners') return 'banners';
 
     const path = window.location.pathname;
     if (path === '/admin/users') return 'users';
     if (path === '/admin/products') return 'products';
-    if (path === '/admin/cashback') return 'cashback';
     if (path === '/admin/withdrawals') return 'withdrawals';
     if (path === '/admin/click-logs') return 'click-logs';
     if (path === '/admin/conversions') return 'conversions';
     if (path === '/admin/referrals') return 'referrals';
     if (hash === '#/admin/settings') return 'settings';
-    if (hash === '#/admin/tracking') return 'tracking';
     if (hash === '#/admin/shared-commissions') return 'shared-commissions';
     if (hash === '#/admin/categories') return 'categories';
     if (hash === '#/admin/deals') return 'deals';
+    if (path === '/admin/stores' || hash === '#/admin/stores') return 'stores';
+    if (path === '/admin/banners' || hash === '#/admin/banners') return 'banners';
     return 'dashboard';
   };
 
@@ -124,6 +126,8 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
   const [sharedCommissions, setSharedCommissions] = useState([]);
   const [categories, setCategories] = useState([]);
   const [deals, setDeals] = useState([]);
+  const [storesData, setStoresData] = useState([]);
+  const [banners, setBanners] = useState([]);
   const [finance, setFinance] = useState({
     totalRevenue: 0.00,
     totalCashbackPaid: 0.00,
@@ -150,36 +154,52 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
           sharedLinksData,
           sharedCommissionsData,
           categoriesData,
-          dealsData
+          dealsData,
+          storesRes,
+          bannersData
         ] = await Promise.all([
-          apiUsers.getAll(),
-          apiProducts.getAll(),
-          apiCashback.getAll(),
-          apiTracking.getAll(),
-          apiWithdrawals.getAll(),
-          apiAnalytics.getClickLogs(),
-          apiAnalytics.getConversions(),
-          apiFinance.getData(),
-          apiSettings.get(),
-          apiSharedLinks.getAll(),
-          apiSharedCommissions.getAll(),
-          apiCategories.getAll(),
-          apiDeals.getAll()
+          apiUsers.getAll().catch(e => { console.warn('Users fetch failed', e); return []; }),
+          apiProducts.getAll().catch(e => { console.warn('Products fetch failed', e); return []; }),
+          apiCashback.getAll().catch(e => { console.warn('Cashback fetch failed', e); return []; }),
+          apiTracking.getAll().catch(e => { console.warn('Tracking fetch failed', e); return []; }),
+          apiWithdrawals.getAll().catch(e => { console.warn('Withdrawals fetch failed', e); return []; }),
+          apiAnalytics.getClickLogs().catch(e => { console.warn('ClickLogs fetch failed', e); return []; }),
+          apiAnalytics.getConversions().catch(e => { console.warn('Conversions fetch failed', e); return []; }),
+          apiFinance.getData().catch(e => { console.warn('Finance fetch failed', e); return null; }),
+          apiSettings.get().catch(e => { console.warn('Settings fetch failed', e); return null; }),
+          apiSharedLinks.getAll().catch(e => { console.warn('SharedLinks fetch failed', e); return []; }),
+          apiSharedCommissions.getAll().catch(e => { console.warn('SharedCommissions fetch failed', e); return []; }),
+          apiCategories.getAll().catch(e => { console.warn('Categories fetch failed', e); return []; }),
+          apiDeals.getAll().catch(e => { console.warn('Deals fetch failed', e); return []; }),
+          apiStores.getAll().catch(e => { console.warn('Stores fetch failed', e); return []; }),
+          apiBanners.getAll().catch(e => { console.warn('Banners fetch failed', e); return []; })
         ]);
 
-        setUsers(usersData);
-        setProducts(productsData);
-        setCashbackList(cashbackData);
-        setTrackedOrders(trackingData);
-        setWithdrawRequests(withdrawData);
-        setClickLogs(clicksData);
-        setConversions(conversionsData);
-        setFinance(financeData);
-        setGlobalSettings(settingsData);
-        setSharedLinks(sharedLinksData);
-        setSharedCommissions(sharedCommissionsData);
-        setCategories(categoriesData);
-        setDeals(dealsData);
+        setUsers(usersData || []);
+        setProducts(productsData || []);
+        setCashbackList(cashbackData || []);
+        setTrackedOrders(trackingData || []);
+        setWithdrawRequests(withdrawData || []);
+        setClickLogs(clicksData || []);
+        setConversions(conversionsData || []);
+        setFinance(financeData || {
+          totalRevenue: 0.00,
+          totalCashbackPaid: 0.00,
+          totalWithdrawPaid: 0.00,
+          pendingWithdrawals: 0.00,
+          transactions: [],
+        });
+        setGlobalSettings(settingsData || {
+          cashbackPercent: 8.0,
+          holdDays: 30,
+          minimumWithdrawal: 10.00,
+        });
+        setSharedLinks(sharedLinksData || []);
+        setSharedCommissions(sharedCommissionsData || []);
+        setCategories(categoriesData || []);
+        setDeals(dealsData || []);
+        setStoresData(storesRes || []);
+        setBanners(bannersData || []);
       } catch (err) {
         console.error('Failed to load Spring Boot dashboard APIs:', err);
         onAddNotification('Failed to sync data with backend.', 'error');
@@ -196,6 +216,7 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
     if (trackedOrders.length === 0) return;
 
     const checkExpirations = () => {
+      if (!trackedOrders || trackedOrders.length === 0) return;
       const today = new Date();
       trackedOrders.forEach(o => {
         if (o.status === 'return_active' && o.returnExpiryDate) {
@@ -224,13 +245,13 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'users', label: 'Users', icon: UsersIcon },
     { id: 'products', label: 'Products', icon: ShoppingBag },
-    { id: 'tracking', label: 'Product Tracking', icon: Truck },
-    { id: 'cashback', label: 'Cashback', icon: Gift },
     { id: 'withdrawals', label: 'Withdrawals', icon: Wallet },
     { id: 'click-logs', label: 'Click Logs', icon: MousePointer },
     { id: 'conversions', label: 'Conversions', icon: CheckSquare },
     { id: 'shared-commissions', label: 'Shared Commissions', icon: Share2 },
     { id: 'referrals', label: 'Referrals', icon: Share2 },
+    { id: 'banners', label: 'Banners', icon: LayoutDashboard },
+    { id: 'stores', label: 'Stores', icon: ShoppingBag },
     { id: 'categories', label: 'Categories', icon: ShoppingBag },
     { id: 'deals', label: 'Deals', icon: Gift },
     { id: 'settings', label: 'Settings', icon: SettingsIcon },
@@ -560,7 +581,74 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
     }
   };
 
+  const addStore = async (store) => {
+    try {
+      const newStore = await apiStores.create(store);
+      setStoresData((prev) => [...prev, newStore]);
+      onAddNotification('Store added successfully.', 'success');
+    } catch (err) {
+      console.error(err);
+      onAddNotification('Failed to add store.', 'error');
+    }
+  };
+
+  const editStore = async (store) => {
+    try {
+      const updatedStore = await apiStores.update(store.id, store);
+      setStoresData((prev) => prev.map((s) => (s.id === updatedStore.id ? updatedStore : s)));
+      onAddNotification('Store updated successfully.', 'success');
+    } catch (err) {
+      console.error(err);
+      onAddNotification('Failed to update store.', 'error');
+    }
+  };
+
+  const deleteStore = async (id) => {
+    try {
+      await apiStores.delete(id);
+      setStoresData((prev) => prev.filter((s) => s.id !== id));
+      onAddNotification('Store deleted successfully.', 'success');
+    } catch (err) {
+      console.error(err);
+      onAddNotification('Failed to delete store.', 'error');
+    }
+  };
+
+  const addBanner = async (banner) => {
+    try {
+      const newBanner = await apiBanners.create(banner);
+      setBanners((prev) => [...prev, newBanner]);
+      onAddNotification('Banner added successfully.', 'success');
+    } catch (err) {
+      console.error(err);
+      onAddNotification('Failed to add banner.', 'error');
+    }
+  };
+
+  const editBanner = async (banner) => {
+    try {
+      const updatedBanner = await apiBanners.update(banner.id, banner);
+      setBanners((prev) => prev.map((b) => (b.id === updatedBanner.id ? updatedBanner : b)));
+      onAddNotification('Banner updated successfully.', 'success');
+    } catch (err) {
+      console.error(err);
+      onAddNotification('Failed to update banner.', 'error');
+    }
+  };
+
+  const deleteBanner = async (id) => {
+    try {
+      await apiBanners.delete(id);
+      setBanners((prev) => prev.filter((b) => b.id !== id));
+      onAddNotification('Banner deleted successfully.', 'success');
+    } catch (err) {
+      console.error(err);
+      onAddNotification('Failed to delete banner.', 'error');
+    }
+  };
+
   // Render active route panel
+
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
@@ -594,27 +682,6 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
             onEditProduct={editProduct}
             onToggleStatus={toggleProductStatus}
             onDeleteProduct={deleteProduct}
-          />
-        );
-      case 'tracking':
-        return (
-          <AdminTracking
-            trackedOrders={trackedOrders}
-            onAddTrackedOrder={addTrackedOrder}
-            onUpdateTrackedOrderStatus={updateTrackedOrderStatus}
-            users={users}
-            products={products}
-            onAddNotification={onAddNotification}
-          />
-        );
-      case 'cashback':
-        return (
-          <AdminCashback
-            cashbackList={cashbackList}
-            onApprove={approveCashback}
-            onReject={rejectCashback}
-            globalSettings={globalSettings}
-            onUpdateSettings={updateGlobalSettings}
           />
         );
       case 'withdrawals':
@@ -663,6 +730,26 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
             deals={deals}
             onAddDeal={addDeal}
             onDeleteDeal={deleteDeal}
+          />
+        );
+      case 'stores':
+        return (
+          <AdminStores
+            stores={storesData}
+            onAddStore={addStore}
+            onEditStore={editStore}
+            onDeleteStore={deleteStore}
+            onAddNotification={onAddNotification}
+          />
+        );
+      case 'banners':
+        return (
+          <AdminBanners
+            banners={banners}
+            onAddBanner={addBanner}
+            onEditBanner={editBanner}
+            onDeleteBanner={deleteBanner}
+            onAddNotification={onAddNotification}
           />
         );
       case 'settings':
