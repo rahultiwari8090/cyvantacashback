@@ -677,6 +677,7 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
         return (
           <AdminProducts
             products={products}
+            stores={storesData}
             onAddProduct={addProduct}
             onAddProductBulk={addProductBulk}
             onEditProduct={editProduct}

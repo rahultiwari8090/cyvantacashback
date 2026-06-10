@@ -80,7 +80,7 @@ const generateMockAffiliateProducts = (platform, keyword, category, limit) => {
   }));
 };
 
-export default function AdminProducts({ products, categories = [], onAddProduct, onAddProductBulk, onToggleStatus, onDeleteProduct, onEditProduct }) {
+export default function AdminProducts({ products, stores = [], categories = [], onAddProduct, onAddProductBulk, onToggleStatus, onDeleteProduct, onEditProduct }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editItem, setEditItem] = useState(null); // null means adding
@@ -104,6 +104,7 @@ export default function AdminProducts({ products, categories = [], onAddProduct,
   // Raw states
   const [rawText, setRawText] = useState('');
   const [rawFormat, setRawFormat] = useState('json');
+  const [rawDefaultPlatform, setRawDefaultPlatform] = useState('Amazon');
 
   // Preview & Selection states
   const [previewProducts, setPreviewProducts] = useState([]);
@@ -126,6 +127,17 @@ export default function AdminProducts({ products, categories = [], onAddProduct,
   const [prodCategory, setProdCategory] = useState('electronics');
   const [prodActive, setProdActive] = useState(true);
   const [formError, setFormError] = useState('');
+
+  const platformOptions = stores.length > 0 
+    ? stores.map(s => ({ value: s.name, label: s.name })) 
+    : [
+        { value: 'Amazon', label: 'Amazon' },
+        { value: 'Flipkart', label: 'Flipkart' },
+        { value: 'Myntra', label: 'Myntra' },
+        { value: 'Ajio', label: 'Ajio' },
+        { value: 'Nykaa Beauty', label: 'Nykaa Beauty' },
+        { value: 'MakeMyTrip', label: 'MakeMyTrip' }
+      ];
 
   const openBulkModal = () => {
     setBulkImportMode('api');
@@ -198,7 +210,7 @@ export default function AdminProducts({ products, categories = [], onAddProduct,
           return {
             id: `raw-${idx}-${Date.now()}`,
             name: item.name,
-            platform: item.platform || 'Amazon',
+            platform: item.platform || rawDefaultPlatform,
             price: parseFloat(item.price),
             cashbackValue: parseFloat(item.cashbackValue || 10),
             affiliateUrl: item.affiliateUrl || item.link || '',
@@ -253,7 +265,7 @@ export default function AdminProducts({ products, categories = [], onAddProduct,
           formatted.push({
             id: `raw-csv-${i}-${Date.now()}`,
             name: name,
-            platform: platformIdx !== -1 ? cols[platformIdx] : 'Amazon',
+            platform: (platformIdx !== -1 && cols[platformIdx]) ? cols[platformIdx] : rawDefaultPlatform,
             price: price,
             cashbackValue: cashbackIdx !== -1 ? parseFloat(cols[cashbackIdx] || 10) : 10,
             affiliateUrl: affiliateUrlIdx !== -1 && cols[affiliateUrlIdx] ? cols[affiliateUrlIdx] : '',
@@ -514,12 +526,9 @@ export default function AdminProducts({ products, categories = [], onAddProduct,
             }}
           >
             <option value="all">All Platforms</option>
-            <option value="Amazon">Amazon</option>
-            <option value="Flipkart">Flipkart</option>
-            <option value="Myntra">Myntra</option>
-            <option value="Ajio">Ajio</option>
-            <option value="Nykaa Beauty">Nykaa Beauty</option>
-            <option value="MakeMyTrip">MakeMyTrip</option>
+            {platformOptions.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
           </select>
         </div>
       </div>
@@ -571,14 +580,7 @@ export default function AdminProducts({ products, categories = [], onAddProduct,
             id="prod-platform"
             value={prodPlatform}
             onChange={(e) => setProdPlatform(e.target.value)}
-            options={[
-              { value: 'Amazon', label: 'Amazon' },
-              { value: 'Flipkart', label: 'Flipkart' },
-              { value: 'Myntra', label: 'Myntra' },
-              { value: 'Ajio', label: 'Ajio' },
-              { value: 'Nykaa Beauty', label: 'Nykaa Beauty' },
-              { value: 'MakeMyTrip', label: 'MakeMyTrip' },
-            ]}
+            options={platformOptions}
           />
 
           <AdminFormSelect
@@ -730,14 +732,7 @@ export default function AdminProducts({ products, categories = [], onAddProduct,
                     id="bulk-platform"
                     value={apiPlatform}
                     onChange={(e) => setApiPlatform(e.target.value)}
-                    options={[
-                      { value: 'Amazon', label: 'Amazon Affiliate API' },
-                      { value: 'Flipkart', label: 'Flipkart Feed API' },
-                      { value: 'Myntra', label: 'Myntra Affiliate Engine' },
-                      { value: 'Ajio', label: 'Ajio Product Catalog API' },
-                      { value: 'Nykaa Beauty', label: 'Nykaa Merchant Feed' },
-                      { value: 'MakeMyTrip', label: 'MakeMyTrip Travel Feed API' }
-                    ]}
+                    options={platformOptions}
                   />
                 </div>
                 <div style={{ flex: 1 }}>
@@ -862,6 +857,15 @@ export default function AdminProducts({ products, categories = [], onAddProduct,
                       { value: 'csv', label: 'Standard Comma-separated (CSV)' },
                       { value: 'upload', label: 'Upload File (.csv, .json)' }
                     ]}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <AdminFormSelect
+                    label="Default Platform (if missing)"
+                    id="raw-default-platform"
+                    value={rawDefaultPlatform}
+                    onChange={(e) => setRawDefaultPlatform(e.target.value)}
+                    options={platformOptions}
                   />
                 </div>
               </div>
