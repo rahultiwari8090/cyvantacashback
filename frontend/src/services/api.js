@@ -80,6 +80,8 @@ export const apiUsers = {
   login: (email, password) => request('/users/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
   adminLogin: (email, password) => request('/users/admin/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
   register: (name, email, password, phone = '', referredBy = null) => request('/users/register', { method: 'POST', body: JSON.stringify({ name, email, password, phone, referredBy }) }),
+  verifyOtp: (email, otp) => request('/users/verify-otp', { method: 'POST', body: JSON.stringify({ email, otp }) }),
+  resendOtp: (email) => request('/users/resend-otp', { method: 'POST', body: JSON.stringify({ email }) }),
   updateStatus: (id, status) => request(`/users/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
   update: (id, userData) => request(`/users/${id}`, { method: 'PUT', body: JSON.stringify(userData) })
 };

@@ -47,6 +47,13 @@ public class User {
     // Custom shared commission rate for this user (null = use global default)
     private Double sharedCommissionRate;
 
+    private String otp;
+
+    private LocalDateTime otpExpiry;
+
+    @Builder.Default
+    private Boolean isVerified = false;
+
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
 
