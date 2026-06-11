@@ -63,11 +63,11 @@ export default function Dashboard({ currentUser, onAddNotification, setView }) {
         productName: newLinkProduct,
         store: newLinkStore,
         productUrl: newLinkUrl,
-        userSharePercent: 100,
-        buyerSharePercent: 0
+        userSharePercent: 100
       });
       setSharedLinks(prev => [newLink, ...prev]);
-      setGeneratedShortUrl(newLink.shortUrl);
+      const correctShortUrl = newLink.shortUrl.includes('cyvanta.cashback') ? newLink.shortUrl.replace('https://cyvanta.cashback', window.location.origin + '/#') : newLink.shortUrl;
+      setGeneratedShortUrl(correctShortUrl);
       setNewLinkProduct('');
       setNewLinkUrl('');
       setNewLinkPrice('');
@@ -109,7 +109,8 @@ export default function Dashboard({ currentUser, onAddNotification, setView }) {
   };
 
   const handleCopySharedLink = (linkUrl, linkId) => {
-    navigator.clipboard.writeText(linkUrl);
+    const correctLink = linkUrl.includes('cyvanta.cashback') ? linkUrl.replace('https://cyvanta.cashback', window.location.origin + '/#') : linkUrl;
+    navigator.clipboard.writeText(correctLink);
     setCopiedSharedId(linkId);
     onAddNotification('Shared link copied to clipboard!', 'success');
     setTimeout(() => setCopiedSharedId(null), 2000);

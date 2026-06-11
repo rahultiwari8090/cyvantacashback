@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tag, Sparkles } from 'lucide-react';
+import { Tag, Sparkles, Share2 } from 'lucide-react';
 
 export default function TopDeals({ deals, onGrabDeal }) {
   return (
@@ -47,13 +47,30 @@ export default function TopDeals({ deals, onGrabDeal }) {
                   </div>
                 </div>
 
-                <button
-                  className="btn-card-primary"
-                  onClick={() => onGrabDeal(deal)}
-                  style={{ marginTop: '4px' }}
-                >
-                  Grab Deal
-                </button>
+                <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                  <button
+                    className="btn-card-primary"
+                    onClick={() => onGrabDeal(deal)}
+                    style={{ flex: 1 }}
+                  >
+                    Grab Deal
+                  </button>
+                  <button
+                    className="btn-secondary"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (window.handleShareDeal) {
+                        window.handleShareDeal(deal.id);
+                      } else {
+                        alert('Log in to share deals!');
+                      }
+                    }}
+                    style={{ padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    title="Share Deal"
+                  >
+                    <Share2 size={16} />
+                  </button>
+                </div>
               </div>
             </div>
           );

@@ -108,13 +108,15 @@ export default function Header({
           <a href="#how-it-works" className="nav-link" onClick={() => setView('home')}>
             How it Works
           </a>
-          <button
-            className={`nav-link ${currentView === 'admin-login' ? 'active' : ''}`}
-            onClick={() => setView('admin-login')}
-            style={{ fontWeight: '700', color: 'var(--primary)' }}
-          >
-            Admin Panel
-          </button>
+          {(currentUser && (currentUser.role === 'ADMIN' || currentUser.isAdmin)) && (
+            <button
+              className={`nav-link ${currentView === 'admin-login' ? 'active' : ''}`}
+              onClick={() => setView('admin-login')}
+              style={{ fontWeight: '700', color: 'var(--primary)' }}
+            >
+              Admin Panel
+            </button>
+          )}
         </nav>
 
         {/* Actions (theme toggle, login, user dashboard badge) */}

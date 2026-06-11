@@ -4,6 +4,10 @@ import com.cyvanta.affiliate_app.model.Coupon;
 import com.cyvanta.affiliate_app.model.Product;
 import com.cyvanta.affiliate_app.model.Store;
 import com.cyvanta.affiliate_app.model.User;
+import com.cyvanta.affiliate_app.model.Category;
+import com.cyvanta.affiliate_app.model.Conversion;
+import com.cyvanta.affiliate_app.repository.CategoryRepository;
+import com.cyvanta.affiliate_app.repository.ConversionRepository;
 import com.cyvanta.affiliate_app.repository.ProductRepository;
 import com.cyvanta.affiliate_app.repository.StoreRepository;
 import com.cyvanta.affiliate_app.repository.UserRepository;
@@ -11,6 +15,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Component
@@ -19,12 +24,18 @@ public class AdminSeedRunner implements CommandLineRunner {
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
     private final StoreRepository storeRepository;
+    private final CategoryRepository categoryRepository;
+    private final ConversionRepository conversionRepository;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    public AdminSeedRunner(UserRepository userRepository, ProductRepository productRepository, StoreRepository storeRepository) {
+    public AdminSeedRunner(UserRepository userRepository, ProductRepository productRepository, 
+                           StoreRepository storeRepository, CategoryRepository categoryRepository,
+                           ConversionRepository conversionRepository) {
         this.userRepository = userRepository;
         this.productRepository = productRepository;
         this.storeRepository = storeRepository;
+        this.categoryRepository = categoryRepository;
+        this.conversionRepository = conversionRepository;
     }
 
     @Override
@@ -43,6 +54,71 @@ public class AdminSeedRunner implements CommandLineRunner {
 
                 userRepository.save(admin);
                 System.out.println("Admin seeded successfully");
+            }
+            
+            // Seed Dummy Referrals
+            if (userRepository.count() < 3) {
+                User user1 = new User();
+                user1.setName("Alice Sharma");
+                user1.setEmail("alice@example.com");
+                user1.setReferredBy("admin123");
+                user1.setRole(User.Role.USER);
+                user1.setPasswordHash(passwordEncoder.encode("password"));
+                
+                User user2 = new User();
+                user2.setName("Bob Singh");
+                user2.setEmail("bob@example.com");
+                user2.setReferredBy("admin123");
+                user2.setRole(User.Role.USER);
+                user2.setPasswordHash(passwordEncoder.encode("password"));
+                
+                userRepository.saveAll(List.of(user1, user2));
+                System.out.println("Sample referred users seeded successfully");
+            }
+            
+            // Seed Categories
+            if (categoryRepository.count() == 0) {
+                categoryRepository.saveAll(List.of(
+                    new Category(null, "Electronics", "Smartphone", "active", LocalDate.now().toString()),
+                    new Category(null, "Fashion", "Shirt", "active", LocalDate.now().toString()),
+                    new Category(null, "Health & Beauty", "Heart", "active", LocalDate.now().toString()),
+                    new Category(null, "Groceries", "ShoppingBag", "active", LocalDate.now().toString())
+                ));
+                System.out.println("Sample categories seeded successfully");
+            }
+            
+            // Seed Conversions
+            if (conversionRepository.count() == 0) {
+                conversionRepository.saveAll(List.of(
+                    Conversion.builder()
+                        .subId("SUB-9X21B")
+                        .clickId("CLK-2026A1")
+                        .commission(150.50)
+                        .status("approved")
+                        .userName("Alice Sharma")
+                        .network("Admitad")
+                        .date(LocalDate.now().minusDays(2))
+                        .build(),
+                    Conversion.builder()
+                        .subId("SUB-3C44M")
+                        .clickId("CLK-2026B2")
+                        .commission(45.00)
+                        .status("pending")
+                        .userName("Bob Singh")
+                        .network("Cuelinks")
+                        .date(LocalDate.now().minusDays(1))
+                        .build(),
+                    Conversion.builder()
+                        .subId("SUB-1L99Z")
+                        .clickId("CLK-2026C3")
+                        .commission(12.75)
+                        .status("rejected")
+                        .userName("Alice Sharma")
+                        .network("Admitad")
+                        .date(LocalDate.now())
+                        .build()
+                ));
+                System.out.println("Sample conversions seeded successfully");
             }
 
             if (productRepository.count() == 0) {

@@ -26,6 +26,9 @@ public class Product {
 
     private String description;
 
+    @Builder.Default
+    private Double dummyCommission = 0.0;
+
     private Double price;
 
     private Double discountPrice;

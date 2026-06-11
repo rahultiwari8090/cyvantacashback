@@ -15,6 +15,7 @@ import {
   Moon,
   Menu,
   Truck,
+  Globe,
 } from 'lucide-react';
 import '../Admin.css';
 
@@ -32,6 +33,8 @@ import AdminCategories from './AdminCategories';
 import AdminDeals from './AdminDeals';
 import AdminStores from './AdminStores';
 import AdminBanners from './AdminBanners';
+import AdminAffiliateNetwork from './AdminAffiliateNetwork';
+
 import {
   apiUsers,
   apiProducts,
@@ -46,7 +49,8 @@ import {
   apiStores,
   apiBanners,
   apiCashback,
-  apiTracking
+  apiTracking,
+  apiAffiliate
 } from '../services/api';
 
 export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, onAddNotification }) {
@@ -78,6 +82,7 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
     if (hash === '#/admin/deals') return 'deals';
     if (path === '/admin/stores' || hash === '#/admin/stores') return 'stores';
     if (path === '/admin/banners' || hash === '#/admin/banners') return 'banners';
+    if (path === '/admin/affiliate-network' || hash === '#/admin/affiliate-network') return 'affiliate-network';
     return 'dashboard';
   };
 
@@ -136,6 +141,8 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
     transactions: [],
   });
 
+  const [refreshKey, setRefreshKey] = useState(0);
+
   // --- FETCH DATA FROM SPRING BOOT / MOCK ON MOUNT ---
   React.useEffect(() => {
     const loadDashboardData = async () => {
@@ -148,31 +155,35 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
           trackingData,
           withdrawData,
           clicksData,
+          commsData,
+          sharesData,
           conversionsData,
           financeData,
           settingsData,
-          sharedLinksData,
-          sharedCommissionsData,
           categoriesData,
           dealsData,
           storesRes,
-          bannersData
+          bannersData,
+          sharedLinksData,
+          sharedCommissionsData
         ] = await Promise.all([
           apiUsers.getAll().catch(e => { console.warn('Users fetch failed', e); return []; }),
           apiProducts.getAll().catch(e => { console.warn('Products fetch failed', e); return []; }),
           apiCashback.getAll().catch(e => { console.warn('Cashback fetch failed', e); return []; }),
           apiTracking.getAll().catch(e => { console.warn('Tracking fetch failed', e); return []; }),
           apiWithdrawals.getAll().catch(e => { console.warn('Withdrawals fetch failed', e); return []; }),
-          apiAnalytics.getClickLogs().catch(e => { console.warn('ClickLogs fetch failed', e); return []; }),
+          apiAffiliate.getAllClicks().catch(e => { console.warn('Affiliate Clicks fetch failed', e); return []; }),
+          apiAffiliate.getCommissionHistory().catch(e => { console.warn('Affiliate Comms fetch failed', e); return []; }),
+          apiAffiliate.getAllShares().catch(e => { console.warn('Affiliate Shares fetch failed', e); return []; }),
           apiAnalytics.getConversions().catch(e => { console.warn('Conversions fetch failed', e); return []; }),
           apiFinance.getData().catch(e => { console.warn('Finance fetch failed', e); return null; }),
           apiSettings.get().catch(e => { console.warn('Settings fetch failed', e); return null; }),
-          apiSharedLinks.getAll().catch(e => { console.warn('SharedLinks fetch failed', e); return []; }),
-          apiSharedCommissions.getAll().catch(e => { console.warn('SharedCommissions fetch failed', e); return []; }),
           apiCategories.getAll().catch(e => { console.warn('Categories fetch failed', e); return []; }),
           apiDeals.getAll().catch(e => { console.warn('Deals fetch failed', e); return []; }),
           apiStores.getAll().catch(e => { console.warn('Stores fetch failed', e); return []; }),
-          apiBanners.getAll().catch(e => { console.warn('Banners fetch failed', e); return []; })
+          apiBanners.getAll().catch(e => { console.warn('Banners fetch failed', e); return []; }),
+          apiSharedLinks.getAll().catch(e => { console.warn('Shared links fetch failed', e); return []; }),
+          apiSharedCommissions.getAll().catch(e => { console.warn('Shared comms fetch failed', e); return []; })
         ]);
 
         setUsers(usersData || []);
@@ -180,7 +191,25 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
         setCashbackList(cashbackData || []);
         setTrackedOrders(trackingData || []);
         setWithdrawRequests(withdrawData || []);
-        setClickLogs(clicksData || []);
+        
+        // Map new AffiliateClicks to Legacy ClickLogs format
+        const mappedClicks = (clicksData || []).map(click => {
+           const buyer = (usersData || []).find(u => u.id === click.buyerId);
+           const product = (productsData || []).find(p => p.id === click.productId);
+           return {
+              clickId: click.trackingId,
+              userName: buyer ? buyer.name : 'Guest User',
+              productName: product ? product.name : 'Unknown Product',
+              network: product ? product.platform : 'Unknown Network',
+              date: click.createdAt ? new Date(click.createdAt).toLocaleString() : 'N/A'
+           };
+        });
+        setClickLogs(mappedClicks);
+
+        // We no longer need the complex legacy mapping since we have a dedicated collection
+        setSharedCommissions(sharedCommissionsData || []);
+        setSharedLinks(sharedLinksData || []);
+        
         setConversions(conversionsData || []);
         setFinance(financeData || {
           totalRevenue: 0.00,
@@ -194,22 +223,20 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
           holdDays: 30,
           minimumWithdrawal: 10.00,
         });
-        setSharedLinks(sharedLinksData || []);
-        setSharedCommissions(sharedCommissionsData || []);
+
         setCategories(categoriesData || []);
         setDeals(dealsData || []);
         setStoresData(storesRes || []);
         setBanners(bannersData || []);
       } catch (err) {
-        console.error('Failed to load Spring Boot dashboard APIs:', err);
-        onAddNotification('Failed to sync data with backend.', 'error');
+        console.error('Failed to load dashboard data:', err);
       } finally {
         setLoading(false);
       }
     };
 
     loadDashboardData();
-  }, []);
+  }, [refreshKey]);
 
   // --- AUTOMATIC EXPIRED RETURN WINDOWS CHECKER ---
   React.useEffect(() => {
@@ -254,6 +281,7 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
     { id: 'stores', label: 'Stores', icon: ShoppingBag },
     { id: 'categories', label: 'Categories', icon: ShoppingBag },
     { id: 'deals', label: 'Deals', icon: Gift },
+    { id: 'affiliate-network', label: 'Affiliate Network', icon: Globe },
     { id: 'settings', label: 'Settings', icon: SettingsIcon },
   ];
 
@@ -464,21 +492,9 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
 
   const approveSharedCommission = async (id, amount) => {
     try {
-      const updated = await apiSharedCommissions.updateStatus(id, 'approved', amount);
-      setSharedCommissions((prev) =>
-        prev.map((c) => (c.id === id ? updated : c))
-      );
-      
-      const links = await apiSharedLinks.getAll();
-      setSharedLinks(links);
-
-      const [usersData, financeData] = await Promise.all([
-        apiUsers.getAll(),
-        apiFinance.getData()
-      ]);
-      setUsers(usersData);
-      setFinance(financeData);
-      onAddNotification('Shared link commission claim approved.', 'success');
+      await apiSharedCommissions.updateStatus(id, { status: 'approved' });
+      setRefreshKey(prev => prev + 1);
+      onAddNotification('Shared link commission claim approved!', 'success');
     } catch (err) {
       console.error(err);
       onAddNotification('Failed to approve shared commission.', 'error');
@@ -487,15 +503,8 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
 
   const rejectSharedCommission = async (id) => {
     try {
-      const current = sharedCommissions.find(c => c.id === id);
-      const amount = current ? current.commissionAmount : 0;
-      const updated = await apiSharedCommissions.updateStatus(id, 'rejected', amount);
-      setSharedCommissions((prev) =>
-        prev.map((c) => (c.id === id ? updated : c))
-      );
-
-      const usersData = await apiUsers.getAll();
-      setUsers(usersData);
+      await apiSharedCommissions.updateStatus(id, { status: 'rejected' });
+      setRefreshKey(prev => prev + 1);
       onAddNotification('Shared link commission claim rejected.', 'error');
     } catch (err) {
       console.error(err);
@@ -503,23 +512,11 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
     }
   };
 
-  const adjustSharedCommission = async (id, amount, currentStatus) => {
+  const adjustSharedCommission = async (id, userAmount, totalAmount, currentStatus) => {
     try {
-      const updated = await apiSharedCommissions.updateStatus(id, currentStatus, amount);
-      setSharedCommissions((prev) =>
-        prev.map((c) => (c.id === id ? updated : c))
-      );
-
-      const links = await apiSharedLinks.getAll();
-      setSharedLinks(links);
-
-      const [usersData, financeData] = await Promise.all([
-        apiUsers.getAll(),
-        apiFinance.getData()
-      ]);
-      setUsers(usersData);
-      setFinance(financeData);
-      onAddNotification(`Fixed commission payout adjusted to ₹${amount}.`, 'success');
+      await apiSharedCommissions.updateStatus(id, { userAmount: userAmount, amount: totalAmount, status: 'approved' });
+      setRefreshKey(prev => prev + 1);
+      onAddNotification(`Fixed commission payout adjusted and approved. User gets ₹${userAmount}.`, 'success');
     } catch (err) {
       console.error(err);
       onAddNotification('Failed to adjust shared commission.', 'error');
@@ -753,6 +750,8 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
             onAddNotification={onAddNotification}
           />
         );
+      case 'affiliate-network':
+        return <AdminAffiliateNetwork addNotification={onAddNotification} />;
       case 'settings':
         return (
           <AdminSettings

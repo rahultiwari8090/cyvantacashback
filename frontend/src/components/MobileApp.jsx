@@ -78,7 +78,8 @@ export default function MobileApp({
   dealsData = [],
   onAddNotification,
   openAuthModal,
-  onLogout
+  onLogout,
+  onGrabDeal
 }) {
   const [activeTab, setActiveTab] = useState('home');
   const [copiedLink, setCopiedLink] = useState(false);
@@ -119,6 +120,12 @@ export default function MobileApp({
   const executeSimulatorGrabDeal = (dealItem, storeItem) => {
     setComparisonDeal(null);
     onAddNotification(`Activating cashback tracker on ${storeItem.platform} for ${dealItem.title || dealItem.name}...`, 'success');
+    
+    // Trigger dummy affiliate click
+    if (onGrabDeal) {
+      onGrabDeal(dealItem);
+    }
+    
     setTimeout(() => {
       onAddNotification(`Redirected to merchant! Shop completed.`, 'info');
       const link = storeItem?.link || dealItem?.affiliateUrl || dealItem?.link;

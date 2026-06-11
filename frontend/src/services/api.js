@@ -125,7 +125,17 @@ export const apiFinance = {
 
 export const apiSettings = {
   get: () => request('/settings'),
-  update: (settings) => request('/settings', { method: 'PUT', body: JSON.stringify(settings) })
+  update: (settingsData) => request('/settings', { method: 'PUT', body: JSON.stringify(settingsData) })
+};
+
+export const apiAffiliate = {
+  createShare: (referrerId, productId) => request('/affiliate/share', { method: 'POST', body: JSON.stringify({ referrerId, productId }) }),
+  getAllShares: () => request('/affiliate/shares'),
+  createClick: (buyerId, shareId, productId) => request('/affiliate/clicks', { method: 'POST', body: JSON.stringify({ buyerId, shareId, productId }) }),
+  getAllClicks: () => request('/affiliate/clicks'),
+  approveCommission: (trackingId) => request(`/affiliate/clicks/${trackingId}/approve`, { method: 'POST' }),
+  rejectCommission: (trackingId) => request(`/affiliate/clicks/${trackingId}/reject`, { method: 'POST' }),
+  getCommissionHistory: () => request('/affiliate/commissions'),
 };
 
 export const apiSharedLinks = {

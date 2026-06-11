@@ -9,12 +9,17 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
+
 @RestController
 @RequestMapping("/api/shared-links")
 @RequiredArgsConstructor
 public class SharedLinkController {
 
     private final SharedLinkRepository sharedLinkRepository;
+
+    @Value("${app.frontend.url:http://localhost:5173}")
+    private String frontendUrl;
 
     @GetMapping
     public ResponseEntity<List<SharedLink>> getAll() {
@@ -34,7 +39,7 @@ public class SharedLinkController {
         if (link.getTotalEarnings() == null) link.setTotalEarnings(0.0);
         link.setStatus("active");
         SharedLink saved = sharedLinkRepository.save(link);
-        saved.setShortUrl("https://cyvanta.cashback/share/" + saved.getId());
+        saved.setShortUrl(frontendUrl + "/#/share/" + saved.getId());
         return ResponseEntity.ok(sharedLinkRepository.save(saved));
     }
 

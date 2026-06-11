@@ -2,11 +2,16 @@ import React, { useState } from 'react';
 import { ArrowLeft, Clock, Copy, Check, Info, ShieldAlert, Sparkles, ExternalLink } from 'lucide-react';
 import TopDeals from './TopDeals';
 
-export default function StoreDetail({ store, onBack, onAddNotification, deals, onGrabDeal }) {
+export default function StoreDetail({ store, onBack, onAddNotification, deals, onGrabDeal, currentUser, openAuthModal }) {
   const [copiedCouponId, setCopiedCouponId] = useState(null);
   const [activatingDealId, setActivatingDealId] = useState(null);
 
   const handleCopyCode = (coupon) => {
+    if (!currentUser) {
+      onAddNotification('Please login or sign up first to use this coupon!', 'info');
+      openAuthModal();
+      return;
+    }
     if (coupon.code) {
       navigator.clipboard.writeText(coupon.code);
       setCopiedCouponId(coupon.id);
@@ -21,6 +26,11 @@ export default function StoreDetail({ store, onBack, onAddNotification, deals, o
   };
 
   const handleActivateDeal = (coupon) => {
+    if (!currentUser) {
+      onAddNotification('Please login or sign up first to activate this deal!', 'info');
+      openAuthModal();
+      return;
+    }
     setActivatingDealId(coupon.id);
     onAddNotification(`Activating Tracker...`, 'success');
     

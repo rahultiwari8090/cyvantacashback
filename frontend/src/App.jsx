@@ -4,7 +4,7 @@ import MobileApp from './components/MobileApp';
 import AuthModal from './components/AuthModal';
 import Notification from './components/Notification';
 import StoreDetail from './components/StoreDetail';
-import { apiTracking, apiWithdrawals, apiProducts, apiUsers, apiStores, apiDeals } from './services/api';
+import { apiTracking, apiWithdrawals, apiProducts, apiUsers, apiStores, apiDeals, apiAffiliate } from './services/api';
 
 const mapProductsToDeals = (productsList, dbDealsList, storesData) => {
   let combinedDeals = [];
@@ -118,6 +118,14 @@ export default function App() {
     syncAppStates();
   }, [currentUser, currentView]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const shareId = params.get('shareId');
+    if (shareId) {
+      localStorage.setItem('shareId', shareId);
+    }
+  }, []);
+
   const handleAppWithdrawalRequest = async (newReq) => {
     try {
       const added = await apiWithdrawals.create(newReq);
@@ -149,6 +157,25 @@ export default function App() {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   };
 
+  useEffect(() => {
+    window.handleShareDeal = async (productId) => {
+      if (!currentUser) {
+        addNotification('Please log in to share deals.', 'error');
+        return;
+      }
+      try {
+        const { apiAffiliate } = await import('./services/api');
+        const res = await apiAffiliate.createShare(currentUser.id, productId);
+        const link = `${window.location.origin}/?shareId=${res.shareId}`;
+        navigator.clipboard.writeText(link);
+        addNotification('Share link copied to clipboard!', 'success');
+      } catch (err) {
+        console.error(err);
+        addNotification('Failed to generate share link.', 'error');
+      }
+    };
+  }, [currentUser]);
+
   const handleLogin = async (userProfile) => {
     try {
       await apiUsers.login(userProfile);
@@ -169,6 +196,18 @@ export default function App() {
 
   // Map and cache dynamic product deals
   const dynamicDeals = React.useMemo(() => mapProductsToDeals(products, deals, storesData), [products, deals, storesData]);
+
+  // Intercept Grab Deal
+  const handleInterceptGrabDeal = async (deal) => {
+    try {
+      const shareId = localStorage.getItem('shareId');
+      const buyerId = currentUser ? currentUser.id : null;
+      await apiAffiliate.createClick(buyerId, shareId, deal.id);
+      addNotification('Tracker activated! Redirecting...', 'info');
+    } catch (e) {
+      console.error('Tracking failed, proceeding anyway.', e);
+    }
+  };
 
   return (
     <SafeAreaView style={[styles.container, theme === 'dark' ? styles.containerDark : styles.containerLight]}>
@@ -195,6 +234,7 @@ export default function App() {
           onLogout={handleLogout}
           theme={theme}
           toggleTheme={toggleTheme}
+          onGrabDeal={handleInterceptGrabDeal}
           onStoreSelect={(id) => {
             setSelectedStoreId(id);
             setCurrentView('store');
@@ -207,6 +247,8 @@ export default function App() {
           store={selectedStore}
           onBack={() => setCurrentView('home')}
           onAddNotification={addNotification}
+          deals={dynamicDeals.filter(d => d.storeLogo === selectedStore.logo)}
+          onGrabDeal={handleInterceptGrabDeal}
           theme={theme}
         />
       )}

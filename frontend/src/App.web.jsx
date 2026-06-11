@@ -16,11 +16,131 @@ import CheckoutModal from './components/CheckoutModal';
 import AdminLogin from './components/AdminLogin';
 import AdminPanel from './components/AdminPanel';
 import MobileApp from './components/MobileApp';
-import { apiTracking, apiWithdrawals, apiProducts, apiDeals, apiSharedLinks, apiStores, apiBanners } from './services/api';
+import { apiTracking, apiWithdrawals, apiProducts, apiDeals, apiSharedLinks, apiSharedCommissions, apiStores, apiBanners, apiAffiliate } from './services/api';
 import './index.css';
 import './App.css';
 
+const ShareLanding = ({ products, currentUser, openAuthModal }) => {
+  const path = window.location.pathname.startsWith('/share/') 
+    ? window.location.pathname.split('/share/')[1]
+    : window.location.hash.replace('#/share/', '');
+  
+  const [landingData, setLandingData] = useState(null);
+  const [landingSession, setLandingSession] = useState(null);
+  const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    const fetchShareData = async () => {
+      try {
+        const links = await apiSharedLinks.getAll();
+        const match = links.find(l => l.id === path || l.shortUrl.endsWith(path));
+        if (match) {
+          setLandingData(match);
+          // Store shareId so future checkouts are attributed to this referrer
+          localStorage.setItem('shareId', match.id);
+          // Record click instantly
+          const clickData = await apiSharedLinks.incrementClicks(match.id);
+          setLandingSession(clickData);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (path) fetchShareData();
+  }, [path]);
+
+  if (loading) return <div style={{ padding: '40px', textAlign: 'center' }}>Loading Referral Details...</div>;
+  if (!landingData) return <div style={{ padding: '40px', textAlign: 'center' }}>Referral Link Expired or Not Found.</div>;
+
+  const mockProduct = products.find(p => p.name === landingData.productName) || {
+    id: `prod-${landingData.id}`,
+    name: landingData.productName,
+    image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300',
+    category: 'electronics',
+    title: landingData.productName
+  };
+
+  const storeMock = {
+    platform: landingData.store,
+    dealPrice: 50.00,
+    effectivePrice: 50.00,
+    cashbackEarned: 5.0,
+    cashbackPercent: 10,
+    link: landingData.productUrl
+  };
+
+  return (
+    <div className="animate-fade" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '60px 20px', minHeight: '60vh', backgroundColor: 'var(--bg)' }}>
+      <div style={{ maxWidth: '500px', width: '100%', backgroundColor: 'var(--card-bg)', borderRadius: '16px', padding: '32px', textAlign: 'center', border: '1px solid var(--border)', boxShadow: '0 10px 25px rgba(0,0,0,0.05)' }}>
+        
+        {/* Added Product Image Display */}
+        <div style={{ width: '120px', height: '120px', borderRadius: '12px', overflow: 'hidden', margin: '0 auto 24px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+          <img src={mockProduct.image} alt={mockProduct.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        </div>
+
+        <h2 style={{ fontSize: '24px', margin: '0 0 8px 0', color: 'var(--text-bold)' }}>You've been invited!</h2>
+        <p style={{ fontSize: '15px', color: 'var(--text)', margin: '0 0 24px 0', lineHeight: '1.6' }}>
+          <strong>{landingData.userName}</strong> has shared an exclusive deal with you for <strong>{landingData.productName}</strong> from {landingData.store}.
+        </p>
+        <div style={{ padding: '16px', backgroundColor: 'rgba(16, 185, 129, 0.1)', borderRadius: '12px', border: '1px solid rgba(16, 185, 129, 0.2)', marginBottom: '32px' }}>
+          <h4 style={{ margin: '0 0 8px 0', color: 'var(--secondary)', fontSize: '16px' }}>Exclusive Affiliate Deal</h4>
+          <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-bold)' }}>
+            Click below to apply the deal. You will be redirected to the secure merchant site.
+          </p>
+        </div>
+        <button 
+          className="btn-primary" 
+          style={{ width: '100%', padding: '16px', fontSize: '16px', fontWeight: 'bold' }}
+          onClick={() => {
+            if (!currentUser) {
+              openAuthModal();
+              return;
+            }
+            
+            const buyerId = currentUser.id;
+            const shareId = landingData.id;
+            const productId = mockProduct.id;
+            
+            // Log click to the Affiliate Network tracker
+            apiAffiliate.createClick(buyerId, shareId, productId).catch(e => console.error("Failed to log affiliate click", e));
+            
+            // Mock a pending commission for the admin dashboard demo
+            const mockCommissionPayload = {
+              userId: landingData.userId,
+              userName: landingData.userName || 'Affiliate',
+              linkId: landingData.id,
+              productName: landingData.productName,
+              store: landingData.store,
+              purchaseAmount: storeMock.dealPrice,
+              commissionRate: storeMock.cashbackPercent,
+              commissionAmount: storeMock.cashbackEarned,
+              userSharePercent: 100,
+              userCommissionAmount: storeMock.cashbackEarned,
+              adminCommissionPercent: 0,
+              adminCommissionAmount: 0,
+              status: 'pending',
+              date: new Date().toISOString().split('T')[0]
+            };
+            
+            apiSharedCommissions.create(mockCommissionPayload).catch(e => console.error("Failed to mock commission", e));
+
+            if (landingData && landingData.productUrl) {
+              window.open(landingData.productUrl, '_blank');
+            } else if (storeMock && storeMock.link) {
+              window.open(storeMock.link, '_blank');
+            } else {
+              window.open('https://google.com', '_blank');
+            }
+          }}
+        >
+          Grab Deal Now
+        </button>
+      </div>
+    </div>
+  );
+};
 export default function App() {
   // Add Admitad ownership verification meta tag dynamically
   useEffect(() => {
@@ -252,14 +372,26 @@ export default function App() {
     setActiveComparisonDeal(deal);
   };
 
-  const executeGrabDealTracked = (dealItem, storeItem) => {
+  const executeGrabDealTracked = async (dealItem, storeItem) => {
     setActiveComparisonDeal(null);
-    const link = storeItem?.link || dealItem?.affiliateUrl || dealItem?.link;
-    if (link) {
-      window.open(link, '_blank');
-    } else {
-      window.open('https://google.com', '_blank');
+    
+    try {
+      const shareId = localStorage.getItem('shareId');
+      const buyerId = currentUser ? currentUser.id : null;
+      await apiAffiliate.createClick(buyerId, shareId, dealItem.id);
+      addNotification('Tracker activated! Redirecting...', 'info');
+    } catch (e) {
+      console.error('Tracking failed, proceeding anyway.', e);
     }
+    
+    const link = storeItem?.link || dealItem?.affiliateUrl || dealItem?.link;
+    setTimeout(() => {
+      if (link) {
+        window.open(link, '_blank');
+      } else {
+        window.open('https://google.com', '_blank');
+      }
+    }, 1500);
   };
 
   const handleReferLink = async (deal, item) => {
@@ -276,9 +408,11 @@ export default function App() {
         productName: deal.title || deal.name,
         store: item.platform,
         productUrl: item.link || 'https://google.com',
-        userSharePercent: 50,
-        buyerSharePercent: 50
+        userSharePercent: 100
       });
+      if (generated.shortUrl && generated.shortUrl.includes('cyvanta.cashback')) {
+         generated.shortUrl = generated.shortUrl.replace('https://cyvanta.cashback', window.location.origin + '/#');
+      }
       setGeneratedShareData(generated);
       setIsShareModalOpen(true);
     } catch (err) {
@@ -292,7 +426,12 @@ export default function App() {
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('user_session');
+    localStorage.removeItem('admin_session');
+    localStorage.removeItem('is_admin');
+    sessionStorage.removeItem('admin_session');
     setCurrentUser(null);
+    setIsAdminLoggedIn(false);
     setView('home');
     addNotification('Logged out successfully. See you again!', 'info');
   };
@@ -457,12 +596,7 @@ export default function App() {
         <Notification notifications={notifications} removeNotification={removeNotification} />
         <AdminPanel
           currentUser={currentUser}
-          onLogout={() => {
-            sessionStorage.removeItem('admin_session');
-            setIsAdminLoggedIn(false);
-            setView('home');
-            addNotification('Logged out from admin panel.', 'info');
-          }}
+          onLogout={handleLogout}
           theme={theme}
           toggleTheme={toggleTheme}
           onAddNotification={addNotification}
@@ -524,89 +658,7 @@ export default function App() {
     );
   }
 
-  const renderShareLanding = () => {
-    const path = window.location.pathname.startsWith('/share/') 
-      ? window.location.pathname.split('/share/')[1]
-      : window.location.hash.replace('#/share/', '');
-    
-    const [landingData, setLandingData] = useState(null);
-    const [landingSession, setLandingSession] = useState(null);
-    const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-      const fetchShareData = async () => {
-        try {
-          const links = await apiSharedLinks.getAll();
-          const match = links.find(l => l.id === path || l.shortUrl.endsWith(path));
-          if (match) {
-            setLandingData(match);
-            // Record click instantly
-            const clickData = await apiSharedLinks.incrementClicks(match.id);
-            setLandingSession(clickData);
-          }
-        } catch (err) {
-          console.error(err);
-        } finally {
-          setLoading(false);
-        }
-      };
-      if (path) fetchShareData();
-    }, [path]);
-
-    if (loading) return <div style={{ padding: '40px', textAlign: 'center' }}>Loading Referral Details...</div>;
-    if (!landingData) return <div style={{ padding: '40px', textAlign: 'center' }}>Referral Link Expired or Not Found.</div>;
-
-    return (
-      <div className="animate-fade" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '60px 20px', minHeight: '60vh', backgroundColor: 'var(--bg)' }}>
-        <div style={{ maxWidth: '500px', width: '100%', backgroundColor: 'var(--card-bg)', borderRadius: '16px', padding: '32px', textAlign: 'center', border: '1px solid var(--border)', boxShadow: '0 10px 25px rgba(0,0,0,0.05)' }}>
-          <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'var(--secondary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', animation: 'scaleUp 0.5s ease-out' }}>
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"></polyline><rect x="2" y="7" width="20" height="5"></rect><line x1="12" y1="22" x2="12" y2="7"></line><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path></svg>
-          </div>
-          <h2 style={{ fontSize: '24px', margin: '0 0 8px 0', color: 'var(--text-bold)' }}>You've been invited!</h2>
-          <p style={{ fontSize: '15px', color: 'var(--text)', margin: '0 0 24px 0', lineHeight: '1.6' }}>
-            <strong>{landingData.userName}</strong> has shared an exclusive deal with you for <strong>{landingData.productName}</strong> from {landingData.store}.
-          </p>
-          <div style={{ padding: '16px', backgroundColor: 'rgba(16, 185, 129, 0.1)', borderRadius: '12px', border: '1px solid rgba(16, 185, 129, 0.2)', marginBottom: '32px' }}>
-            <h4 style={{ margin: '0 0 8px 0', color: 'var(--secondary)', fontSize: '16px' }}>Special Commission Split</h4>
-            <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-bold)' }}>
-              If you purchase using this link, you will automatically earn {landingData.buyerSharePercent}% of the cashback directly into your wallet!
-            </p>
-          </div>
-          <button 
-            className="btn-primary" 
-            style={{ width: '100%', padding: '16px', fontSize: '16px', fontWeight: 'bold' }}
-            onClick={() => {
-              // Open Checkout Modal for this shared product
-              const mockProduct = products.find(p => p.name === landingData.productName) || {
-                id: `prod-${landingData.id}`,
-                name: landingData.productName,
-                image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300',
-                category: 'electronics',
-                title: landingData.productName
-              };
-              const storeMock = {
-                platform: landingData.store,
-                dealPrice: 49.99, // default mock
-                effectivePrice: 49.99,
-                cashbackEarned: 5.0,
-                cashbackPercent: 10,
-                link: landingData.productUrl
-              };
-              if (landingData && landingData.productUrl) {
-                window.open(landingData.productUrl, '_blank');
-              } else if (storeMock && storeMock.link) {
-                window.open(storeMock.link, '_blank');
-              } else {
-                window.open('https://google.com', '_blank');
-              }
-            }}
-          >
-            Grab Deal Now
-          </button>
-        </div>
-      </div>
-    );
-  };
 
   return (
     <div id="root">
@@ -680,6 +732,8 @@ export default function App() {
               return d.platform && selectedStore?.name && d.platform.toLowerCase() === selectedStore.name.toLowerCase();
             })}
             onGrabDeal={handleGrabProductDeal}
+            currentUser={currentUser}
+            openAuthModal={() => setIsAuthModalOpen(true)}
           />
         )}
 
@@ -691,7 +745,13 @@ export default function App() {
           />
         )}
 
-        {currentView === 'share-landing' && renderShareLanding()}
+        {currentView === 'share-landing' && (
+          <ShareLanding 
+            products={products}
+            currentUser={currentUser}
+            openAuthModal={() => setIsAuthModalOpen(true)}
+          />
+        )}
       </main>
 
       {/* Structured Footer */}

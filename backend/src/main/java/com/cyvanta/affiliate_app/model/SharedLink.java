@@ -26,7 +26,6 @@ public class SharedLink {
     private Integer conversionsCount;
     private Double totalEarnings;
     private Double userSharePercent;
-    private Double buyerSharePercent;
     private String status;
     private LocalDate date;
 }

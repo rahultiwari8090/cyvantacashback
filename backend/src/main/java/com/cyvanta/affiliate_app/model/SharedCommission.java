@@ -25,13 +25,9 @@ public class SharedCommission {
     private Double commissionRate;
     private Double commissionAmount;
     private Double userSharePercent;
-    private Double buyerSharePercent;
     private Double userCommissionAmount;
-    private Double buyerCommissionAmount;
     private Double adminCommissionPercent;
     private Double adminCommissionAmount;
-    private String buyerId;
-    private String buyerName;
     private String shareId;
     private String clickId;
     private String orderId;

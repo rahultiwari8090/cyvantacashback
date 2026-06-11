@@ -2,6 +2,7 @@ package com.cyvanta.affiliate_app.controller;
 
 import com.cyvanta.affiliate_app.model.SharedCommission;
 import com.cyvanta.affiliate_app.repository.SharedCommissionRepository;
+import com.cyvanta.affiliate_app.service.AdmitadSyncService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +17,13 @@ import java.util.Map;
 public class SharedCommissionController {
 
     private final SharedCommissionRepository sharedCommissionRepository;
+    private final AdmitadSyncService admitadSyncService;
+
+    @PostMapping("/sync")
+    public ResponseEntity<String> triggerManualSync() {
+        admitadSyncService.syncConversions();
+        return ResponseEntity.ok("Admitad synchronization triggered successfully.");
+    }
 
     @GetMapping
     public ResponseEntity<List<SharedCommission>> getAll() {
@@ -33,11 +41,9 @@ public class SharedCommissionController {
         commission.setStatus("pending");
         
         Double userPct = commission.getUserSharePercent() != null ? commission.getUserSharePercent() : 100.0;
-        Double buyerPct = commission.getBuyerSharePercent() != null ? commission.getBuyerSharePercent() : 0.0;
         
         if (commission.getCommissionAmount() != null) {
             commission.setUserCommissionAmount((commission.getCommissionAmount() * userPct) / 100.0);
-            commission.setBuyerCommissionAmount((commission.getCommissionAmount() * buyerPct) / 100.0);
         }
         
         return ResponseEntity.ok(sharedCommissionRepository.save(commission));
@@ -57,11 +63,24 @@ public class SharedCommissionController {
                 
                 if (amount != null) {
                     commission.setCommissionAmount(amount);
-                    Double userPct = commission.getUserSharePercent() != null ? commission.getUserSharePercent() : 100.0;
-                    Double buyerPct = commission.getBuyerSharePercent() != null ? commission.getBuyerSharePercent() : 0.0;
-                    commission.setUserCommissionAmount((amount * userPct) / 100.0);
-                    commission.setBuyerCommissionAmount((amount * buyerPct) / 100.0);
                 }
+            }
+            if (body.containsKey("userAmount")) {
+                Object uAmt = body.get("userAmount");
+                Double userAmount = null;
+                if (uAmt instanceof Number) userAmount = ((Number) uAmt).doubleValue();
+                else if (uAmt instanceof String) userAmount = Double.parseDouble((String) uAmt);
+                
+                if (userAmount != null) {
+                    commission.setUserCommissionAmount(userAmount);
+                }
+            }
+            
+            // Calculate admin profit
+            if (commission.getCommissionAmount() != null && commission.getUserCommissionAmount() != null) {
+                commission.setAdminCommissionAmount(
+                    commission.getCommissionAmount() - commission.getUserCommissionAmount()
+                );
             }
             return ResponseEntity.ok(sharedCommissionRepository.save(commission));
         }).orElse(ResponseEntity.notFound().build());
