@@ -10,4 +10,6 @@ import java.util.List;
 public interface SharedCommissionRepository extends MongoRepository<SharedCommission, String> {
     List<SharedCommission> findByUserId(String userId);
     java.util.Optional<SharedCommission> findByOrderId(String orderId);
+    java.util.Optional<SharedCommission> findByClickId(String clickId);
+    List<SharedCommission> findByShareId(String shareId);
 }

@@ -78,16 +78,16 @@ export default function AdminSharedCommissions({
 
   const renderCommRow = (item, idx) => (
     <tr key={item.id} className="animate-fade">
-      <td style={{ fontSize: '11px', fontWeight: 'bold' }}>{item.shareId || item.linkId || 'N/A'}</td>
-      <td style={{ fontWeight: '600', color: 'var(--text-bold)' }}>{item.userName}</td>
-      <td style={{ fontWeight: '500', fontSize: '13px', maxWidth: '150px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={item.productName}>{item.productName}</td>
-      <td style={{ fontSize: '12px' }}>{item.store}</td>
-      <td style={{ fontSize: '11px', color: 'var(--text)' }}>{item.clickId || '-'}</td>
-      <td style={{ fontSize: '11px', color: 'var(--text)' }}>{item.orderId || '-'}</td>
-      <td style={{ fontWeight: 'bold', fontSize: '13px' }}>₹{(item.purchaseAmount || 0).toFixed(2)}</td>
-      <td style={{ fontWeight: 'bold', color: 'var(--text-bold)', fontSize: '13px' }}>₹{(item.commissionAmount || 0).toFixed(2)}</td>
-      <td style={{ fontWeight: '600', color: 'var(--primary)', fontSize: '13px' }}>₹{item.userCommissionAmount !== undefined ? (item.userCommissionAmount || 0).toFixed(2) : (item.commissionAmount || 0).toFixed(2)}</td>
-      <td style={{ fontWeight: '600', color: '#10b981', fontSize: '13px' }}>₹{item.adminCommissionAmount !== undefined ? (item.adminCommissionAmount || 0).toFixed(2) : '0.00'}</td>
+      <td style={{ fontSize: '10px', fontWeight: 'bold' }}>{item.shareId || item.linkId || 'N/A'}</td>
+      <td style={{ fontWeight: '600', color: 'var(--text-bold)', fontSize: '11px' }}>{item.userName}</td>
+      <td style={{ fontWeight: '500', fontSize: '11px' }} title={item.productName}>{item.productName}</td>
+      <td style={{ fontSize: '10px' }}>{item.store}</td>
+      <td style={{ fontSize: '10px', color: 'var(--text)' }}>{item.clickId || '-'}</td>
+      <td style={{ fontSize: '10px', color: 'var(--text)' }}>{item.orderId || '-'}</td>
+      <td style={{ fontWeight: 'bold', fontSize: '11px' }}>₹{(item.purchaseAmount || 0).toFixed(2)}</td>
+      <td style={{ fontWeight: 'bold', color: 'var(--text-bold)', fontSize: '11px' }}>₹{(item.commissionAmount || 0).toFixed(2)}</td>
+      <td style={{ fontWeight: '600', color: 'var(--primary)', fontSize: '11px' }}>₹{item.userCommissionAmount !== undefined ? (item.userCommissionAmount || 0).toFixed(2) : (item.commissionAmount || 0).toFixed(2)}</td>
+      <td style={{ fontWeight: '600', color: '#10b981', fontSize: '11px' }}>₹{item.adminCommissionAmount !== undefined ? (item.adminCommissionAmount || 0).toFixed(2) : '0.00'}</td>
       <td>
         <span className={`status-badge ${item.status === 'approved' ? 'active' : item.status === 'pending' ? 'pending' : 'inactive'}`}>
           {item.status.toUpperCase()}
@@ -130,24 +130,24 @@ export default function AdminSharedCommissions({
 
   const renderLinkRow = (item, idx) => (
     <tr key={item.id} className="animate-fade">
-      <td style={{ fontSize: '13px' }}>{item.date}</td>
-      <td style={{ fontWeight: '600', color: 'var(--text-bold)' }}>{item.userName}</td>
-      <td style={{ fontWeight: '500' }}>{item.productName}</td>
+      <td style={{ fontSize: '11px' }}>{item.date}</td>
+      <td style={{ fontWeight: '600', color: 'var(--text-bold)', fontSize: '11px' }}>{item.userName}</td>
+      <td style={{ fontWeight: '500', fontSize: '11px' }}>{item.productName}</td>
       <td>
-        <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', backgroundColor: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-bold)', fontWeight: 600 }}>
+        <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '10px', backgroundColor: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-bold)', fontWeight: 600 }}>
           {item.store}
         </span>
       </td>
-      <td style={{ fontWeight: 500 }}>
+      <td style={{ fontWeight: 500, fontSize: '11px' }}>
         {item.userSharePercent !== undefined ? `${item.userSharePercent}%` : '100%'}
       </td>
-      <td style={{ fontSize: '12px', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        <a href={item.productUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'none' }}>
+      <td style={{ fontSize: '10px' }}>
+        <a href={item.productUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'none' }} title={item.productUrl}>
           {item.productUrl}
         </a>
       </td>
-      <td style={{ fontWeight: '600' }}>{item.clicksCount || 0}</td>
-      <td style={{ fontWeight: '600' }}>{item.conversionsCount || 0}</td>
+      <td style={{ fontWeight: '600', fontSize: '11px' }}>{item.clicksCount || 0}</td>
+      <td style={{ fontWeight: '600', fontSize: '11px' }}>{item.conversionsCount || 0}</td>
       <td style={{ fontWeight: '700', color: '#10b981' }}>₹{(item.totalEarnings || 0).toFixed(2)}</td>
     </tr>
   );

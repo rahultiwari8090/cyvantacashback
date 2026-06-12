@@ -8,7 +8,7 @@ export default function CheckoutModal({ deal, store, onClose, onPlaceOrder }) {
   const [redirectingUpi, setRedirectingUpi] = useState(false);
 
   const deliveryFee = 0;
-  const totalAmount = store.effectivePrice + deliveryFee;
+  const totalAmount = (store.dealPrice || store.effectivePrice || 0) + deliveryFee;
 
   const handlePlaceOrder = (e) => {
     if (e) e.preventDefault();

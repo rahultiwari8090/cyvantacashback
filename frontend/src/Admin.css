@@ -420,32 +420,56 @@
 .admin-table-wrapper {
   overflow-x: auto;
   width: 100%;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+.admin-table-wrapper::-webkit-scrollbar {
+  height: 8px;
+}
+
+.admin-table-wrapper::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+.admin-table-wrapper::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+.admin-table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: var(--text);
 }
 
 .admin-table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
+  min-width: 1200px;
 }
 
 .admin-table th {
-  padding: 14px 24px;
-  font-size: 12px;
+  padding: 12px 14px;
+  font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
   color: var(--text);
   border-bottom: 1px solid var(--border);
   background-color: rgba(var(--primary-rgb), 0.02);
-  letter-spacing: 0.5px;
-  white-space: nowrap;
+  letter-spacing: 0.4px;
+  white-space: normal;
+  word-break: break-word;
+  max-width: 120px;
 }
 
 .admin-table td {
-  padding: 16px 24px;
-  font-size: 14px;
+  padding: 12px 14px;
+  font-size: 12px;
   border-bottom: 1px solid var(--border);
   color: var(--text);
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
+  max-width: 100px;
 }
 
 .admin-table tr:last-child td {
@@ -1100,8 +1124,8 @@
 
 @media (max-width: 480px) {
   .admin-table th, .admin-table td {
-    padding: 12px 16px;
-    font-size: 13px;
+    padding: 10px 12px;
+    font-size: 11px;
   }
 }
 

@@ -6,4 +6,5 @@ import java.util.List;
 
 public interface CommissionHistoryRepository extends MongoRepository<CommissionHistory, String> {
     List<CommissionHistory> findByReferrerId(String referrerId);
+    java.util.Optional<CommissionHistory> findByTrackingId(String trackingId);
 }

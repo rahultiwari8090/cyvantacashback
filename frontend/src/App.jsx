@@ -199,9 +199,14 @@ export default function App() {
 
   // Intercept Grab Deal
   const handleInterceptGrabDeal = async (deal) => {
+    if (!currentUser) {
+      addNotification('Please login or sign up first to grab deals!', 'info');
+      setIsAuthModalOpen(true);
+      return;
+    }
     try {
       const shareId = localStorage.getItem('shareId');
-      const buyerId = currentUser ? currentUser.id : null;
+      const buyerId = currentUser.id;
       await apiAffiliate.createClick(buyerId, shareId, deal.id);
       addNotification('Tracker activated! Redirecting...', 'info');
     } catch (e) {
@@ -249,6 +254,8 @@ export default function App() {
           onAddNotification={addNotification}
           deals={dynamicDeals.filter(d => d.storeLogo === selectedStore.logo)}
           onGrabDeal={handleInterceptGrabDeal}
+          currentUser={currentUser}
+          openAuthModal={() => setIsAuthModalOpen(true)}
           theme={theme}
         />
       )}

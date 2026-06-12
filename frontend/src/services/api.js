@@ -22,12 +22,17 @@ async function request(url, options = {}) {
   if (!response.ok) {
     const errorText = await response.text();
     let errorMessage = errorText || `API error: ${response.status}`;
+    let parsedError = null;
     try {
-      const errObj = JSON.parse(errorText);
-      if (errObj.error) errorMessage = errObj.error;
-      else if (errObj.message) errorMessage = errObj.message;
+      parsedError = JSON.parse(errorText);
+      if (parsedError.error) errorMessage = parsedError.error;
+      else if (parsedError.message) errorMessage = parsedError.message;
     } catch (e) {}
-    throw new Error(errorMessage);
+    const err = new Error(errorMessage);
+    // Attach all parsed fields (e.g. requireOtp) so callers can inspect them
+    if (parsedError) Object.assign(err, parsedError);
+    err.status = response.status;
+    throw err;
   }
   
   if (response.status === 204) return null;

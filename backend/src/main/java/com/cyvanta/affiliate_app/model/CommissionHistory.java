@@ -22,6 +22,12 @@ public class CommissionHistory {
 
     private String referrerId;
 
+    private String shareId;
+
+    private String productName;
+
+    private String merchant;
+
     private Double amount;
 
     private String status; // APPROVED, REJECTED

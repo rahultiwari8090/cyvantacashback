@@ -6,4 +6,6 @@ import java.util.Optional;
 
 public interface AffiliateClickRepository extends MongoRepository<AffiliateClick, String> {
     Optional<AffiliateClick> findByTrackingId(String trackingId);
+    java.util.List<AffiliateClick> findByShareId(String shareId);
+    java.util.List<AffiliateClick> findByReferrerId(String referrerId);
 }

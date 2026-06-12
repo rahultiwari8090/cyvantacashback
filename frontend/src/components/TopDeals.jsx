@@ -1,7 +1,7 @@
 import React from 'react';
 import { Tag, Sparkles, Share2 } from 'lucide-react';
 
-export default function TopDeals({ deals, onGrabDeal }) {
+export default function TopDeals({ deals, onGrabDeal, onShareDeal }) {
   return (
     <div style={{ width: '100%', marginBottom: '40px' }}>
       <div className="section-header">
@@ -59,10 +59,8 @@ export default function TopDeals({ deals, onGrabDeal }) {
                     className="btn-secondary"
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (window.handleShareDeal) {
-                        window.handleShareDeal(deal.id);
-                      } else {
-                        alert('Log in to share deals!');
+                      if (onShareDeal) {
+                        onShareDeal(deal);
                       }
                     }}
                     style={{ padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}

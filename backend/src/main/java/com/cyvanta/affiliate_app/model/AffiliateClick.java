@@ -30,7 +30,11 @@ public class AffiliateClick {
 
     private String productId;
 
-    private String status; // PENDING, PURCHASED, APPROVED, REJECTED
+    private String referrerId;
+
+    private String merchant;
+
+    private String status; // CLICKED, PENDING, PURCHASED, APPROVED, REJECTED
 
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();

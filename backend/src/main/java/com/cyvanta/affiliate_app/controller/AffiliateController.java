@@ -8,6 +8,7 @@ import com.cyvanta.affiliate_app.repository.CommissionHistoryRepository;
 import com.cyvanta.affiliate_app.repository.ShareActionRepository;
 import com.cyvanta.affiliate_app.service.AffiliateNetworkService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/affiliate")
 @RequiredArgsConstructor
@@ -42,6 +44,7 @@ public class AffiliateController {
                 .build();
 
         shareActionRepository.save(shareAction);
+        log.info("[SHARE] Share created — shareId={}, referrerId={}, productId={}", shareId, referrerId, productId);
         return ResponseEntity.ok(Map.of("shareId", shareId));
     }
 
@@ -55,18 +58,30 @@ public class AffiliateController {
         String buyerId = body.getOrDefault("buyerId", null);
         String shareId = body.getOrDefault("shareId", null);
         String productId = body.getOrDefault("productId", null);
+        String merchant = body.getOrDefault("merchant", null);
 
         String trackingId = UUID.randomUUID().toString();
+
+        // Resolve referrerId from shareId
+        String referrerId = null;
+        if (shareId != null) {
+            referrerId = shareActionRepository.findByShareId(shareId)
+                    .map(ShareAction::getReferrerId).orElse(null);
+        }
 
         AffiliateClick click = AffiliateClick.builder()
                 .trackingId(trackingId)
                 .buyerId(buyerId)
                 .shareId(shareId)
                 .productId(productId)
+                .referrerId(referrerId)
+                .merchant(merchant)
                 .status("PENDING")
                 .build();
 
         affiliateClickRepository.save(click);
+        log.info("[CLICK] Affiliate click created — trackingId={}, shareId={}, referrerId={}, buyerId={}, productId={}",
+                trackingId, shareId, referrerId, buyerId, productId);
 
         // Process click (this triggers the async 5sec purchase simulation)
         affiliateNetworkService.processClick(click);
@@ -81,12 +96,14 @@ public class AffiliateController {
 
     @PostMapping("/clicks/{trackingId}/approve")
     public ResponseEntity<?> approveCommission(@PathVariable String trackingId) {
+        log.info("[ADMIN] Approve commission requested for trackingId={}", trackingId);
         affiliateNetworkService.approveCommission(trackingId);
         return ResponseEntity.ok(Map.of("message", "Commission approved"));
     }
 
     @PostMapping("/clicks/{trackingId}/reject")
     public ResponseEntity<?> rejectCommission(@PathVariable String trackingId) {
+        log.info("[ADMIN] Reject commission requested for trackingId={}", trackingId);
         affiliateNetworkService.rejectCommission(trackingId);
         return ResponseEntity.ok(Map.of("message", "Commission rejected"));
     }

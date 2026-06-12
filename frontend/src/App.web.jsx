@@ -104,27 +104,9 @@ const ShareLanding = ({ products, currentUser, openAuthModal }) => {
             const productId = mockProduct.id;
             
             // Log click to the Affiliate Network tracker
+            // The backend will automatically simulate a purchase after 5s 
+            // and create a pending SharedCommission for the referrer
             apiAffiliate.createClick(buyerId, shareId, productId).catch(e => console.error("Failed to log affiliate click", e));
-            
-            // Mock a pending commission for the admin dashboard demo
-            const mockCommissionPayload = {
-              userId: landingData.userId,
-              userName: landingData.userName || 'Affiliate',
-              linkId: landingData.id,
-              productName: landingData.productName,
-              store: landingData.store,
-              purchaseAmount: storeMock.dealPrice,
-              commissionRate: storeMock.cashbackPercent,
-              commissionAmount: storeMock.cashbackEarned,
-              userSharePercent: 100,
-              userCommissionAmount: storeMock.cashbackEarned,
-              adminCommissionPercent: 0,
-              adminCommissionAmount: 0,
-              status: 'pending',
-              date: new Date().toISOString().split('T')[0]
-            };
-            
-            apiSharedCommissions.create(mockCommissionPayload).catch(e => console.error("Failed to mock commission", e));
 
             if (landingData && landingData.productUrl) {
               window.open(landingData.productUrl, '_blank');
@@ -233,6 +215,8 @@ export default function App() {
   // Share Modal states
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [generatedShareData, setGeneratedShareData] = useState(null);
+  const [shareModalUrl, setShareModalUrl] = useState(null);
+  const [shareModalTitle, setShareModalTitle] = useState(null);
 
   useEffect(() => {
     const syncAppStates = async () => {
@@ -369,15 +353,67 @@ export default function App() {
   };
 
   const handleGrabProductDeal = (deal) => {
+    if (!currentUser) {
+      addNotification('Please login or sign up first to grab deals!', 'info');
+      setIsAuthModalOpen(true);
+      return;
+    }
     setActiveComparisonDeal(deal);
   };
 
+  const handleShareDeal = async (deal) => {
+    if (!currentUser) {
+      addNotification('Please login to share deals.', 'error');
+      setIsAuthModalOpen(true);
+      return;
+    }
+
+    try {
+      // Create a tracked share for attribution (doesn't have to be the shared URL)
+      const res = await apiAffiliate.createShare(currentUser.id, deal.id).catch(e => { console.warn('createShare failed', e); return null; });
+
+      // Prefer the merchant/affiliate URL if available; fallback to created share landing
+      const affiliateUrl = deal.affiliateUrl || deal.link || (deal.comparisons && deal.comparisons[0] && (deal.comparisons[0].link || deal.comparisons[0].affiliateUrl)) || (res && res.shareId ? `${window.location.origin}/?shareId=${res.shareId}` : window.location.href);
+
+      // Save share id locally for attribution on later clicks
+      if (res && res.shareId) localStorage.setItem('shareId', res.shareId);
+
+      const title = deal.title || deal.name || 'Check this deal';
+      const text = `${title} — Grab this deal now!`;
+
+      // Use native share where available (opens Instagram/Facebook on mobile)
+      if (navigator.share) {
+        try {
+          await navigator.share({ title, text, url: affiliateUrl });
+          addNotification('Shared via device share sheet.', 'success');
+          return;
+        } catch (e) {
+          console.warn('navigator.share failed', e);
+        }
+      }
+
+      // Open a small share modal with explicit options so user can pick network
+      setShareModalUrl(affiliateUrl);
+      setShareModalTitle(title);
+      setIsShareModalOpen(true);
+    } catch (err) {
+      console.error('Failed to generate share link:', err);
+      addNotification('Failed to generate share link.', 'error');
+    }
+  };
+
   const executeGrabDealTracked = async (dealItem, storeItem) => {
+    if (!currentUser) {
+      setActiveComparisonDeal(null);
+      addNotification('Please login or sign up first to grab deals!', 'info');
+      setIsAuthModalOpen(true);
+      return;
+    }
     setActiveComparisonDeal(null);
     
     try {
       const shareId = localStorage.getItem('shareId');
-      const buyerId = currentUser ? currentUser.id : null;
+      const buyerId = currentUser.id;
       await apiAffiliate.createClick(buyerId, shareId, dealItem.id);
       addNotification('Tracker activated! Redirecting...', 'info');
     } catch (e) {
@@ -713,6 +749,7 @@ export default function App() {
             <TopDeals
               deals={dynamicDeals.slice(0, 8)}
               onGrabDeal={handleGrabProductDeal}
+              onShareDeal={handleShareDeal}
             />
 
             {/* Business Model Explanation */}
@@ -871,20 +908,18 @@ export default function App() {
                 </div>
               ) : [...activeComparisonDeal.comparisons]
                 .map(comp => {
-                  const dealPrice = comp.listedPrice || 0;
+                  const dealPrice = comp.listedPrice || comp.dealPrice || 0;
                   const cashbackEarned = parseFloat(((dealPrice * (comp.cashbackPercent || 0)) / 100).toFixed(2));
-                  const effectivePrice = dealPrice - cashbackEarned;
                   return {
                     platform: comp.platform,
                     logo: storesData.find(s => s.name === comp.platform)?.logo || 'default-logo-url',
-                    price: comp.listedPrice,
+                    price: dealPrice,
                     cashbackPercent: comp.cashbackPercent || 0,
                     cashbackEarned,
-                    effectivePrice,
                     link: comp.link
                   };
                 })
-                .sort((a, b) => a.effectivePrice - b.effectivePrice)
+                .sort((a, b) => a.price - b.price)
                 .map((item, index) => {
                 const isBestValue = index === 0;
                 return (
@@ -945,9 +980,9 @@ export default function App() {
                     {/* Right Price & CTA */}
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginTop: '6px' }}>
-                        <span style={{ fontSize: '11px', color: 'var(--text)' }}>Effective Price:</span>
+                        <span style={{ fontSize: '11px', color: 'var(--text)' }}>Deal Price:</span>
                         <span style={{ fontSize: '18px', fontWeight: '800', color: isBestValue ? 'var(--secondary)' : 'var(--text-bold)' }}>
-                          ₹{item.effectivePrice.toFixed(2)}
+                          ₹{item.price.toFixed(2)}
                         </span>
                       </div>
                       
@@ -1026,6 +1061,47 @@ export default function App() {
           </div>
         </div>
       )}
+      {/* Share Modal Fallback */}
+      {isShareModalOpen && shareModalUrl && (
+        <div className="modal-overlay animate-fade">
+          <div className="modal-content" style={{ maxWidth: '520px', width: '92%' }}>
+            <div className="modal-header">
+              <h3>Share Deal</h3>
+              <button className="modal-close" onClick={() => { setIsShareModalOpen(false); setShareModalUrl(null); setShareModalTitle(null); }}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="modal-body" style={{ padding: '20px' }}>
+              <p style={{ marginTop: 0 }}>{shareModalTitle}</p>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '14px', marginBottom: '12px' }}>
+                {/* WhatsApp */}
+                <button onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(shareModalTitle + ' ' + shareModalUrl)}`, '_blank')} style={{ width: '52px', height: '52px', borderRadius: '50%', backgroundColor: '#25D366', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', transition: 'transform 0.15s' }} onMouseOver={e => e.currentTarget.style.transform = 'scale(1.08)'} onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'} aria-label="Share on WhatsApp">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                </button>
+
+                {/* Facebook */}
+                <button onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareModalUrl)}`, '_blank')} style={{ width: '52px', height: '52px', borderRadius: '50%', backgroundColor: '#1877F2', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', transition: 'transform 0.15s' }} onMouseOver={e => e.currentTarget.style.transform = 'scale(1.08)'} onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'} aria-label="Share on Facebook">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>
+                </button>
+
+                {/* Instagram (copy then open Instagram) */}
+                <button onClick={() => { navigator.clipboard.writeText(shareModalUrl); window.open('https://instagram.com', '_blank'); addNotification('Link copied! Paste it in your Instagram story.', 'info'); }} style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', transition: 'transform 0.15s' }} onMouseOver={e => e.currentTarget.style.transform = 'scale(1.08)'} onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'} aria-label="Share on Instagram">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+                </button>
+
+                {/* Copy link */}
+                <button onClick={async () => { try { await navigator.clipboard.writeText(shareModalUrl); addNotification('Link copied to clipboard!', 'success'); } catch (e) { addNotification('Unable to copy link.', 'error'); } }} style={{ width: '52px', height: '52px', borderRadius: '50%', backgroundColor: '#374151', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', transition: 'transform 0.15s' }} onMouseOver={e => e.currentTarget.style.transform = 'scale(1.08)'} onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'} aria-label="Copy link">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                </button>
+              </div>
+              <div style={{ fontSize: '13px', color: 'var(--text)', wordBreak: 'break-all' }}>{shareModalUrl}</div>
+            </div>
+            <div className="modal-footer" style={{ paddingTop: '12px' }}>
+              <button className="btn-secondary" onClick={() => { setIsShareModalOpen(false); setShareModalUrl(null); setShareModalTitle(null); }}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Checkout Modal */}
       {isCheckoutModalOpen && checkoutDeal && checkoutItem && (
         <div className="modal-overlay animate-fade">
@@ -1050,7 +1126,7 @@ export default function App() {
                         <div style={{ fontSize: '12px', color: 'var(--text)', marginTop: '4px' }}>Sold by: {checkoutItem.platform}</div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-bold)' }}>₹{checkoutItem.effectivePrice.toFixed(2)}</div>
+                        <div style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-bold)' }}>₹{checkoutItem.dealPrice.toFixed(2)}</div>
                         <div style={{ fontSize: '11px', color: 'var(--secondary)', fontWeight: '600' }}>Includes ₹{checkoutItem.cashbackEarned.toFixed(2)} Commission</div>
                       </div>
                     </div>
@@ -1178,7 +1254,7 @@ export default function App() {
                       console.error(err);
                     }
                   }}>
-                    Confirm & Pay ₹{checkoutItem.effectivePrice.toFixed(2)}
+                    Confirm & Pay ₹{checkoutItem.dealPrice.toFixed(2)}
                   </button>
                 </>
               ) : (
