@@ -16,6 +16,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Component
@@ -79,10 +80,10 @@ public class AdminSeedRunner implements CommandLineRunner {
             // Seed Categories
             if (categoryRepository.count() == 0) {
                 categoryRepository.saveAll(List.of(
-                    new Category(null, "Electronics", "Smartphone", "active", LocalDate.now().toString()),
-                    new Category(null, "Fashion", "Shirt", "active", LocalDate.now().toString()),
-                    new Category(null, "Health & Beauty", "Heart", "active", LocalDate.now().toString()),
-                    new Category(null, "Groceries", "ShoppingBag", "active", LocalDate.now().toString())
+                    new Category(null, "Electronics", "Smartphone", "active", LocalDateTime.now()),
+                    new Category(null, "Fashion", "Shirt", "active", LocalDateTime.now()),
+                    new Category(null, "Health & Beauty", "Heart", "active", LocalDateTime.now()),
+                    new Category(null, "Groceries", "ShoppingBag", "active", LocalDateTime.now())
                 ));
                 System.out.println("Sample categories seeded successfully");
             }
