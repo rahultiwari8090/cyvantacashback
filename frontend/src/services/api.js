@@ -1,4 +1,4 @@
-export const BASE_URL = import.meta.env.VITE_API_URL || 'http://10.87.214.149:8080/api';
+export const BASE_URL = import.meta.env.VITE_API_URL || 'https://cyvantacashback-3.onrender.com/api';
 
 console.log(`[API Service] Running in BACKEND (${BASE_URL}) mode.`);
 
@@ -15,7 +15,7 @@ async function request(url, options = {}) {
       ...options.headers,
     },
     mode: options.mode || 'cors',
-    credentials: options.credentials || 'include'
+    // credentials: options.credentials || 'include' // Removed to fix CORS issues with '*' origins
   };
 
   const response = await fetch(`${BASE_URL}${url}`, config);
