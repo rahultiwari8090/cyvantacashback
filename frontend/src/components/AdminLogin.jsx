@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Mail, Lock, ShieldAlert } from 'lucide-react';
-import { apiUsers } from '../services/api';
+import { apiUsers, BASE_URL } from '../services/api';
 
 export default function AdminLogin({ onLoginSuccess, onAddNotification, setView }) {
   const [email, setEmail] = useState('');
@@ -26,7 +26,7 @@ export default function AdminLogin({ onLoginSuccess, onAddNotification, setView 
   const fetchAdminConfig = async () => {
     try {
       // GET /api/admin/config - Returns admin email hint
-      const response = await fetch('http://localhost:8080/api/admin/config');
+      const response = await fetch(`${BASE_URL}/admin/config`);
       const data = await response.json();
       setAdminConfig(data);
     } catch (error) {

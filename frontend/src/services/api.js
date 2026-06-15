@@ -1,4 +1,4 @@
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+export const BASE_URL = import.meta.env.VITE_API_URL || 'http://10.87.214.149:8080/api';
 
 console.log(`[API Service] Running in BACKEND (${BASE_URL}) mode.`);
 
