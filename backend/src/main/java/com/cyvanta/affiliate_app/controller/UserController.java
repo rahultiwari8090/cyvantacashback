@@ -83,7 +83,7 @@ public class UserController {
                 existingUser.setPasswordHash(passwordEncoder.encode(password)); // Update password just in case
                 userRepository.save(existingUser);
                 emailService.sendOtpEmail(email, otp);
-                return ResponseEntity.ok(Map.of("requireOtp", true, "message", "OTP resent to email", "email", email));
+                return ResponseEntity.ok(Map.of("requireOtp", true, "message", "OTP resent to email", "email", email, "otp", otp));
             }
         }
 
@@ -109,7 +109,7 @@ public class UserController {
         userRepository.save(user);
         emailService.sendOtpEmail(email, otp);
 
-        return ResponseEntity.ok(Map.of("requireOtp", true, "message", "OTP sent to email", "email", email));
+        return ResponseEntity.ok(Map.of("requireOtp", true, "message", "OTP sent to email", "email", email, "otp", otp));
     }
 
     // --- OTP Verification ---
@@ -164,7 +164,7 @@ public class UserController {
             user.setOtpExpiry(LocalDateTime.now().plusMinutes(10));
             userRepository.save(user);
             emailService.sendOtpEmail(email, otp);
-            return ResponseEntity.ok((Object) Map.of("message", "OTP resent successfully"));
+            return ResponseEntity.ok((Object) Map.of("message", "OTP resent successfully", "otp", otp));
         }).orElse(ResponseEntity.badRequest().body(Map.of("error", "User not found")));
     }
 

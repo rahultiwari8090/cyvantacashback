@@ -28,6 +28,7 @@ export default function AuthModal({ isOpen, onClose, onLogin }) {
     setError('');
     setSuccessMessage('');
     setLoading(true);
+    setSuccessMessage('Connecting to server... this may take a moment on first load.');
 
     if (activeTab === 'login') {
       if (!email || !password) {
@@ -55,9 +56,19 @@ export default function AuthModal({ isOpen, onClose, onLogin }) {
             setAuthStep('otp');
             setSuccessMessage('Please verify your email.');
             // Auto resend OTP so they get a fresh one
-            apiUsers.resendOtp(email).catch(console.error);
+            apiUsers.resendOtp(email)
+              .then((res) => {
+                if (res.otp) {
+                  setSuccessMessage(`Please verify your email. [Testing Fallback] OTP code is: ${res.otp}`);
+                }
+              })
+              .catch(console.error);
           } else {
-            setError(err.message || 'Login failed. Please try again.');
+            const msg = (err.message === 'Failed to fetch' || err.name === 'TypeError')
+              ? 'Unable to reach server. The server may be starting up — please try again in a few seconds.'
+              : (err.message || 'Login failed. Please try again.');
+            setError(msg);
+            setSuccessMessage('');
           }
           setLoading(false);
         });
@@ -72,7 +83,7 @@ export default function AuthModal({ isOpen, onClose, onLogin }) {
         .then((res) => {
           if (res.requireOtp) {
             setAuthStep('otp');
-            setSuccessMessage(res.message || 'OTP sent to your email.');
+            setSuccessMessage(res.otp ? `[Testing Fallback] OTP code is: ${res.otp}` : (res.message || 'OTP sent to your email.'));
             setLoading(false);
             return;
           }
@@ -85,9 +96,13 @@ export default function AuthModal({ isOpen, onClose, onLogin }) {
         .catch((err) => {
           if (err.requireOtp) {
             setAuthStep('otp');
-            setSuccessMessage(err.message || 'OTP sent to your email.');
+            setSuccessMessage(err.otp ? `[Testing Fallback] OTP code is: ${err.otp}` : (err.message || 'OTP sent to your email.'));
           } else {
-            setError(err.message || 'Registration failed. Please try again.');
+            const msg = (err.message === 'Failed to fetch' || err.name === 'TypeError')
+              ? 'Unable to reach server. The server may be starting up — please try again in a few seconds.'
+              : (err.message || 'Registration failed. Please try again.');
+            setError(msg);
+            setSuccessMessage('');
           }
           setLoading(false);
         });
@@ -123,7 +138,7 @@ export default function AuthModal({ isOpen, onClose, onLogin }) {
     setError('');
     setSuccessMessage('');
     apiUsers.resendOtp(email)
-      .then((res) => setSuccessMessage(res.message || 'OTP resent successfully.'))
+      .then((res) => setSuccessMessage(res.otp ? `[Testing Fallback] OTP code is: ${res.otp}` : (res.message || 'OTP resent successfully.')))
       .catch((err) => setError(err.message || 'Failed to resend OTP.'));
   };
 
@@ -269,8 +284,14 @@ export default function AuthModal({ isOpen, onClose, onLogin }) {
             </div>
 
             <button type="submit" className="btn-auth-submit" disabled={loading}>
-              {loading ? 'Processing...' : (activeTab === 'login' ? 'Continue & Claim Cashback' : 'Join Now & Get ₹5.00 Bonus')}
+              {loading ? (
+                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                  <span className="spinner" style={{ width: '16px', height: '16px', border: '2px solid rgba(255,255,255,0.3)', borderTop: '2px solid #fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }}></span>
+                  Connecting...
+                </span>
+              ) : (activeTab === 'login' ? 'Continue & Claim Cashback' : 'Join Now & Get ₹5.00 Bonus')}
             </button>
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
             <p style={{ fontSize: '12px', textAlign: 'center', marginTop: '8px', color: 'var(--text)' }}>
               By continuing, you agree to our Terms of Service & Privacy Policy.
