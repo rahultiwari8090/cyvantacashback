@@ -1,43 +1,70 @@
 export const BASE_URL = import.meta.env.VITE_API_URL || 'https://cyvantacashback-3.onrender.com/api';
 
-console.log(`[API Service] Running in BACKEND (${BASE_URL}) mode.`);
+// Detect if running inside Capacitor native shell (Android/iOS)
+const isCapacitorNative = typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+
+console.log(`[API Service] Running in BACKEND (${BASE_URL}) mode. Native: ${isCapacitorNative}`);
 
 // --- HELPER WRAPPER TO MAKE FETCH REQUESTS ---
-async function request(url, options = {}) {
+async function request(url, options = {}, retryCount = 0) {
   const defaultHeaders = {
     'Content-Type': 'application/json',
   };
-  
+
+  // In Capacitor native, the WebView origin is http://localhost which causes
+  // CORS preflight failures when mode is 'cors'. Omit mode entirely so the
+  // browser/webview uses the default (no-cors won't work for reading JSON,
+  // but omitting mode lets the native layer handle it correctly).
   const config = {
     ...options,
     headers: {
       ...defaultHeaders,
       ...options.headers,
     },
-    mode: options.mode || 'cors',
-    // credentials: options.credentials || 'include' // Removed to fix CORS issues with '*' origins
   };
 
-  const response = await fetch(`${BASE_URL}${url}`, config);
-  if (!response.ok) {
-    const errorText = await response.text();
-    let errorMessage = errorText || `API error: ${response.status}`;
-    let parsedError = null;
-    try {
-      parsedError = JSON.parse(errorText);
-      if (parsedError.error) errorMessage = parsedError.error;
-      else if (parsedError.message) errorMessage = parsedError.message;
-    } catch (e) {}
-    const err = new Error(errorMessage);
-    // Attach all parsed fields (e.g. requireOtp) so callers can inspect them
-    if (parsedError) Object.assign(err, parsedError);
-    err.status = response.status;
+  // Only set cors mode when running in a real browser (not Capacitor native)
+  if (!isCapacitorNative) {
+    config.mode = options.mode || 'cors';
+  }
+
+  // Add a 60-second timeout to handle Render free-tier cold starts
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60000);
+  config.signal = controller.signal;
+
+  try {
+    const response = await fetch(`${BASE_URL}${url}`, config);
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorMessage = errorText || `API error: ${response.status}`;
+      let parsedError = null;
+      try {
+        parsedError = JSON.parse(errorText);
+        if (parsedError.error) errorMessage = parsedError.error;
+        else if (parsedError.message) errorMessage = parsedError.message;
+      } catch (e) {}
+      const err = new Error(errorMessage);
+      // Attach all parsed fields (e.g. requireOtp) so callers can inspect them
+      if (parsedError) Object.assign(err, parsedError);
+      err.status = response.status;
+      throw err;
+    }
+
+    if (response.status === 204) return null;
+    const text = await response.text();
+    return text ? JSON.parse(text) : null;
+  } catch (err) {
+    clearTimeout(timeoutId);
+    // Auto-retry once on network/timeout errors (common with Render cold starts)
+    if (retryCount < 1 && (err.name === 'AbortError' || err.message === 'Failed to fetch' || err.name === 'TypeError')) {
+      console.warn(`[API] Request to ${url} failed (${err.message}), retrying...`);
+      return request(url, options, retryCount + 1);
+    }
     throw err;
   }
-  
-  if (response.status === 204) return null;
-  const text = await response.text();
-  return text ? JSON.parse(text) : null;
 }
 
 // --- API ACTIONS DEFINITIONS ---

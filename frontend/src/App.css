@@ -633,9 +633,16 @@
 /* --- DEALS OF THE DAY PRODUCT GRID --- */
 .deals-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 16px;
   margin-bottom: 32px;
+}
+
+@media (max-width: 480px) {
+  .deals-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
 }
 
 .deal-card {
@@ -1952,20 +1959,26 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  height: 100%;
+  height: 100vh;
+  width: 100%;
   position: relative;
   background-color: var(--bg);
+  overflow: hidden;
 }
 
 .mobile-app-header {
-  height: 52px;
+  height: 60px;
   border-bottom: 1px solid var(--border);
   background-color: var(--card-bg);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
+  padding: 0 20px;
   flex-shrink: 0;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+  z-index: 100;
+  position: sticky;
+  top: 0;
 }
 
 .app-branding {
@@ -1977,22 +1990,23 @@
 .app-branding span {
   font-family: var(--heading);
   font-weight: 800;
-  font-size: 15px;
+  font-size: 18px;
+  letter-spacing: -0.5px;
   color: var(--text-bold);
 }
 
 .app-logo-bullet {
   background: var(--gradient-primary);
   color: white;
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 800;
-  font-size: 13px;
-  box-shadow: 0 2px 5px rgba(var(--primary-rgb), 0.3);
+  font-size: 15px;
+  box-shadow: 0 4px 10px rgba(var(--primary-rgb), 0.3);
 }
 
 .app-login-btn {
@@ -2001,18 +2015,19 @@
   color: white;
   background: var(--gradient-primary);
   border-radius: 14px;
-  padding: 5px 12px;
+  padding: 6px 16px;
+  box-shadow: 0 4px 10px rgba(var(--primary-rgb), 0.2);
 }
 
 .app-user-profile {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 
 .app-user-initial {
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
   background-color: var(--primary);
   color: white;
   border-radius: 50%;
@@ -2020,7 +2035,8 @@
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 11px;
+  font-size: 14px;
+  box-shadow: 0 4px 10px rgba(var(--primary-rgb), 0.2);
 }
 
 .app-logout-icon {
@@ -2028,26 +2044,31 @@
   cursor: pointer;
   display: flex;
   align-items: center;
+  padding: 4px;
+  background-color: rgba(239, 68, 68, 0.1);
+  border-radius: 8px;
 }
 
 /* App Scrollable Content Area */
 .mobile-app-screen-content {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
-  padding-bottom: 24px;
+  padding: 20px;
+  padding-bottom: 30px;
+  background: radial-gradient(circle at 50% 0%, rgba(var(--primary-rgb), 0.03) 0%, var(--bg) 100%);
 }
 
 /* App Bottom Navigation Bar */
 .mobile-app-nav {
-  height: 60px;
+  height: 70px;
   border-top: 1px solid var(--border);
   background-color: var(--card-bg);
   display: flex;
   justify-content: space-around;
   align-items: center;
   flex-shrink: 0;
-  padding-bottom: 2px;
+  padding-bottom: env(safe-area-inset-bottom);
+  box-shadow: 0 -4px 15px rgba(0,0,0,0.03);
 }
 
 .app-nav-item {
@@ -2084,12 +2105,13 @@
 .app-quick-wallet {
   background: var(--gradient-primary);
   color: white;
-  border-radius: 16px;
-  padding: 16px;
-  box-shadow: 0 8px 20px rgba(var(--primary-rgb), 0.25);
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 10px 25px rgba(var(--primary-rgb), 0.25);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+  margin-bottom: 4px;
 }
 
 .quick-wallet-header {
@@ -2100,19 +2122,22 @@
   text-transform: uppercase;
   font-weight: 700;
   opacity: 0.9;
+  letter-spacing: 1px;
 }
 
 .quick-wallet-balance {
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 800;
+  font-family: var(--heading);
+  letter-spacing: -1px;
 }
 
 .quick-wallet-breakdown {
   display: flex;
   justify-content: space-between;
   border-top: 1px dashed rgba(255, 255, 255, 0.2);
-  padding-top: 10px;
-  margin-top: 4px;
+  padding-top: 12px;
+  margin-top: 6px;
   font-size: 11px;
   opacity: 0.95;
 }
@@ -2121,38 +2146,40 @@
 .app-promo-card {
   background-color: var(--card-bg);
   border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 14px;
+  border-radius: 20px;
+  padding: 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  box-shadow: var(--shadow);
 }
 
 .promo-details h4 {
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 800;
   color: var(--text-bold);
-  margin-bottom: 2px;
+  margin-bottom: 4px;
 }
 
 .promo-details p {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text);
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .app-mini-btn {
   background-color: var(--primary);
   color: white;
-  border-radius: 8px;
-  padding: 4px 10px;
-  font-size: 11px;
+  border-radius: 10px;
+  padding: 6px 14px;
+  font-size: 12px;
   font-weight: 700;
+  box-shadow: 0 4px 10px rgba(var(--primary-rgb), 0.2);
 }
 
 .promo-gift-icon {
   color: var(--primary);
-  opacity: 0.2;
+  opacity: 0.15;
 }
 
 /* App Header Section */
@@ -2160,17 +2187,17 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 6px;
+  margin-top: 10px;
 }
 
 .app-section-header h3 {
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 17px;
+  font-weight: 800;
   color: var(--text-bold);
 }
 
 .app-section-header span {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--primary);
   font-weight: 700;
   cursor: pointer;
@@ -2290,27 +2317,28 @@
 .app-stores-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
 }
 
 .app-store-row {
   background-color: var(--card-bg);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 12px;
+  border-radius: 16px;
+  padding: 12px 16px;
   display: flex;
   align-items: center;
   gap: 12px;
   cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
 }
 
 .app-store-row img {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
   object-fit: contain;
   background-color: white;
-  padding: 4px;
+  padding: 6px;
   border: 1px solid var(--border);
 }
 
@@ -2319,9 +2347,10 @@
 }
 
 .app-store-row-info h4 {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--text-bold);
+  margin-bottom: 2px;
 }
 
 .app-store-row-info p {
@@ -2333,11 +2362,11 @@
 .app-store-go-btn {
   background-color: rgba(var(--primary-rgb), 0.08);
   color: var(--primary);
-  font-size: 10px;
-  font-weight: 700;
-  padding: 4px 10px;
+  padding: 6px 12px;
   border-radius: 8px;
-  display: inline-flex;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
   align-items: center;
   gap: 4px;
 }
@@ -2346,56 +2375,63 @@
 .app-empty-state-card {
   background-color: var(--card-bg);
   border: 1px dashed var(--border);
-  border-radius: 16px;
-  padding: 30px 16px;
+  border-radius: 20px;
+  padding: 40px 20px;
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
+  box-shadow: var(--shadow);
 }
 
 .app-empty-state-card h4 {
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 18px;
+  font-weight: 800;
   color: var(--text-bold);
-  margin-top: 4px;
+  margin-top: 12px;
 }
 
 .app-empty-state-card p {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text);
-  margin-top: 4px;
+  margin-top: 6px;
+  line-height: 1.5;
 }
 
 /* App tracking Card user view */
 .app-track-card {
   background-color: var(--card-bg);
   border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 14px;
+  border-radius: 20px;
+  padding: 20px;
   cursor: pointer;
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.04);
 }
 
 .app-track-card-header {
   display: flex;
   justify-content: space-between;
+  align-items: center;
 }
 
 .app-track-id {
   font-family: monospace;
-  font-weight: 700;
-  font-size: 12px;
+  font-weight: 800;
+  font-size: 13px;
   color: var(--text-bold);
+  opacity: 0.6;
 }
 
 .app-track-platform {
-  font-size: 11px;
-  color: var(--primary);
+  font-size: 12px;
   font-weight: 700;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .app-track-product-name {
@@ -2749,4 +2785,245 @@
   font-size: 13px;
   font-weight: 700;
   margin-top: 10px;
+}
+
+/* --- PREMIUM MOBILE RESPONSIVE POLISH --- */
+@media (max-width: 768px) {
+  /* Store detailed banner responsive layout */
+  .store-detail-header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 24px 16px;
+    gap: 18px;
+    margin-bottom: 20px;
+    border-radius: var(--radius-md);
+  }
+  
+  .store-detail-logo-wrapper {
+    width: 100px;
+    height: 100px;
+    padding: 10px;
+    margin: 0 auto;
+    flex-shrink: 0;
+  }
+  
+  .store-detail-info {
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+  }
+  
+  .store-detail-title-row {
+    flex-direction: column;
+    gap: 6px;
+    align-items: center;
+    width: 100%;
+  }
+  
+  .store-detail-name {
+    font-size: 22px;
+    text-align: center;
+    line-height: 1.3;
+  }
+  
+  .store-detail-tag {
+    font-size: 12px;
+    padding: 4px 12px;
+  }
+  
+  .store-detail-desc {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text);
+  }
+  
+  .store-detail-meta-pills {
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+    width: 100%;
+  }
+  
+  .store-detail-pill {
+    font-size: 12px;
+    justify-content: center;
+  }
+
+  /* Coupon cards stacked layout */
+  .coupon-card {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 16px;
+    gap: 16px;
+    border-radius: var(--radius-sm);
+  }
+  
+  .coupon-card::before {
+    width: 100%;
+    height: 4px;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: auto;
+  }
+  
+  .coupon-details {
+    gap: 6px;
+    width: 100%;
+  }
+  
+  .coupon-title {
+    font-size: 15px;
+    line-height: 1.4;
+  }
+  
+  .coupon-desc {
+    font-size: 12px;
+  }
+  
+  .coupon-exp-row {
+    font-size: 11px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .coupon-action-box {
+    align-items: stretch;
+    width: 100%;
+    margin-top: 4px;
+  }
+  
+  .coupon-code-button, 
+  .coupon-action-box .btn-primary {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 12px !important;
+    font-size: 14px !important;
+    text-align: center;
+    display: flex !important;
+  }
+
+  /* Popular Stores Grid Layout */
+  .stores-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
+    margin-bottom: 24px;
+  }
+  
+  .store-card {
+    padding: 12px !important;
+    gap: 10px !important;
+    border-radius: 12px !important;
+  }
+  
+  .store-popular-tag {
+    font-size: 9px;
+    padding: 2px 6px;
+    top: 8px;
+    right: 8px;
+  }
+  
+  .store-logo-box {
+    height: 64px !important;
+    padding: 6px !important;
+  }
+  
+  .store-meta {
+    gap: 6px;
+  }
+  
+  .store-cashback-badge {
+    font-size: 10px !important;
+    padding: 2px 6px;
+  }
+  
+  .store-description {
+    font-size: 11px !important;
+    height: 32px !important;
+    line-height: 1.4;
+  }
+  
+  .store-card-actions button {
+    padding: 8px 10px !important;
+    font-size: 12px !important;
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Product Deals Grid Layout override for smaller mobile screens */
+  .deals-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+  }
+  
+  .deal-card {
+    border-radius: 12px !important;
+  }
+  
+  .deal-badge {
+    font-size: 10px;
+    padding: 2px 6px;
+    top: 8px;
+    left: 8px;
+  }
+  
+  .deal-image-box {
+    height: 110px !important;
+    padding: 12px !important;
+  }
+  
+  .deal-info {
+    padding: 10px !important;
+    gap: 6px !important;
+  }
+  
+  .deal-store-row {
+    margin-bottom: 2px;
+  }
+  
+  .deal-store-logo {
+    height: 16px !important;
+    max-width: 55px !important;
+  }
+  
+  .deal-category {
+    font-size: 9px !important;
+    padding: 1px 6px !important;
+  }
+  
+  .deal-title {
+    font-size: 12px !important;
+    height: 36px !important;
+    line-height: 1.5;
+    margin-bottom: 2px;
+  }
+  
+  .deal-price-section {
+    padding: 6px !important;
+    gap: 2px !important;
+    border-radius: 6px !important;
+  }
+  
+  .deal-retail-row, 
+  .deal-discounted-row {
+    font-size: 10px !important;
+    line-height: 1.2;
+  }
+  
+  .deal-discounted-row span:last-child {
+    font-size: 12px !important;
+    font-weight: 800;
+  }
+  
+  .deal-info .btn-card-primary {
+    padding: 8px 10px !important;
+    font-size: 12px !important;
+    margin-top: 4px;
+  }
+  
+  .deal-info .btn-secondary {
+    padding: 8px !important;
+  }
 }

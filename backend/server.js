@@ -165,6 +165,45 @@ app.get('/api/withdrawals', (req, res) => {
   });
 });
 
+app.get('/api/stores', (req, res) => {
+  db.all('SELECT * FROM stores', [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+app.get('/api/deals', (req, res) => {
+  db.all('SELECT * FROM deals', [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    const parsedRows = rows.map(row => ({
+      ...row,
+      comparisons: row.comparisons ? JSON.parse(row.comparisons) : []
+    }));
+    res.json(parsedRows);
+  });
+});
+
+app.get('/api/banners', (req, res) => {
+  db.all('SELECT * FROM banners', [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+app.get('/api/banners/active', (req, res) => {
+  db.all('SELECT * FROM banners WHERE status = "active"', [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+app.get('/api/categories', (req, res) => {
+  db.all('SELECT * FROM categories', [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
 app.get('/api/shared-links', (req, res) => res.json([]));
 app.get('/api/shared-commissions', (req, res) => res.json([]));
 app.get('/api/analytics/clicks', (req, res) => res.json([]));

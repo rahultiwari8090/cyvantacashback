@@ -4,10 +4,10 @@ import com.cyvanta.affiliate_app.model.Coupon;
 import com.cyvanta.affiliate_app.model.Product;
 import com.cyvanta.affiliate_app.model.Store;
 import com.cyvanta.affiliate_app.model.User;
-import com.cyvanta.affiliate_app.model.Category;
-import com.cyvanta.affiliate_app.model.Conversion;
+import com.cyvanta.affiliate_app.model.Deal;
 import com.cyvanta.affiliate_app.repository.CategoryRepository;
 import com.cyvanta.affiliate_app.repository.ConversionRepository;
+import com.cyvanta.affiliate_app.repository.DealRepository;
 import com.cyvanta.affiliate_app.repository.ProductRepository;
 import com.cyvanta.affiliate_app.repository.StoreRepository;
 import com.cyvanta.affiliate_app.repository.UserRepository;
@@ -27,16 +27,18 @@ public class AdminSeedRunner implements CommandLineRunner {
     private final StoreRepository storeRepository;
     private final CategoryRepository categoryRepository;
     private final ConversionRepository conversionRepository;
+    private final DealRepository dealRepository;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public AdminSeedRunner(UserRepository userRepository, ProductRepository productRepository, 
                            StoreRepository storeRepository, CategoryRepository categoryRepository,
-                           ConversionRepository conversionRepository) {
+                           ConversionRepository conversionRepository, DealRepository dealRepository) {
         this.userRepository = userRepository;
         this.productRepository = productRepository;
         this.storeRepository = storeRepository;
         this.categoryRepository = categoryRepository;
         this.conversionRepository = conversionRepository;
+        this.dealRepository = dealRepository;
     }
 
     @Override
@@ -231,6 +233,44 @@ public class AdminSeedRunner implements CommandLineRunner {
                             .build()
             ));
             System.out.println("Sample stores with coupons seeded successfully");
+
+            if (dealRepository.count() == 0) {
+                dealRepository.saveAll(List.of(
+                    Deal.builder()
+                        .name("boAt Rockerz 450 Bluetooth On-Ear Headphones with Mic")
+                        .image("https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300")
+                        .offerText("Up to 50% Off")
+                        .link("https://amazon.in/dp/example")
+                        .cashback("10%")
+                        .status("active")
+                        .comparisons(List.of(
+                            Deal.DealComparison.builder()
+                                .platform("Amazon")
+                                .listedPrice(29.99)
+                                .cashbackPercent(10.0)
+                                .link("https://amazon.in/dp/example")
+                                .build()
+                        ))
+                        .build(),
+                    Deal.builder()
+                        .name("Adidas UltraBoost 22 Performance Athletic Sports Shoes")
+                        .image("https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300")
+                        .offerText("Flat 30% Off")
+                        .link("https://myntra.com/shoes/example")
+                        .cashback("12%")
+                        .status("active")
+                        .comparisons(List.of(
+                            Deal.DealComparison.builder()
+                                .platform("Myntra")
+                                .listedPrice(110.00)
+                                .cashbackPercent(12.0)
+                                .link("https://myntra.com/shoes/example")
+                                .build()
+                        ))
+                        .build()
+                ));
+                System.out.println("Sample deals seeded successfully");
+            }
         } catch (Exception e) {
             System.out.println("Database seed skipped because MongoDB is not reachable or not configured correctly");
             e.printStackTrace();

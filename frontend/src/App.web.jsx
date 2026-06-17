@@ -195,7 +195,9 @@ export default function App() {
   const [notifications, setNotifications] = useState([]);
 
   // Simulator and state sync variables
-  const [isSimulatorMode, setIsSimulatorMode] = useState(false);
+  const isCapacitorNative = typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+  const [isMobileView, setIsMobileView] = useState(isCapacitorNative || window.innerWidth < 768);
+  const [isSimulatorMode, setIsSimulatorMode] = useState(false); // Kept for dev but hidden
   const [trackedOrders, setTrackedOrders] = useState([]);
   const [withdrawRequests, setWithdrawRequests] = useState([]);
   const [products, setProducts] = useState([]);
@@ -218,29 +220,56 @@ export default function App() {
   const [shareModalUrl, setShareModalUrl] = useState(null);
   const [shareModalTitle, setShareModalTitle] = useState(null);
 
+  // 1. Fetch static catalog data once on mount or when simulator mode changes
   useEffect(() => {
-    const syncAppStates = async () => {
+    const loadCatalogData = async () => {
       try {
-        const [tracking, withdrawals, productsData, dbDeals, storesRes, activeBanners] = await Promise.all([
-          apiTracking.getAll().catch(e => { console.warn('Tracking failed:', e); return []; }),
-          apiWithdrawals.getAll().catch(e => { console.warn('Withdrawals failed:', e); return []; }),
+        const [productsData, dbDeals, storesRes, activeBanners] = await Promise.all([
           apiProducts.getAll().catch(e => { console.warn('Products failed:', e); return []; }),
           apiDeals.getAll().catch(e => { console.warn('Deals failed:', e); return []; }),
           apiStores.getAll().catch(e => { console.warn('Stores failed:', e); return []; }),
           apiBanners.getActive().catch(e => { console.warn('Banners failed:', e); return []; })
         ]);
-        setTrackedOrders(tracking || []);
-        setWithdrawRequests(withdrawals || []);
         setProducts(productsData || []);
         setDealsData(dbDeals || []);
         setStoresData(storesRes || []);
         setBannersData(activeBanners || []);
       } catch (err) {
-        console.error('Failed to sync states:', err);
+        console.error('Failed to load catalog data:', err);
       }
     };
-    syncAppStates();
-  }, [currentView, isSimulatorMode]);
+    loadCatalogData();
+  }, [isSimulatorMode]);
+
+  // 2. Fetch user-specific transactional data when user logs in/out
+  useEffect(() => {
+    const loadUserData = async () => {
+      if (!currentUser) {
+        setTrackedOrders([]);
+        setWithdrawRequests([]);
+        return;
+      }
+      try {
+        const [tracking, withdrawals] = await Promise.all([
+          apiTracking.getAll().catch(e => { console.warn('Tracking failed:', e); return []; }),
+          apiWithdrawals.getAll().catch(e => { console.warn('Withdrawals failed:', e); return []; })
+        ]);
+        setTrackedOrders(tracking || []);
+        setWithdrawRequests(withdrawals || []);
+      } catch (err) {
+        console.error('Failed to load user transaction data:', err);
+      }
+    };
+    loadUserData();
+  }, [currentUser]);
+
+  // 3. Handle window resizing & environment checks
+  useEffect(() => {
+    const handleResize = () => setIsMobileView(isCapacitorNative || window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Initial call
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isCapacitorNative]);
 
   const handleAppWithdrawalRequest = async (newReq) => {
     try {
@@ -504,6 +533,7 @@ export default function App() {
         const baseDeal = {
           ...d,
           title: d.name,
+          platform: d.platform || (d.comparisons && d.comparisons.length > 0 ? d.comparisons[0].platform : 'Amazon'),
           category: 'electronics', // Default category for deals
           storeLogo: storesLogoMap['Amazon'] || fallbackLogo,
           retailPrice,
@@ -609,7 +639,18 @@ export default function App() {
 
   if (currentView === 'admin-login') {
     return (
-      <div id="root">
+      <div className="admin-layout-wrapper" style={{ minHeight: '100vh', backgroundColor: 'var(--bg)' }}>
+        <Header
+          currentView={currentView}
+          setView={setView}
+          theme={theme}
+          toggleTheme={toggleTheme}
+          currentUser={currentUser}
+          onLogout={handleLogout}
+          openAuthModal={() => setIsAuthModalOpen(true)}
+          storesData={storesData}
+          onStoreSelect={handleStoreSelect}
+        />
         <Notification notifications={notifications} removeNotification={removeNotification} />
         <AdminLogin
           onLoginSuccess={(adminUser) => {
@@ -622,13 +663,18 @@ export default function App() {
           onAddNotification={addNotification}
           setView={setView}
         />
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
+          onLogin={handleLogin}
+        />
       </div>
     );
   }
 
   if (currentView === 'admin-panel') {
     return (
-      <div id="root">
+      <div className="admin-layout-wrapper" style={{ minHeight: '100vh', backgroundColor: 'var(--bg)' }}>
         <Notification notifications={notifications} removeNotification={removeNotification} />
         <AdminPanel
           currentUser={currentUser}
@@ -641,72 +687,298 @@ export default function App() {
     );
   }
 
-  if (isSimulatorMode) {
+  if (isMobileView && currentView !== 'admin-login' && currentView !== 'admin-panel') {
+    const selectedStore = storesData.find((s) => s.id === selectedStoreId);
+
     return (
-      <div id="root">
+      <div id="root" style={{ minHeight: '100vh', backgroundColor: 'var(--bg)' }}>
         <Notification notifications={notifications} removeNotification={removeNotification} />
         
-        <div className="simulator-layout-wrapper">
-          <div className="simulator-toggle-header">
-            <button className="simulator-toggle-btn" onClick={() => setIsSimulatorMode(false)}>
-              💻 Desktop Web View
-            </button>
-            <button className="simulator-toggle-btn active">
-              📱 User Mobile App View
-            </button>
-          </div>
-
-          {/* Smartphone device shell */}
-          <div className="smartphone-device-frame">
-            <div className="smartphone-status-bar">
-              <span>12:55 PM</span>
-              <div className="status-bar-right">
-                <span>5G</span>
-                <div className="status-bar-battery"><div className="battery-fill"></div></div>
-              </div>
-            </div>
-            
-            <MobileApp
-              currentUser={currentUser}
-              trackedOrders={trackedOrders}
-              withdrawRequests={withdrawRequests}
-              onAddWithdrawalRequest={handleAppWithdrawalRequest}
-              storesData={storesData}
-              dealsData={dynamicDeals}
+        {currentView === 'store' && selectedStore ? (
+          <div style={{ padding: '12px' }}>
+            <StoreDetail
+              store={selectedStore}
+              onBack={() => setView('home')}
               onAddNotification={addNotification}
+              deals={dynamicDeals.filter(d => {
+                return d.platform && selectedStore?.name && d.platform.toLowerCase() === selectedStore.name.toLowerCase();
+              })}
+              onGrabDeal={handleGrabProductDeal}
+              onShareDeal={handleShareDeal}
+              currentUser={currentUser}
               openAuthModal={() => setIsAuthModalOpen(true)}
-              onLogout={handleLogout}
             />
-
-            <div className="smartphone-home-bar">
-              <div className="home-bar-indicator"></div>
-            </div>
           </div>
-        </div>
+        ) : (
+          <MobileApp
+            currentUser={currentUser}
+            trackedOrders={trackedOrders}
+            withdrawRequests={withdrawRequests}
+            onAddWithdrawalRequest={handleAppWithdrawalRequest}
+            storesData={storesData}
+            dealsData={dynamicDeals}
+            onAddNotification={addNotification}
+            openAuthModal={() => setIsAuthModalOpen(true)}
+            onLogout={handleLogout}
+            onGrabDeal={handleGrabProductDeal}
+            onShareDeal={handleShareDeal}
+            onStoreSelect={(id) => {
+              setSelectedStoreId(id);
+              setView('store');
+            }}
+          />
+        )}
 
-        {/* Login / Registration overlay sheet */}
         <AuthModal
           isOpen={isAuthModalOpen}
           onClose={() => setIsAuthModalOpen(false)}
           onLogin={handleLogin}
         />
+
+        {/* Price Comparison Modal (Mobile) */}
+        {activeComparisonDeal && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'center',
+            zIndex: 2000,
+            padding: '0',
+          }}>
+            <div style={{
+              backgroundColor: 'var(--card-bg)',
+              border: '1px solid var(--border)',
+              borderRadius: '16px 16px 0 0',
+              boxShadow: 'var(--shadow-lg)',
+              width: '100%',
+              maxHeight: '85vh',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+            }}>
+              {/* Header */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '14px 16px',
+                borderBottom: '1px solid var(--border)'
+              }}>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: 'var(--text-bold)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  🔍 Price Comparison
+                </h3>
+                <button
+                  onClick={() => setActiveComparisonDeal(null)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    fontSize: '20px',
+                    cursor: 'pointer',
+                    color: 'var(--text)',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  &times;
+                </button>
+              </div>
+
+              {/* Product info banner */}
+              <div style={{
+                display: 'flex',
+                gap: '12px',
+                padding: '14px 16px',
+                backgroundColor: 'var(--bg)',
+                borderBottom: '1px solid var(--border)'
+              }}>
+                <img
+                  src={activeComparisonDeal.image}
+                  alt=""
+                  style={{
+                    width: '56px',
+                    height: '56px',
+                    objectFit: 'cover',
+                    borderRadius: '6px',
+                    border: '1px solid var(--border)'
+                  }}
+                />
+                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', flex: 1 }}>
+                  <h4 style={{ margin: '0 0 4px 0', fontSize: '13px', fontWeight: '600', color: 'var(--text-bold)', lineHeight: '1.4' }}>
+                    {activeComparisonDeal.title || activeComparisonDeal.name}
+                  </h4>
+                  <span style={{ fontSize: '11px', color: 'var(--text)', textTransform: 'capitalize' }}>
+                    Category: <strong>{activeComparisonDeal.category}</strong>
+                  </span>
+                </div>
+              </div>
+
+              {/* Platform Comparison List */}
+              <div style={{
+                padding: '14px 16px',
+                overflowY: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px'
+              }}>
+                {(!activeComparisonDeal.comparisons || activeComparisonDeal.comparisons.length === 0) ? (
+                  <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text)' }}>
+                    No active comparisons available for this deal.
+                  </div>
+                ) : [...activeComparisonDeal.comparisons]
+                  .map(comp => {
+                    const dealPrice = comp.listedPrice || comp.dealPrice || 0;
+                    const cashbackEarned = parseFloat(((dealPrice * (comp.cashbackPercent || 0)) / 100).toFixed(2));
+                    return {
+                      platform: comp.platform,
+                      logo: storesData.find(s => s.name === comp.platform)?.logo || 'default-logo-url',
+                      price: dealPrice,
+                      cashbackPercent: comp.cashbackPercent || 0,
+                      cashbackEarned,
+                      link: comp.link
+                    };
+                  })
+                  .sort((a, b) => a.price - b.price)
+                  .map((item, index) => {
+                  const isBestValue = index === 0;
+                  return (
+                    <div
+                      key={item.platform + index}
+                      style={{
+                        border: isBestValue ? '2px solid var(--secondary)' : '1px solid var(--border)',
+                        borderRadius: '10px',
+                        padding: '12px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '10px',
+                        position: 'relative',
+                        backgroundColor: 'var(--card-bg)',
+                        boxShadow: isBestValue ? '0 4px 12px rgba(16, 185, 129, 0.1)' : 'none'
+                      }}
+                    >
+                      {isBestValue && (
+                        <span style={{
+                          position: 'absolute',
+                          top: '-10px',
+                          left: '12px',
+                          backgroundColor: 'var(--secondary)',
+                          color: '#fff',
+                          fontSize: '9px',
+                          fontWeight: '800',
+                          padding: '2px 8px',
+                          borderRadius: '10px',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px'
+                        }}>
+                          🏆 Best Value
+                        </span>
+                      )}
+
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <img
+                            src={item.logo}
+                            alt={item.platform}
+                            style={{
+                              height: '22px',
+                              width: 'auto',
+                              maxWidth: '60px',
+                              objectFit: 'contain'
+                            }}
+                          />
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <span style={{ fontSize: '10px', color: 'var(--text)', textDecoration: 'line-through' }}>
+                              ₹{(item.price || 0).toFixed(2)}
+                            </span>
+                            <span style={{ fontSize: '11px', color: 'var(--secondary)', fontWeight: '600' }}>
+                              -{item.cashbackPercent}% (-₹{item.cashbackEarned.toFixed(2)})
+                            </span>
+                          </div>
+                        </div>
+                        <span style={{ fontSize: '16px', fontWeight: '800', color: isBestValue ? 'var(--secondary)' : 'var(--text-bold)' }}>
+                          ₹{item.price.toFixed(2)}
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          onClick={() => executeGrabDealTracked(activeComparisonDeal, item)}
+                          style={{
+                            flex: 1,
+                            backgroundColor: isBestValue ? 'var(--secondary)' : 'var(--primary)',
+                            color: '#fff',
+                            border: 'none',
+                            padding: '10px',
+                            borderRadius: '8px',
+                            fontWeight: '700',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Buy & Earn
+                        </button>
+                        <button
+                          onClick={() => handleReferLink(activeComparisonDeal, item)}
+                          style={{
+                            flex: 1,
+                            backgroundColor: 'transparent',
+                            color: 'var(--text-bold)',
+                            border: '1px solid var(--border)',
+                            padding: '10px',
+                            borderRadius: '8px',
+                            fontWeight: '700',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Refer Link
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Footer */}
+              <div style={{
+                padding: '12px 16px',
+                borderTop: '1px solid var(--border)',
+                display: 'flex',
+                justifyContent: 'center',
+                backgroundColor: 'var(--bg)'
+              }}>
+                <button
+                  onClick={() => setActiveComparisonDeal(null)}
+                  style={{
+                    padding: '10px 24px',
+                    border: '1px solid var(--border)',
+                    backgroundColor: 'var(--card-bg)',
+                    color: 'var(--text-bold)',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: '700',
+                    fontSize: '13px',
+                    width: '100%'
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
 
-
-
   return (
-    <div id="root">
+    <div className="web-app-wrapper" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* Toast Alert Manager */}
       <Notification notifications={notifications} removeNotification={removeNotification} />
-
-      {/* Floating Mode Switcher to Mobile App */}
-      <div className="simulator-toggle-header" style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 1000, margin: 0 }}>
-        <button className="simulator-toggle-btn" style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '8px' }} onClick={() => setIsSimulatorMode(true)}>
-          📱 Switch to Mobile App View
-        </button>
-      </div>
 
       {/* Header Sticky Component */}
       <Header

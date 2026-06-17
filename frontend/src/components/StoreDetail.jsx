@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ArrowLeft, Clock, Copy, Check, Info, ShieldAlert, Sparkles, ExternalLink } from 'lucide-react';
 import TopDeals from './TopDeals';
 
-export default function StoreDetail({ store, onBack, onAddNotification, deals, onGrabDeal, currentUser, openAuthModal }) {
+export default function StoreDetail({ store, onBack, onAddNotification, deals, onGrabDeal, onShareDeal, currentUser, openAuthModal }) {
   const [copiedCouponId, setCopiedCouponId] = useState(null);
   const [activatingDealId, setActivatingDealId] = useState(null);
 
@@ -17,11 +17,8 @@ export default function StoreDetail({ store, onBack, onAddNotification, deals, o
       setCopiedCouponId(coupon.id);
       onAddNotification(`Coupon "${coupon.code}" copied to clipboard!`, 'success');
       
-      // Simulate opening affiliate link after a short delay
-      setTimeout(() => {
-        setCopiedCouponId(null);
-        onAddNotification(`Opening secure tracking link to ${store.name}...`, 'info');
-      }, 1500);
+      setCopiedCouponId(null);
+      onAddNotification(`Opening secure tracking link to ${store.name}...`, 'info');
     }
   };
 
@@ -34,10 +31,8 @@ export default function StoreDetail({ store, onBack, onAddNotification, deals, o
     setActivatingDealId(coupon.id);
     onAddNotification(`Activating Tracker...`, 'success');
     
-    setTimeout(() => {
-      setActivatingDealId(null);
-      onAddNotification(`Redirecting you safely to ${store.name} checkout...`, 'info');
-    }, 2000);
+    setActivatingDealId(null);
+    onAddNotification(`Redirecting you safely to ${store.name} checkout...`, 'info');
   };
 
   return (
@@ -179,7 +174,7 @@ export default function StoreDetail({ store, onBack, onAddNotification, deals, o
           <h3 className="section-title" style={{ fontSize: '22px', marginBottom: '16px', paddingLeft: '16px' }}>
             Top Products on {store.name}
           </h3>
-          <TopDeals deals={deals} onGrabDeal={onGrabDeal} />
+          <TopDeals deals={deals} onGrabDeal={onGrabDeal} onShareDeal={onShareDeal} />
         </div>
       )}
     </div>

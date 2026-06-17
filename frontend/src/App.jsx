@@ -94,29 +94,46 @@ export default function App() {
     setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
   };
 
-  // Load initial tracked orders, withdrawal requests, and products
-  const syncAppStates = async () => {
-    try {
-      const [tracking, withdrawals, productsData, dbDeals, storesRes] = await Promise.all([
-        apiTracking.getAll(),
-        apiWithdrawals.getAll(),
-        apiProducts.getAll(),
-        apiDeals.getAll(),
-        apiStores.getAll()
-      ]);
-      setTrackedOrders(tracking || []);
-      setWithdrawRequests(withdrawals || []);
-      setProducts(productsData || []);
-      setDeals(dbDeals || []);
-      setStoresData(storesRes || []);
-    } catch (err) {
-      console.error('Failed to sync states on native:', err);
-    }
-  };
-
+  // 1. Fetch static catalog data once on mount
   useEffect(() => {
-    syncAppStates();
-  }, [currentUser, currentView]);
+    const loadCatalogData = async () => {
+      try {
+        const [productsData, dbDeals, storesRes] = await Promise.all([
+          apiProducts.getAll().catch(e => { console.warn('Products failed:', e); return []; }),
+          apiDeals.getAll().catch(e => { console.warn('Deals failed:', e); return []; }),
+          apiStores.getAll().catch(e => { console.warn('Stores failed:', e); return []; })
+        ]);
+        setProducts(productsData || []);
+        setDeals(dbDeals || []);
+        setStoresData(storesRes || []);
+      } catch (err) {
+        console.error('Failed to load catalog data:', err);
+      }
+    };
+    loadCatalogData();
+  }, []);
+
+  // 2. Fetch user-specific transactional data on login/logout
+  useEffect(() => {
+    const loadUserData = async () => {
+      if (!currentUser) {
+        setTrackedOrders([]);
+        setWithdrawRequests([]);
+        return;
+      }
+      try {
+        const [tracking, withdrawals] = await Promise.all([
+          apiTracking.getAll().catch(e => { console.warn('Tracking failed:', e); return []; }),
+          apiWithdrawals.getAll().catch(e => { console.warn('Withdrawals failed:', e); return []; })
+        ]);
+        setTrackedOrders(tracking || []);
+        setWithdrawRequests(withdrawals || []);
+      } catch (err) {
+        console.error('Failed to load user transaction data:', err);
+      }
+    };
+    loadUserData();
+  }, [currentUser]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -140,9 +157,7 @@ export default function App() {
             confirmed: Math.max(0, prev.wallet.confirmed - newReq.amount),
             pending: prev.wallet.pending + newReq.amount
           }
-        }));
       }
-      syncAppStates();
     } catch (err) {
       console.error('Failed to request app withdrawal:', err);
     }

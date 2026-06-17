@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Home,
   ShoppingBag,
@@ -17,7 +17,14 @@ import {
   User,
   LogOut,
   Send,
-  AlertCircle
+  AlertCircle,
+  Layers,
+  Shirt,
+  Smartphone,
+  Heart,
+  ShoppingCart,
+  Plane,
+  Sparkles
 } from 'lucide-react';
 
 const STORES_INFO = [
@@ -79,7 +86,9 @@ export default function MobileApp({
   onAddNotification,
   openAuthModal,
   onLogout,
-  onGrabDeal
+  onGrabDeal,
+  onShareDeal,
+  onStoreSelect
 }) {
   const [activeTab, setActiveTab] = useState('home');
   const [copiedLink, setCopiedLink] = useState(false);
@@ -93,6 +102,52 @@ export default function MobileApp({
   // Selected Order for tracking modal
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [comparisonDeal, setComparisonDeal] = useState(null);
+
+  // New States for Mobile UI
+  const [activeSlide, setActiveSlide] = useState(0);
+  const [selectedCategory, setSelectedCategory] = useState('all');
+
+  const HERO_SLIDES = [
+    {
+      id: 1,
+      tag: 'Limited Time Bonanza',
+      title: 'Discover Top Deals. <span style="color:var(--primary)">Shop Safely.</span>',
+      desc: 'Shop at Amazon, Ajio, Flipkart & 500+ stores.',
+      logo: 'https://upload.wikimedia.org/wikipedia/commons/b/bc/Myntra_Logo.png',
+    },
+    {
+      id: 2,
+      tag: 'Electronics Mega Deal',
+      title: 'Up to <span style="color:var(--primary)">80% OFF</span> on Gadgets',
+      desc: 'Upgrade your phone or laptop with active coupons.',
+      logo: 'https://www.google.com/s2/favicons?sz=256&domain=flipkart.com',
+    },
+    {
+      id: 3,
+      tag: 'Affiliate Program',
+      title: 'Share Links. <span style="color:var(--primary)">Earn Cash!</span>',
+      desc: 'Share unique links and earn commission for life.',
+      logo: 'https://www.google.com/s2/favicons?sz=256&domain=ajio.com',
+    }
+  ];
+
+  const CATEGORIES = [
+    { id: 'all', name: 'All Stores', icon: Layers },
+    { id: 'fashion', name: 'Fashion', icon: Shirt },
+    { id: 'electronics', name: 'Electronics', icon: Smartphone },
+    { id: 'health', name: 'Health & Beauty', icon: Heart },
+    { id: 'grocery', name: 'Food & Grocery', icon: ShoppingCart },
+    { id: 'travel', name: 'Travel & Flights', icon: Plane },
+  ];
+
+  useEffect(() => {
+    if (activeTab === 'home') {
+      const timer = setInterval(() => {
+        setActiveSlide((prev) => (prev + 1) % HERO_SLIDES.length);
+      }, 5000);
+      return () => clearInterval(timer);
+    }
+  }, [activeTab]);
 
   // Get current user's wallet info (or fallback if guest/admin)
   const isGuest = !currentUser;
@@ -119,26 +174,27 @@ export default function MobileApp({
 
   const executeSimulatorGrabDeal = (dealItem, storeItem) => {
     setComparisonDeal(null);
-    onAddNotification(`Activating cashback tracker on ${storeItem.platform} for ${dealItem.title || dealItem.name}...`, 'success');
+    onAddNotification(`Redirecting to ${storeItem.platform}...`, 'success');
     
     // Trigger dummy affiliate click
     if (onGrabDeal) {
       onGrabDeal(dealItem);
     }
     
-    setTimeout(() => {
-      onAddNotification(`Redirected to merchant! Shop completed.`, 'info');
-      const link = storeItem?.link || dealItem?.affiliateUrl || dealItem?.link;
-      if (link) {
-        window.open(link, '_blank');
-      } else {
-        window.open('https://google.com', '_blank');
-      }
-    }, 1500);
+    const link = storeItem?.link || dealItem?.affiliateUrl || dealItem?.link;
+    if (link) {
+      window.open(link, '_blank');
+    } else {
+      window.open('https://google.com', '_blank');
+    }
   };
 
   const handleStoreClick = (store) => {
-    onAddNotification(`Redirecting to ${store.name}... Tracking ID is active!`, 'success');
+    if (onStoreSelect) {
+      onStoreSelect(store.id);
+    } else {
+      onAddNotification(`Redirecting to ${store.name}... Tracking ID is active!`, 'success');
+    }
   };
 
   const handleRequestWithdrawal = (e) => {
@@ -171,28 +227,25 @@ export default function MobileApp({
     }
 
     setWithdrawLoading(true);
-    onAddNotification('Submitting withdrawal request to Admin...', 'info');
 
-    setTimeout(() => {
-      const newRequest = {
-        userName: user.name,
-        coins: Math.round(amount * 100), // 100 coins = ₹1
-        amount: amount,
-        upiId: upiId,
-        date: new Date().toISOString().split('T')[0],
-      };
-      
-      onAddWithdrawalRequest(newRequest);
-      
-      // Update local wallet view
-      user.wallet.confirmed = Math.max(0, user.wallet.confirmed - amount);
-      user.wallet.pending += amount; // shift to pending processing
+    const newRequest = {
+      userName: user.name,
+      coins: Math.round(amount * 100), // 100 coins = ₹1
+      amount: amount,
+      upiId: upiId,
+      date: new Date().toISOString().split('T')[0],
+    };
 
-      setWithdrawAmount('');
-      setUpiId('');
-      setWithdrawLoading(false);
-      onAddNotification('Withdrawal requested successfully! Awaiting Admin approval.', 'success');
-    }, 1800);
+    onAddWithdrawalRequest(newRequest);
+
+    // Update local wallet view
+    user.wallet.confirmed = Math.max(0, user.wallet.confirmed - amount);
+    user.wallet.pending += amount; // shift to pending processing
+
+    setWithdrawAmount('');
+    setUpiId('');
+    setWithdrawLoading(false);
+    onAddNotification('Withdrawal requested successfully!', 'success');
   };
 
   // Get return status description for user UI
@@ -352,67 +405,270 @@ export default function MobileApp({
           <>
             {/* TAB 1: HOME SCREEN */}
             {activeTab === 'home' && (
-          <div className="mobile-screen-tab-panel animate-fade">
-            {/* Wallet Quick Summary */}
-            <div className="app-quick-wallet">
-              <div className="quick-wallet-header">
-                <span>Total Cashback Balance</span>
-                <TrendingUp size={16} style={{ color: '#10b981' }} />
-              </div>
-              <div className="quick-wallet-balance">
-                ₹{(user.wallet.confirmed + user.wallet.pending).toFixed(2)}
-              </div>
-              <div className="quick-wallet-breakdown">
-                <span>Confirmed: <strong>₹{user.wallet.confirmed.toFixed(2)}</strong></span>
-                <span>Pending: <strong>₹{user.wallet.pending.toFixed(2)}</strong></span>
-              </div>
-            </div>
-
-            {/* Quick Promo Banner */}
-            <div className="app-promo-card">
-              <div className="promo-details">
-                <h4>Invite Friends & Earn</h4>
-                <p>Get flat 10% of all their cashback rates for life!</p>
-                <button className="app-mini-btn" onClick={() => setActiveTab('wallet')}>Share Link</button>
-              </div>
-              <div className="promo-gift-icon">
-                <Gift size={48} />
-              </div>
-            </div>
-
-            {/* Hot Deals */}
-            <div className="app-section-header">
-              <h3>Top Cashback Deals</h3>
-              <span onClick={() => setActiveTab('stores')}>See All</span>
-            </div>
-
-            <div className="app-deals-scroll">
-              {dealsData.slice(0, 3).map(deal => (
-                <div key={deal.id} className="app-deal-item" onClick={() => handleGrabDeal(deal)}>
-                  <img src={deal.image} alt={deal.title} />
-                  <div className="app-deal-info">
-                    <h4>{deal.title}</h4>
-                    <div className="app-deal-prices">
-                      <span className="deal-price-val">₹{deal.dealPrice.toFixed(2)}</span>
-                      <span className="deal-price-cb">+₹{deal.cashbackEarned.toFixed(2)} Cashback</span>
-                    </div>
+              <div className="mobile-screen-tab-panel animate-fade" style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                {/* Wallet Quick Summary */}
+                <div className="app-quick-wallet">
+                  <div className="quick-wallet-header">
+                    <span>Total Cashback Balance</span>
+                    <TrendingUp size={16} style={{ color: '#10b981' }} />
+                  </div>
+                  <div className="quick-wallet-balance">
+                    ₹{(user.wallet.confirmed + user.wallet.pending).toFixed(2)}
+                  </div>
+                  <div className="quick-wallet-breakdown">
+                    <span>Confirmed: <strong>₹{user.wallet.confirmed.toFixed(2)}</strong></span>
+                    <span>Pending: <strong>₹{user.wallet.pending.toFixed(2)}</strong></span>
                   </div>
                 </div>
-              ))}
-            </div>
 
-            {/* How it works simple text */}
-            <div className="app-how-it-works-card">
-              <h3>How to Earn Cashback:</h3>
-              <ol>
-                <li>Click <strong>Shop & Earn</strong> inside any store.</li>
-                <li>Purchase product on the merchant site.</li>
-                <li>Your sale is tracked (viewable in the **Track** tab).</li>
-                <li>Once return policy expires, cashback is transferred to your wallet!</li>
-              </ol>
-            </div>
-          </div>
-        )}
+                {/* Modern Hero Banner Carousel */}
+                <div style={{
+                  background: 'var(--gradient-card-glow)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '16px',
+                  padding: '16px',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                  minHeight: '130px',
+                  boxShadow: 'var(--shadow)'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ flex: 1, paddingRight: '8px' }}>
+                      <span style={{
+                        fontSize: '9px',
+                        fontWeight: '800',
+                        color: 'var(--primary)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        backgroundColor: 'rgba(255, 79, 47, 0.1)',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        marginBottom: '6px'
+                      }}>
+                        <Sparkles size={10} /> {HERO_SLIDES[activeSlide].tag}
+                      </span>
+                      <h4 
+                        style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: 'var(--text-bold)', lineHeight: '1.3' }}
+                        dangerouslySetInnerHTML={{ __html: HERO_SLIDES[activeSlide].title }}
+                      />
+                      <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: 'var(--text)', opacity: 0.85 }}>
+                        {HERO_SLIDES[activeSlide].desc}
+                      </p>
+                    </div>
+                    <div style={{
+                      width: '48px',
+                      height: '48px',
+                      borderRadius: '12px',
+                      backgroundColor: '#fff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '1px solid var(--border)',
+                      padding: '8px',
+                      flexShrink: 0
+                    }}>
+                      <img src={HERO_SLIDES[activeSlide].logo} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                    </div>
+                  </div>
+
+                  {/* Indicator Dots */}
+                  <div style={{ display: 'flex', gap: '4px', marginTop: '6px', justifyContent: 'flex-start' }}>
+                    {HERO_SLIDES.map((_, idx) => (
+                      <div 
+                        key={idx} 
+                        onClick={() => setActiveSlide(idx)}
+                        style={{
+                          width: idx === activeSlide ? '12px' : '6px',
+                          height: '6px',
+                          borderRadius: '99px',
+                          backgroundColor: idx === activeSlide ? 'var(--primary)' : 'var(--border)',
+                          transition: 'all 0.3s ease',
+                          cursor: 'pointer'
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Category horizontal scroll container */}
+                <div style={{ width: '100%', marginTop: '4px' }}>
+                  <h3 style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-bold)', marginBottom: '10px' }}>
+                    Shop by Category
+                  </h3>
+                  <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
+                    {CATEGORIES.map((cat) => {
+                      const Icon = cat.icon;
+                      const isActive = selectedCategory === cat.id;
+                      return (
+                        <div
+                          key={cat.id}
+                          onClick={() => setSelectedCategory(cat.id)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '8px 12px',
+                            borderRadius: '99px',
+                            backgroundColor: isActive ? 'var(--primary)' : 'var(--card-bg)',
+                            color: isActive ? '#fff' : 'var(--text)',
+                            border: isActive ? '1px solid var(--primary)' : '1px solid var(--border)',
+                            fontSize: '11px',
+                            fontWeight: '700',
+                            whiteSpace: 'nowrap',
+                            cursor: 'pointer',
+                            flexShrink: 0,
+                            boxShadow: isActive ? '0 4px 10px rgba(255, 79, 47, 0.2)' : 'none'
+                          }}
+                        >
+                          <Icon size={12} />
+                          <span>{cat.name}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Popular Stores Grid (Filtered) */}
+                <div style={{ width: '100%' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                    <h3 style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-bold)' }}>
+                      Popular Retailers
+                    </h3>
+                    <span 
+                      onClick={() => setActiveTab('stores')}
+                      style={{ fontSize: '11px', fontWeight: '700', color: 'var(--primary)', cursor: 'pointer' }}
+                    >
+                      See All
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '6px', scrollbarWidth: 'none' }}>
+                    {storesData
+                      .filter(s => selectedCategory === 'all' || s.category === selectedCategory)
+                      .slice(0, 6)
+                      .map((store) => (
+                        <div 
+                          key={store.id} 
+                          onClick={() => onStoreSelect(store.id)}
+                          style={{
+                            flexShrink: 0,
+                            width: '110px',
+                            backgroundColor: 'var(--card-bg)',
+                            border: '1px solid var(--border)',
+                            borderRadius: '12px',
+                            padding: '10px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            textAlign: 'center',
+                            gap: '8px',
+                            cursor: 'pointer',
+                            boxShadow: 'var(--shadow)'
+                          }}
+                        >
+                          <div style={{
+                            width: '44px',
+                            height: '44px',
+                            backgroundColor: '#fff',
+                            border: '1px solid var(--border)',
+                            borderRadius: '8px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '6px'
+                          }}>
+                            <img src={store.logo} alt={store.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', width: '100%' }}>
+                            <h4 style={{ margin: 0, fontSize: '11px', fontWeight: '800', color: 'var(--text-bold)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {store.name}
+                            </h4>
+                            <span style={{ fontSize: '9px', fontWeight: '700', color: '#10b981' }}>
+                              Up to {store.cashbackRate}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+
+                {/* Hot Deals Grid/Scroll */}
+                <div style={{ width: '100%' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                    <h3 style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-bold)' }}>
+                      Top Cashback Deals
+                    </h3>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+                    {dealsData
+                      .filter(d => selectedCategory === 'all' || d.category === selectedCategory)
+                      .slice(0, 8)
+                      .map(deal => (
+                        <div 
+                          key={deal.id} 
+                          className="app-deal-item" 
+                          onClick={() => handleGrabDeal(deal)}
+                          style={{
+                            width: '100%',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            boxShadow: 'var(--shadow)'
+                          }}
+                        >
+                          <div style={{
+                            width: '100%',
+                            height: '90px',
+                            backgroundColor: '#fff',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '8px',
+                            borderBottom: '1px solid var(--border)'
+                          }}>
+                            <img src={deal.image} alt={deal.title} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                          </div>
+                          <div className="app-deal-info" style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                            <h4 style={{
+                              margin: 0,
+                              fontSize: '11px',
+                              fontWeight: '700',
+                              color: 'var(--text-bold)',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                              height: '32px',
+                              lineHeight: '1.4'
+                            }}>
+                              {deal.title}
+                            </h4>
+                            <div className="app-deal-prices" style={{ display: 'flex', flexDirection: 'column', marginTop: '2px' }}>
+                              <span className="deal-price-val" style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-bold)' }}>₹{deal.dealPrice.toFixed(2)}</span>
+                              <span className="deal-price-cb" style={{ fontSize: '9px', color: '#10b981', fontWeight: '700' }}>+₹{deal.cashbackEarned.toFixed(2)} CB</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+
+                {/* How it works simple text */}
+                <div className="app-how-it-works-card">
+                  <h3>How to Earn Cashback:</h3>
+                  <ol>
+                    <li>Click <strong>Shop & Earn</strong> inside any store.</li>
+                    <li>Purchase product on the merchant site.</li>
+                    <li>Your sale is tracked (viewable in the **Track** tab).</li>
+                    <li>Once return policy expires, cashback is transferred to your wallet!</li>
+                  </ol>
+                </div>
+              </div>
+            )}
 
         {/* TAB 2: STORES GRID */}
         {activeTab === 'stores' && (
