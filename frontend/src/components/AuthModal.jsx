@@ -5,7 +5,7 @@ import { apiUsers } from '../services/api';
 export default function AuthModal({ isOpen, onClose, onLogin }) {
   const [activeTab, setActiveTab] = useState('login');
   const [authStep, setAuthStep] = useState('details'); // 'details' or 'otp'
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [otp, setOtp] = useState('');
@@ -21,6 +21,9 @@ export default function AuthModal({ isOpen, onClose, onLogin }) {
     setError('');
     setSuccessMessage('');
     setOtp('');
+    setIdentifier('');
+    setPassword('');
+    setName('');
   };
 
   const handleDetailsSubmit = (e) => {
@@ -31,17 +34,17 @@ export default function AuthModal({ isOpen, onClose, onLogin }) {
     setSuccessMessage('Connecting to server... this may take a moment on first load.');
 
     if (activeTab === 'login') {
-      if (!email || !password) {
+      if (!identifier || !password) {
         setError('Please fill in all fields');
         setLoading(false);
         return;
       }
       
-      apiUsers.login(email, password)
+      apiUsers.login(identifier, password)
         .then((res) => {
           if (res.requireOtp) {
             setAuthStep('otp');
-            setSuccessMessage(res.message || 'Please verify your email.');
+            setSuccessMessage(res.message || 'Please verify your email or phone.');
             setLoading(false);
             return;
           }
@@ -54,13 +57,11 @@ export default function AuthModal({ isOpen, onClose, onLogin }) {
         .catch((err) => {
           if (err.requireOtp || err.message?.toLowerCase().includes('verify')) {
             setAuthStep('otp');
-            setSuccessMessage('Please verify your email.');
+            setSuccessMessage('Please verify your email or phone.');
             // Auto resend OTP so they get a fresh one
-            apiUsers.resendOtp(email)
+            apiUsers.resendOtp(identifier)
               .then((res) => {
-                if (res.otp) {
-                  setSuccessMessage(`Please verify your email. [Testing Fallback] OTP code is: ${res.otp}`);
-                }
+                setSuccessMessage(res.message || 'Please verify your email or phone.');
               })
               .catch(console.error);
           } else {
@@ -73,17 +74,17 @@ export default function AuthModal({ isOpen, onClose, onLogin }) {
           setLoading(false);
         });
     } else {
-      if (!name || !email || !password) {
+      if (!name || !identifier || !password) {
         setError('Please fill in all fields');
         setLoading(false);
         return;
       }
       
-      apiUsers.register(name, email, password)
+      apiUsers.register(name, identifier, password)
         .then((res) => {
           if (res.requireOtp) {
             setAuthStep('otp');
-            setSuccessMessage(res.otp ? `[Testing Fallback] OTP code is: ${res.otp}` : (res.message || 'OTP sent to your email.'));
+            setSuccessMessage(res.message || 'OTP sent to your email or phone.');
             setLoading(false);
             return;
           }
@@ -96,7 +97,7 @@ export default function AuthModal({ isOpen, onClose, onLogin }) {
         .catch((err) => {
           if (err.requireOtp) {
             setAuthStep('otp');
-            setSuccessMessage(err.otp ? `[Testing Fallback] OTP code is: ${err.otp}` : (err.message || 'OTP sent to your email.'));
+            setSuccessMessage(err.message || 'OTP sent to your email or phone.');
           } else {
             const msg = (err.message === 'Failed to fetch' || err.name === 'TypeError')
               ? 'Unable to reach server. The server may be starting up — please try again in a few seconds.'
@@ -120,7 +121,7 @@ export default function AuthModal({ isOpen, onClose, onLogin }) {
     setSuccessMessage('');
     setLoading(true);
 
-    apiUsers.verifyOtp(email, otp)
+    apiUsers.verifyOtp(identifier, otp)
       .then((userData) => {
         localStorage.setItem('user_session', JSON.stringify(userData));
         localStorage.setItem('is_admin', 'false');
@@ -137,8 +138,8 @@ export default function AuthModal({ isOpen, onClose, onLogin }) {
   const handleResendOtp = () => {
     setError('');
     setSuccessMessage('');
-    apiUsers.resendOtp(email)
-      .then((res) => setSuccessMessage(res.otp ? `[Testing Fallback] OTP code is: ${res.otp}` : (res.message || 'OTP resent successfully.')))
+    apiUsers.resendOtp(identifier)
+      .then((res) => setSuccessMessage(res.message || 'OTP resent successfully.'))
       .catch((err) => setError(err.message || 'Failed to resend OTP.'));
   };
 
@@ -168,8 +169,8 @@ export default function AuthModal({ isOpen, onClose, onLogin }) {
 
         {authStep === 'otp' && (
           <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '5px' }}>Verify Your Email</h2>
-            <p style={{ fontSize: '13px', color: 'var(--text)' }}>We sent a 6-digit code to <strong>{email}</strong></p>
+            <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '5px' }}>Verify Your Account</h2>
+            <p style={{ fontSize: '13px', color: 'var(--text)' }}>We sent a 6-digit code to <strong>{identifier}</strong></p>
           </div>
         )}
 
@@ -232,7 +233,7 @@ export default function AuthModal({ isOpen, onClose, onLogin }) {
             )}
 
             <div className="form-group">
-              <label>Email Address</label>
+              <label>Email or Mobile Number</label>
               <div style={{ position: 'relative' }}>
                 <Mail
                   size={16}
@@ -245,12 +246,12 @@ export default function AuthModal({ isOpen, onClose, onLogin }) {
                   }}
                 />
                 <input
-                  type="email"
-                  placeholder="Enter email address"
+                  type="text"
+                  placeholder="Enter email or mobile number"
                   className="form-input"
                   style={{ paddingLeft: '36px', width: '100%' }}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
                   disabled={loading}
                   required
                 />

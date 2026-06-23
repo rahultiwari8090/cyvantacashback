@@ -1,5 +1,8 @@
 package com.cyvanta.affiliate_app.config;
 
+import com.cyvanta.affiliate_app.model.AdminPermissions;
+import com.cyvanta.affiliate_app.model.Category;
+import com.cyvanta.affiliate_app.model.Conversion;
 import com.cyvanta.affiliate_app.model.Coupon;
 import com.cyvanta.affiliate_app.model.Product;
 import com.cyvanta.affiliate_app.model.Store;
@@ -45,14 +48,27 @@ public class AdminSeedRunner implements CommandLineRunner {
     public void run(String... args) {
         try {
             if (userRepository.findByEmail("admin@affiliateapp.com").isPresent()) {
-                System.out.println("Admin already exists");
+                // Always ensure seeded admin has SUPER_ADMIN role and latest permissions
+                User existingAdmin = userRepository.findByEmail("admin@affiliateapp.com").get();
+                if (existingAdmin.getRole() != User.Role.SUPER_ADMIN 
+                    || existingAdmin.getPermissions() == null 
+                    || existingAdmin.getPermissions().getAllowedModules() == null
+                    || existingAdmin.getPermissions().getAllowedModules().isEmpty()) {
+                    existingAdmin.setRole(User.Role.SUPER_ADMIN);
+                    existingAdmin.setPermissions(AdminPermissions.defaultForRole(User.Role.SUPER_ADMIN));
+                    userRepository.save(existingAdmin);
+                    System.out.println("Admin role upgraded to SUPER_ADMIN with fresh permissions");
+                } else {
+                    System.out.println("Admin already exists with correct SUPER_ADMIN role");
+                }
             } else {
                 User admin = new User();
                 admin.setName("admin");
                 admin.setPhone("+919476543211");
                 admin.setEmail("admin@affiliateapp.com");
                 admin.setReferralCode("admin123");
-                admin.setRole(User.Role.ADMIN);
+                admin.setRole(User.Role.SUPER_ADMIN);
+                admin.setPermissions(AdminPermissions.defaultForRole(User.Role.SUPER_ADMIN));
                 admin.setPasswordHash(passwordEncoder.encode("admin123"));
 
                 userRepository.save(admin);

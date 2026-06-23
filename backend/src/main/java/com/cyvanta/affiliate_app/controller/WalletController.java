@@ -2,6 +2,7 @@ package com.cyvanta.affiliate_app.controller;
 
 import com.cyvanta.affiliate_app.model.Transaction;
 import com.cyvanta.affiliate_app.model.Wallet;
+import com.cyvanta.affiliate_app.model.WalletTransaction;
 import com.cyvanta.affiliate_app.repository.TransactionRepository;
 import com.cyvanta.affiliate_app.service.WalletService;
 import lombok.RequiredArgsConstructor;
@@ -26,5 +27,10 @@ public class WalletController {
     @GetMapping("/{userId}/transactions")
     public ResponseEntity<List<Transaction>> getUserTransactions(@PathVariable String userId) {
         return ResponseEntity.ok(transactionRepository.findByReferrerId(userId));
+    }
+
+    @GetMapping("/{userId}/ledger")
+    public ResponseEntity<List<WalletTransaction>> getUserLedger(@PathVariable String userId) {
+        return ResponseEntity.ok(walletService.getLedgerForUser(userId));
     }
 }

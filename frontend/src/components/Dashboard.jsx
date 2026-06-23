@@ -17,7 +17,6 @@ export default function Dashboard({ currentUser, onAddNotification, setView }) {
   const [newLinkProduct, setNewLinkProduct] = useState('');
   const [newLinkStore, setNewLinkStore] = useState('Amazon');
   const [newLinkUrl, setNewLinkUrl] = useState('');
-  const [newLinkPrice, setNewLinkPrice] = useState('');
   const [generatedShortUrl, setGeneratedShortUrl] = useState('');
   const [copiedSharedId, setCopiedSharedId] = useState(null);
 
@@ -65,12 +64,17 @@ export default function Dashboard({ currentUser, onAddNotification, setView }) {
         productUrl: newLinkUrl,
         userSharePercent: 100
       });
-      setSharedLinks(prev => [newLink, ...prev]);
-      const correctShortUrl = newLink.shortUrl.includes('cyvanta.cashback') ? newLink.shortUrl.replace('https://cyvanta.cashback', window.location.origin + '/#') : newLink.shortUrl;
+      const defaultShortUrl = `${window.location.origin}/#/share/${newLink.id}`;
+      const correctShortUrl = newLink.shortUrl
+        ? newLink.shortUrl.includes('cyvanta.cashback')
+          ? newLink.shortUrl.replace('https://cyvanta.cashback', window.location.origin + '/#')
+          : newLink.shortUrl
+        : defaultShortUrl;
+      const savedLink = { ...newLink, shortUrl: correctShortUrl };
+      setSharedLinks(prev => [savedLink, ...prev]);
       setGeneratedShortUrl(correctShortUrl);
       setNewLinkProduct('');
       setNewLinkUrl('');
-      setNewLinkPrice('');
       onAddNotification('Shared link generated successfully!', 'success');
     } catch (err) {
       console.error(err);
@@ -379,6 +383,7 @@ export default function Dashboard({ currentUser, onAddNotification, setView }) {
                         <th>Date</th>
                         <th>Product Name</th>
                         <th>Store</th>
+                        <th>Deep Link</th>
                         <th>Clicks</th>
                         <th>Conversions</th>
                         <th>My Earnings</th>
@@ -386,48 +391,61 @@ export default function Dashboard({ currentUser, onAddNotification, setView }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {sharedLinks.map(link => (
-                        <tr key={link.id}>
-                          <td>{link.date}</td>
-                          <td style={{ fontWeight: 600, color: 'var(--text-bold)' }}>{link.productName}</td>
-                          <td>
-                            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', backgroundColor: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-bold)', fontWeight: 600 }}>
-                              {link.store}
-                            </span>
-                          </td>
-                          <td style={{ fontWeight: 600 }}>{link.clicksCount}</td>
-                          <td style={{ fontWeight: 600 }}>{link.conversionsCount}</td>
-                          <td style={{ fontWeight: 700, color: '#10b981' }}>₹{link.totalEarnings.toFixed(2)}</td>
-                          <td>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                              <button
-                                className="btn-primary"
-                                onClick={() => handleCopySharedLink(link.shortUrl, link.id)}
-                                title="Copy Short Link"
-                                style={{ padding: '6px 10px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                              >
-                                {copiedSharedId === link.id ? <Check size={13} /> : <Copy size={13} />}
-                              </button>
-                              <button
-                                className="btn-primary"
-                                onClick={() => handleSimulateClick(link.id)}
-                                title="Simulate Visitor Click & Order"
-                                style={{ padding: '6px 10px', borderRadius: '4px', backgroundColor: '#8b5cf6', borderColor: '#8b5cf6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}
-                              >
-                                <Play size={13} />
-                              </button>
-                              <button
-                                className="btn-withdraw"
-                                onClick={() => handleDeleteLink(link.id)}
-                                title="Delete Link"
-                                style={{ padding: '6px 10px', borderRadius: '4px', backgroundColor: '#ef4444', borderColor: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}
-                              >
-                                <Trash2 size={13} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
+                      {sharedLinks.map(link => {
+                        const displayLink = link.shortUrl
+                          ? (link.shortUrl.includes('cyvanta.cashback') ? link.shortUrl.replace('https://cyvanta.cashback', window.location.origin + '/#') : link.shortUrl)
+                          : `${window.location.origin}/#/share/${link.id}`;
+                        return (
+                          <tr key={link.id}>
+                            <td>{link.date}</td>
+                            <td style={{ fontWeight: 600, color: 'var(--text-bold)' }}>{link.productName}</td>
+                            <td>
+                              <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', backgroundColor: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-bold)', fontWeight: 600 }}>
+                                {link.store}
+                              </span>
+                            </td>
+                            <td style={{ maxWidth: '260px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              <a href={displayLink} target="_blank" rel="noreferrer" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>
+                                {displayLink}
+                              </a>
+                            </td>
+                            <td style={{ fontWeight: 600 }}>{link.clicksCount}</td>
+                            <td style={{ fontWeight: 600 }}>{link.conversionsCount}</td>
+                            <td style={{ fontWeight: 700, color: '#10b981' }}>₹{link.totalEarnings.toFixed(2)}</td>
+                            <td>
+                              <div style={{ display: 'flex', gap: '8px' }}>
+                                <button
+                                  type="button"
+                                  className="btn-primary"
+                                  onClick={() => handleCopySharedLink(displayLink, link.id)}
+                                  title="Copy Short Link"
+                                  style={{ padding: '6px 10px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                >
+                                  {copiedSharedId === link.id ? <Check size={13} /> : <Copy size={13} />}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn-primary"
+                                  onClick={() => handleSimulateClick(link.id)}
+                                  title="Simulate Visitor Click & Order"
+                                  style={{ padding: '6px 10px', borderRadius: '4px', backgroundColor: '#8b5cf6', borderColor: '#8b5cf6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}
+                                >
+                                  <Play size={13} />
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn-withdraw"
+                                  onClick={() => handleDeleteLink(link.id)}
+                                  title="Delete Link"
+                                  style={{ padding: '6px 10px', borderRadius: '4px', backgroundColor: '#ef4444', borderColor: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

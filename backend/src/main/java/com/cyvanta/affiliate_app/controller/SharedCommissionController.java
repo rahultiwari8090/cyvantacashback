@@ -59,9 +59,18 @@ public class SharedCommissionController {
 
         SharedCommission saved = sharedCommissionRepository.save(commission);
 
-        // If the commission has a userId and it's pending, add to pending wallet
+        // If the commission has a userId and it's pending, add to pending wallet and ledger
         if (saved.getUserId() != null && "pending".equals(saved.getStatus()) && saved.getUserCommissionAmount() != null) {
             walletService.processPendingCommission(saved.getUserId(), saved.getUserCommissionAmount());
+            walletService.recordTransaction(
+                    saved.getUserId(),
+                    saved.getUserCommissionAmount(),
+                    "CREDIT",
+                    "COMMISSION",
+                    "Pending commission for " + saved.getProductName(),
+                    saved.getClickId() != null ? saved.getClickId() : saved.getId(),
+                    "PENDING"
+            );
             log.info("[COMMISSION] Pending commission ₹{} added to wallet for user {}", saved.getUserCommissionAmount(), saved.getUserId());
         }
 
@@ -123,15 +132,15 @@ public class SharedCommissionController {
                             .build();
                     commissionHistoryRepository.save(ch);
 
-                    // Create WalletTransaction audit log
-                    WalletTransaction wt = WalletTransaction.builder()
-                            .userId(commission.getUserId())
-                            .trackingId(commission.getClickId() != null ? commission.getClickId() : commission.getId())
-                            .amount(userPayout)
-                            .type("CREDIT")
-                            .description("Commission Approved: " + commission.getProductName() + " via " + commission.getStore())
-                            .build();
-                    walletTransactionRepository.save(wt);
+                    walletService.recordTransaction(
+                            commission.getUserId(),
+                            userPayout,
+                            "CREDIT",
+                            "COMMISSION",
+                            "Commission Approved: " + commission.getProductName() + " via " + commission.getStore(),
+                            commission.getClickId() != null ? commission.getClickId() : commission.getId(),
+                            "APPROVED"
+                    );
 
                     log.info("[COMMISSION] ✅ APPROVED — User {} credited ₹{} for product '{}'",
                             commission.getUserName(), userPayout, commission.getProductName());

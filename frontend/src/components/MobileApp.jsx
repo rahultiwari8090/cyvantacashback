@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import SearchBar from './SearchBar';
 import {
   Home,
   ShoppingBag,
@@ -13,6 +14,7 @@ import {
   CheckCircle,
   Truck,
   ShieldCheck,
+  Shield,
   Play,
   User,
   LogOut,
@@ -88,7 +90,8 @@ export default function MobileApp({
   onLogout,
   onGrabDeal,
   onShareDeal,
-  onStoreSelect
+  onStoreSelect,
+  setView
 }) {
   const [activeTab, setActiveTab] = useState('home');
   const [copiedLink, setCopiedLink] = useState(false);
@@ -106,6 +109,8 @@ export default function MobileApp({
   // New States for Mobile UI
   const [activeSlide, setActiveSlide] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [homeSearchQuery, setHomeSearchQuery] = useState('');
+  const [searchFilter, setSearchFilter] = useState('all');
 
   const HERO_SLIDES = [
     {
@@ -139,6 +144,32 @@ export default function MobileApp({
     { id: 'grocery', name: 'Food & Grocery', icon: ShoppingCart },
     { id: 'travel', name: 'Travel & Flights', icon: Plane },
   ];
+
+  const searchedStores = React.useMemo(() => {
+    if (!homeSearchQuery.trim()) return [];
+    return storesData.filter(store => 
+      (store.name || '').toLowerCase().includes(homeSearchQuery.toLowerCase()) ||
+      (store.category || '').toLowerCase().includes(homeSearchQuery.toLowerCase())
+    );
+  }, [homeSearchQuery, storesData]);
+
+  const searchedCategories = React.useMemo(() => {
+    if (!homeSearchQuery.trim()) return [];
+    return CATEGORIES.filter(cat => 
+      cat.id !== 'all' && 
+      (cat.name || '').toLowerCase().includes(homeSearchQuery.toLowerCase())
+    );
+  }, [homeSearchQuery, CATEGORIES]);
+
+  const searchedDeals = React.useMemo(() => {
+    if (!homeSearchQuery.trim()) return [];
+    return dealsData.filter(deal => 
+      (deal.title || '').toLowerCase().includes(homeSearchQuery.toLowerCase()) ||
+      (deal.name || '').toLowerCase().includes(homeSearchQuery.toLowerCase()) ||
+      (deal.category || '').toLowerCase().includes(homeSearchQuery.toLowerCase()) ||
+      (deal.platform || '').toLowerCase().includes(homeSearchQuery.toLowerCase())
+    );
+  }, [homeSearchQuery, dealsData]);
 
   useEffect(() => {
     if (activeTab === 'home') {
@@ -273,16 +304,44 @@ export default function MobileApp({
           <span>Cyvanta Mobile</span>
         </div>
         
-        {isGuest ? (
-          <button className="app-login-btn" onClick={openAuthModal}>Login</button>
-        ) : (
-          <div className="app-user-profile">
-            <span className="app-user-initial">{user.name[0]}</span>
-            <button className="app-logout-icon" onClick={onLogout} title="Logout App">
-              <LogOut size={14} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Admin Panel Button */}
+          {setView && (
+            <button
+              onClick={() => setView('admin-login')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '5px 10px',
+                borderRadius: '6px',
+                border: '1px solid var(--border)',
+                backgroundColor: 'var(--card-bg)',
+                color: 'var(--primary)',
+                fontSize: '10px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                transition: 'all 0.2s ease'
+              }}
+              title="Admin Panel"
+            >
+              <Shield size={12} />
+              Admin
             </button>
-          </div>
-        )}
+          )}
+
+          {isGuest ? (
+            <button className="app-login-btn" onClick={openAuthModal}>Login</button>
+          ) : (
+            <div className="app-user-profile">
+              <span className="app-user-initial">{user.name[0]}</span>
+              <button className="app-logout-icon" onClick={onLogout} title="Logout App">
+                <LogOut size={14} />
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Main Screen Content Frame */}
@@ -496,177 +555,342 @@ export default function MobileApp({
                   </div>
                 </div>
 
-                {/* Category horizontal scroll container */}
-                <div style={{ width: '100%', marginTop: '4px' }}>
-                  <h3 style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-bold)', marginBottom: '10px' }}>
-                    Shop by Category
-                  </h3>
-                  <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
-                    {CATEGORIES.map((cat) => {
-                      const Icon = cat.icon;
-                      const isActive = selectedCategory === cat.id;
-                      return (
-                        <div
-                          key={cat.id}
-                          onClick={() => setSelectedCategory(cat.id)}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            padding: '8px 12px',
-                            borderRadius: '99px',
-                            backgroundColor: isActive ? 'var(--primary)' : 'var(--card-bg)',
-                            color: isActive ? '#fff' : 'var(--text)',
-                            border: isActive ? '1px solid var(--primary)' : '1px solid var(--border)',
-                            fontSize: '11px',
-                            fontWeight: '700',
-                            whiteSpace: 'nowrap',
-                            cursor: 'pointer',
-                            flexShrink: 0,
-                            boxShadow: isActive ? '0 4px 10px rgba(255, 79, 47, 0.2)' : 'none'
-                          }}
-                        >
-                          <Icon size={12} />
-                          <span>{cat.name}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
+                {/* Search Bar */}
+                <SearchBar
+                  placeholder="Search products, brands, categories or stores..."
+                  value={homeSearchQuery}
+                  onChange={setHomeSearchQuery}
+                />
 
-                {/* Popular Stores Grid (Filtered) */}
-                <div style={{ width: '100%' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                    <h3 style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-bold)' }}>
-                      Popular Retailers
-                    </h3>
-                    <span 
-                      onClick={() => setActiveTab('stores')}
-                      style={{ fontSize: '11px', fontWeight: '700', color: 'var(--primary)', cursor: 'pointer' }}
-                    >
-                      See All
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '6px', scrollbarWidth: 'none' }}>
-                    {storesData
-                      .filter(s => selectedCategory === 'all' || s.category === selectedCategory)
-                      .slice(0, 6)
-                      .map((store) => (
-                        <div 
-                          key={store.id} 
-                          onClick={() => onStoreSelect(store.id)}
-                          style={{
-                            flexShrink: 0,
-                            width: '110px',
-                            backgroundColor: 'var(--card-bg)',
-                            border: '1px solid var(--border)',
-                            borderRadius: '12px',
-                            padding: '10px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            textAlign: 'center',
-                            gap: '8px',
-                            cursor: 'pointer',
-                            boxShadow: 'var(--shadow)'
-                          }}
-                        >
-                          <div style={{
-                            width: '44px',
-                            height: '44px',
-                            backgroundColor: '#fff',
-                            border: '1px solid var(--border)',
-                            borderRadius: '8px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            padding: '6px'
-                          }}>
-                            <img src={store.logo} alt={store.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', width: '100%' }}>
-                            <h4 style={{ margin: 0, fontSize: '11px', fontWeight: '800', color: 'var(--text-bold)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {store.name}
-                            </h4>
-                            <span style={{ fontSize: '9px', fontWeight: '700', color: '#10b981' }}>
-                              Up to {store.cashbackRate}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                </div>
+                {homeSearchQuery ? (
+                  <div className="search-results-section animate-fade" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div className="search-results-header" style={{ marginBottom: '12px', paddingBottom: '8px' }}>
+                      <h4 className="search-results-title" style={{ fontSize: '15px' }}>
+                        Results for <span style={{ color: 'var(--primary)' }}>"{homeSearchQuery}"</span>
+                      </h4>
+                      <span className="search-results-count" style={{ fontSize: '11px' }}>
+                        Found {searchedStores.length + searchedCategories.length + searchedDeals.length} matches
+                      </span>
+                    </div>
 
-                {/* Hot Deals Grid/Scroll */}
-                <div style={{ width: '100%' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                    <h3 style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-bold)' }}>
-                      Top Cashback Deals
-                    </h3>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
-                    {dealsData
-                      .filter(d => selectedCategory === 'all' || d.category === selectedCategory)
-                      .slice(0, 8)
-                      .map(deal => (
-                        <div 
-                          key={deal.id} 
-                          className="app-deal-item" 
-                          onClick={() => handleGrabDeal(deal)}
-                          style={{
-                            width: '100%',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            boxShadow: 'var(--shadow)'
-                          }}
-                        >
-                          <div style={{
-                            width: '100%',
-                            height: '90px',
-                            backgroundColor: '#fff',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            padding: '8px',
-                            borderBottom: '1px solid var(--border)'
-                          }}>
-                            <img src={deal.image} alt={deal.title} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-                          </div>
-                          <div className="app-deal-info" style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-                            <h4 style={{
-                              margin: 0,
-                              fontSize: '11px',
-                              fontWeight: '700',
-                              color: 'var(--text-bold)',
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical',
-                              overflow: 'hidden',
-                              height: '32px',
-                              lineHeight: '1.4'
-                            }}>
-                              {deal.title}
-                            </h4>
-                            <div className="app-deal-prices" style={{ display: 'flex', flexDirection: 'column', marginTop: '2px' }}>
-                              <span className="deal-price-val" style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-bold)' }}>₹{deal.dealPrice.toFixed(2)}</span>
-                              <span className="deal-price-cb" style={{ fontSize: '9px', color: '#10b981', fontWeight: '700' }}>+₹{deal.cashbackEarned.toFixed(2)} CB</span>
+                    {/* Filter chips */}
+                    <div className="search-filter-chips" style={{ marginBottom: '8px' }}>
+                      <button 
+                        className={`search-filter-chip ${searchFilter === 'all' ? 'active' : ''}`}
+                        onClick={() => setSearchFilter('all')}
+                        style={{ padding: '6px 12px', fontSize: '11px' }}
+                      >
+                        All ({searchedStores.length + searchedCategories.length + searchedDeals.length})
+                      </button>
+                      <button 
+                        className={`search-filter-chip ${searchFilter === 'products' ? 'active' : ''}`}
+                        onClick={() => setSearchFilter('products')}
+                        style={{ padding: '6px 12px', fontSize: '11px' }}
+                      >
+                        Deals ({searchedDeals.length})
+                      </button>
+                      <button 
+                        className={`search-filter-chip ${searchFilter === 'stores' ? 'active' : ''}`}
+                        onClick={() => setSearchFilter('stores')}
+                        style={{ padding: '6px 12px', fontSize: '11px' }}
+                      >
+                        Stores ({searchedStores.length})
+                      </button>
+                      <button 
+                        className={`search-filter-chip ${searchFilter === 'categories' ? 'active' : ''}`}
+                        onClick={() => setSearchFilter('categories')}
+                        style={{ padding: '6px 12px', fontSize: '11px' }}
+                      >
+                        Categories ({searchedCategories.length})
+                      </button>
+                    </div>
+
+                    {/* No Results */}
+                    {searchedStores.length === 0 && searchedCategories.length === 0 && searchedDeals.length === 0 && (
+                      <div className="no-results-card animate-scale" style={{ padding: '30px 10px', margin: '20px auto' }}>
+                        <div className="no-results-icon" style={{ fontSize: '36px' }}>🔍</div>
+                        <h4 style={{ color: 'var(--text-bold)', fontWeight: 800 }}>No results found</h4>
+                        <p className="no-results-text" style={{ fontSize: '12px' }}>Try another keyword!</p>
+                      </div>
+                    )}
+
+                    {/* Matching Categories */}
+                    {(searchFilter === 'all' || searchFilter === 'categories') && searchedCategories.length > 0 && (
+                      <div className="search-results-group">
+                        <h4 className="search-results-group-title" style={{ fontSize: '13px', marginBottom: '8px' }}>📂 Categories</h4>
+                        <div className="search-categories-grid">
+                          {searchedCategories.map(cat => {
+                            const Icon = cat.icon || Layers;
+                            return (
+                              <div 
+                                key={cat.id} 
+                                className="search-category-badge"
+                                onClick={() => {
+                                  setSelectedCategory(cat.id);
+                                  setHomeSearchQuery('');
+                                }}
+                                style={{ padding: '6px 12px', fontSize: '12px' }}
+                              >
+                                <Icon size={12} style={{ color: 'var(--primary)' }} />
+                                <span>{cat.name}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Matching Stores */}
+                    {(searchFilter === 'all' || searchFilter === 'stores') && searchedStores.length > 0 && (
+                      <div className="search-results-group">
+                        <h4 className="search-results-group-title" style={{ fontSize: '13px', marginBottom: '8px' }}>🏢 Stores</h4>
+                        <div className="app-stores-list" style={{ gap: '8px' }}>
+                          {searchedStores.map(store => (
+                            <div key={store.id} className="app-store-row" onClick={() => handleStoreClick(store)} style={{ padding: '8px' }}>
+                              <img src={store.logo} alt={store.name} style={{ width: '36px', height: '36px' }} />
+                              <div className="app-store-row-info">
+                                <h4 style={{ fontSize: '12px' }}>{store.name}</h4>
+                                <p style={{ fontSize: '10px' }}>Up to {store.cashbackRate} Cashback</p>
+                              </div>
+                              <button className="app-store-go-btn" style={{ padding: '4px 8px', fontSize: '10px' }}>
+                                Shop
+                              </button>
                             </div>
-                          </div>
+                          ))}
                         </div>
-                      ))}
-                  </div>
-                </div>
+                      </div>
+                    )}
 
-                {/* How it works simple text */}
-                <div className="app-how-it-works-card">
-                  <h3>How to Earn Cashback:</h3>
-                  <ol>
-                    <li>Click <strong>Shop & Earn</strong> inside any store.</li>
-                    <li>Purchase product on the merchant site.</li>
-                    <li>Your sale is tracked (viewable in the **Track** tab).</li>
-                    <li>Once return policy expires, cashback is transferred to your wallet!</li>
-                  </ol>
-                </div>
+                    {/* Matching Products & Deals */}
+                    {(searchFilter === 'all' || searchFilter === 'products') && searchedDeals.length > 0 && (
+                      <div className="search-results-group">
+                        <h4 className="search-results-group-title" style={{ fontSize: '13px', marginBottom: '8px' }}>🏷️ Deals</h4>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+                          {searchedDeals.map(deal => (
+                            <div 
+                              key={deal.id} 
+                              className="app-deal-item" 
+                              onClick={() => handleGrabDeal(deal)}
+                              style={{
+                                width: '100%',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                boxShadow: 'var(--shadow)'
+                              }}
+                            >
+                              <div style={{
+                                width: '100%',
+                                height: '90px',
+                                backgroundColor: '#fff',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: '8px',
+                                borderBottom: '1px solid var(--border)'
+                              }}>
+                                <img src={deal.image} alt={deal.title} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                              </div>
+                              <div className="app-deal-info" style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                                <h4 style={{
+                                  margin: 0,
+                                  fontSize: '11px',
+                                  fontWeight: '700',
+                                  color: 'var(--text-bold)',
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: 'vertical',
+                                  overflow: 'hidden',
+                                  height: '32px',
+                                  lineHeight: '1.4'
+                                }}>
+                                  {deal.title}
+                                </h4>
+                                <div className="app-deal-prices" style={{ display: 'flex', flexDirection: 'column', marginTop: '2px' }}>
+                                  <span className="deal-price-val" style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-bold)' }}>₹{deal.dealPrice.toFixed(2)}</span>
+                                  <span className="deal-price-cb" style={{ fontSize: '9px', color: '#10b981', fontWeight: '700' }}>+₹{deal.cashbackEarned.toFixed(2)} CB</span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    {/* Category horizontal scroll container */}
+                    <div style={{ width: '100%', marginTop: '4px' }}>
+                      <h3 style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-bold)', marginBottom: '10px' }}>
+                        Shop by Category
+                      </h3>
+                      <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
+                        {CATEGORIES.map((cat) => {
+                          const Icon = cat.icon;
+                          const isActive = selectedCategory === cat.id;
+                          return (
+                            <div
+                              key={cat.id}
+                              onClick={() => setSelectedCategory(cat.id)}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                padding: '8px 12px',
+                                borderRadius: '99px',
+                                backgroundColor: isActive ? 'var(--primary)' : 'var(--card-bg)',
+                                color: isActive ? '#fff' : 'var(--text)',
+                                border: isActive ? '1px solid var(--primary)' : '1px solid var(--border)',
+                                fontSize: '11px',
+                                fontWeight: '700',
+                                whiteSpace: 'nowrap',
+                                cursor: 'pointer',
+                                flexShrink: 0,
+                                boxShadow: isActive ? '0 4px 10px rgba(255, 79, 47, 0.2)' : 'none'
+                              }}
+                            >
+                              <Icon size={12} />
+                              <span>{cat.name}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Popular Stores Grid (Filtered) */}
+                    <div style={{ width: '100%' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                        <h3 style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-bold)' }}>
+                          Popular Retailers
+                        </h3>
+                        <span 
+                          onClick={() => setActiveTab('stores')}
+                          style={{ fontSize: '11px', fontWeight: '700', color: 'var(--primary)', cursor: 'pointer' }}
+                        >
+                          See All
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '6px', scrollbarWidth: 'none' }}>
+                        {storesData
+                          .filter(s => selectedCategory === 'all' || s.category === selectedCategory)
+                          .slice(0, 6)
+                          .map((store) => (
+                            <div 
+                              key={store.id} 
+                              onClick={() => handleStoreClick(store)}
+                              style={{
+                                flexShrink: 0,
+                                width: '110px',
+                                backgroundColor: 'var(--card-bg)',
+                                border: '1px solid var(--border)',
+                                borderRadius: '12px',
+                                padding: '10px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                textAlign: 'center',
+                                gap: '8px',
+                                cursor: 'pointer',
+                                boxShadow: 'var(--shadow)'
+                              }}
+                            >
+                              <div style={{
+                                width: '44px',
+                                height: '44px',
+                                backgroundColor: '#fff',
+                                border: '1px solid var(--border)',
+                                borderRadius: '8px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: '6px'
+                              }}>
+                                <img src={store.logo} alt={store.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', width: '100%' }}>
+                                <h4 style={{ margin: 0, fontSize: '11px', fontWeight: '800', color: 'var(--text-bold)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {store.name}
+                                </h4>
+                                <span style={{ fontSize: '9px', fontWeight: '700', color: '#10b981' }}>
+                                  Up to {store.cashbackRate}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+
+                    {/* Hot Deals Grid/Scroll */}
+                    <div style={{ width: '100%' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                        <h3 style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-bold)' }}>
+                          Top Cashback Deals
+                        </h3>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+                        {dealsData
+                          .filter(d => selectedCategory === 'all' || d.category === selectedCategory)
+                          .slice(0, 8)
+                          .map(deal => (
+                            <div 
+                              key={deal.id} 
+                              className="app-deal-item" 
+                              onClick={() => handleGrabDeal(deal)}
+                              style={{
+                                width: '100%',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                boxShadow: 'var(--shadow)'
+                              }}
+                            >
+                              <div style={{
+                                width: '100%',
+                                height: '90px',
+                                backgroundColor: '#fff',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: '8px',
+                                borderBottom: '1px solid var(--border)'
+                              }}>
+                                <img src={deal.image} alt={deal.title} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                              </div>
+                              <div className="app-deal-info" style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                                <h4 style={{
+                                  margin: 0,
+                                  fontSize: '11px',
+                                  fontWeight: '700',
+                                  color: 'var(--text-bold)',
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: 'vertical',
+                                  overflow: 'hidden',
+                                  height: '32px',
+                                  lineHeight: '1.4'
+                                }}>
+                                  {deal.title}
+                                </h4>
+                                <div className="app-deal-prices" style={{ display: 'flex', flexDirection: 'column', marginTop: '2px' }}>
+                                  <span className="deal-price-val" style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-bold)' }}>₹{deal.dealPrice.toFixed(2)}</span>
+                                  <span className="deal-price-cb" style={{ fontSize: '9px', color: '#10b981', fontWeight: '700' }}>+₹{deal.cashbackEarned.toFixed(2)} CB</span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+
+                    {/* How it works simple text */}
+                    <div className="app-how-it-works-card">
+                      <h3>How to Earn Cashback:</h3>
+                      <ol>
+                        <li>Click <strong>Shop & Earn</strong> inside any store.</li>
+                        <li>Purchase product on the merchant site.</li>
+                        <li>Your sale is tracked (viewable in the **Track** tab).</li>
+                        <li>Once return policy expires, cashback is transferred to your wallet!</li>
+                      </ol>
+                    </div>
+                  </>
+                )}
               </div>
             )}
 

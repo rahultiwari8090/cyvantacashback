@@ -116,6 +116,32 @@ export default function AdminFinance({ finance, withdrawRequests }) {
             <Wallet size={22} />
           </div>
         </div>
+
+        <div className="admin-kpi-card">
+          <div className="admin-kpi-info">
+            <h3>Total Wallet Balance</h3>
+            <div className="admin-kpi-value">₹{finance.totalWalletBalance.toFixed(2)}</div>
+            <span style={{ fontSize: '12px', color: 'var(--text)', display: 'block', marginTop: '4px' }}>
+              Approved + Pending user balances
+            </span>
+          </div>
+          <div className="admin-kpi-icon" style={{ color: '#22c55e' }}>
+            <ArrowUpRight size={22} />
+          </div>
+        </div>
+
+        <div className="admin-kpi-card">
+          <div className="admin-kpi-info">
+            <h3>Approved Wallet Reserve</h3>
+            <div className="admin-kpi-value">₹{finance.totalApprovedBalance.toFixed(2)}</div>
+            <span style={{ fontSize: '12px', color: 'var(--text)', display: 'block', marginTop: '4px' }}>
+              Withdrawable user balance
+            </span>
+          </div>
+          <div className="admin-kpi-icon" style={{ color: '#3b82f6' }}>
+            <ArrowDownRight size={22} />
+          </div>
+        </div>
       </div>
 
       {/* Tables Row Layout */}

@@ -1,4 +1,6 @@
-export const BASE_URL = import.meta.env.VITE_API_URL || 'https://cyvantacashback-3.onrender.com/api';
+const localHostnames = ['localhost', '127.0.0.1', '::1'];
+const isLocalhost = typeof window !== 'undefined' && localHostnames.includes(window.location.hostname);
+export const BASE_URL = import.meta.env.VITE_API_URL || (isLocalhost ? 'http://localhost:8080/api' : 'https://cyvantacashback-3.onrender.com/api');
 
 // Detect if running inside Capacitor native shell (Android/iOS)
 const isCapacitorNative = typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
@@ -109,11 +111,26 @@ export const apiDeals = {
 
 export const apiUsers = {
   getAll: () => request('/users'),
-  login: (email, password) => request('/users/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
-  adminLogin: (email, password) => request('/users/admin/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
-  register: (name, email, password, phone = '', referredBy = null) => request('/users/register', { method: 'POST', body: JSON.stringify({ name, email, password, phone, referredBy }) }),
-  verifyOtp: (email, otp) => request('/users/verify-otp', { method: 'POST', body: JSON.stringify({ email, otp }) }),
-  resendOtp: (email) => request('/users/resend-otp', { method: 'POST', body: JSON.stringify({ email }) }),
+  login: (identifier, password) => {
+    const payload = { password, identifier };
+    if (identifier && identifier.includes('@')) payload.email = identifier;
+    else payload.phone = identifier;
+    return request('/users/login', { method: 'POST', body: JSON.stringify(payload) });
+  },
+  adminLogin: (identifier, password) => {
+    const payload = { password, identifier };
+    if (identifier && identifier.includes('@')) payload.email = identifier;
+    else payload.phone = identifier;
+    return request('/users/admin/login', { method: 'POST', body: JSON.stringify(payload) });
+  },
+  register: (name, identifier, password, referredBy = null) => {
+    const payload = { name, password, referredBy, identifier };
+    if (identifier && identifier.includes('@')) payload.email = identifier;
+    else payload.phone = identifier;
+    return request('/users/register', { method: 'POST', body: JSON.stringify(payload) });
+  },
+  verifyOtp: (identifier, otp) => request('/users/verify-otp', { method: 'POST', body: JSON.stringify({ identifier, otp }) }),
+  resendOtp: (identifier) => request('/users/resend-otp', { method: 'POST', body: JSON.stringify({ identifier }) }),
   updateStatus: (id, status) => request(`/users/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
   update: (id, userData) => request(`/users/${id}`, { method: 'PUT', body: JSON.stringify(userData) })
 };
@@ -155,6 +172,10 @@ export const apiFinance = {
   getData: () => request('/finance')
 };
 
+export const apiWallet = {
+  getLedger: (userId) => request(`/wallet/${userId}/ledger`)
+};
+
 export const apiSettings = {
   get: () => request('/settings'),
   update: (settingsData) => request('/settings', { method: 'PUT', body: JSON.stringify(settingsData) })
@@ -183,6 +204,25 @@ export const apiSharedCommissions = {
   getByUser: (userId) => request(`/shared-commissions/user/${userId}`),
   create: (commData) => request('/shared-commissions', { method: 'POST', body: JSON.stringify(commData) }),
   updateStatus: (id, status, amount) => request(`/shared-commissions/${id}/status`, { method: 'PUT', body: JSON.stringify({ status, amount }) })
+};
+
+export const apiAdmin = {
+  getActivityLogs: () => request('/admin/activity-logs'),
+  getLoginHistory: () => request('/admin/login-history'),
+};
+
+export const apiAdminManagement = {
+  getAllAdmins: () => request('/users/admins'),
+  createAdmin: (adminData, requesterId) => request('/users/admin/create', {
+    method: 'POST',
+    body: JSON.stringify(adminData),
+    headers: { 'X-Admin-Id': requesterId }
+  }),
+  changeRole: (userId, role, requesterId) => request(`/users/${userId}/role`, {
+    method: 'PUT',
+    body: JSON.stringify({ role }),
+    headers: { 'X-Admin-Id': requesterId }
+  }),
 };
 
 export const apiCategories = {

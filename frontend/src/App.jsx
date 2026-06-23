@@ -6,6 +6,69 @@ import Notification from './components/Notification';
 import StoreDetail from './components/StoreDetail';
 import { apiTracking, apiWithdrawals, apiProducts, apiUsers, apiStores, apiDeals, apiAffiliate } from './services/api';
 
+const DEFAULT_STORES = [
+  {
+    id: 'amazon',
+    name: 'Amazon',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg',
+    cashbackRate: '10%',
+    category: 'all',
+    description: 'Shop millions of products across every category.',
+    isPopular: true,
+    link: 'https://www.amazon.in',
+  },
+  {
+    id: 'flipkart',
+    name: 'Flipkart',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/7/7a/Flipkart_logo.svg',
+    cashbackRate: '8%',
+    category: 'all',
+    description: 'Discover daily deals on electronics, fashion and more.',
+    isPopular: true,
+    link: 'https://www.flipkart.com',
+  },
+  {
+    id: 'myntra',
+    name: 'Myntra',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/b/bc/Myntra_Logo.png',
+    cashbackRate: '12%',
+    category: 'fashion',
+    description: 'Fashion, footwear and lifestyle at great prices.',
+    isPopular: false,
+    link: 'https://www.myntra.com',
+  },
+  {
+    id: 'ajio',
+    name: 'Ajio',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/c/c9/Ajio_Logo.svg',
+    cashbackRate: '15%',
+    category: 'fashion',
+    description: 'Trendy fashion brands with exclusive cashback offers.',
+    isPopular: false,
+    link: 'https://www.ajio.com',
+  },
+  {
+    id: 'nykaa',
+    name: 'Nykaa Beauty',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/5/5b/Nykaa_Logo.svg',
+    cashbackRate: '7%',
+    category: 'health',
+    description: 'Beauty, wellness and personal care with cashback.',
+    isPopular: false,
+    link: 'https://www.nykaa.com',
+  },
+  {
+    id: 'makemytrip',
+    name: 'MakeMyTrip',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/f/fb/MakeMyTrip_Logo.svg',
+    cashbackRate: '9%',
+    category: 'travel',
+    description: 'Book flights, hotels and holiday packages at the best price.',
+    isPopular: false,
+    link: 'https://www.makemytrip.com',
+  },
+];
+
 const mapProductsToDeals = (productsList, dbDealsList, storesData) => {
   let combinedDeals = [];
   const storesLogoMap = storesData?.reduce((acc, store) => { acc[store.name] = store.logo; return acc; }, {}) || {};
@@ -105,7 +168,7 @@ export default function App() {
         ]);
         setProducts(productsData || []);
         setDeals(dbDeals || []);
-        setStoresData(storesRes || []);
+        setStoresData((storesRes && storesRes.length > 0) ? storesRes : DEFAULT_STORES);
       } catch (err) {
         console.error('Failed to load catalog data:', err);
       }
@@ -157,6 +220,7 @@ export default function App() {
             confirmed: Math.max(0, prev.wallet.confirmed - newReq.amount),
             pending: prev.wallet.pending + newReq.amount
           }
+        }));
       }
     } catch (err) {
       console.error('Failed to request app withdrawal:', err);

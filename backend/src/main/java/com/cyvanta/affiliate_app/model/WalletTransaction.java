@@ -26,6 +26,10 @@ public class WalletTransaction {
 
     private String type; // CREDIT, DEBIT
 
+    private String category; // COMMISSION, WITHDRAWAL, ADJUSTMENT, REFUND, OTHER
+
+    private String status; // PENDING, APPROVED, REJECTED, COMPLETED
+
     private String description;
 
     @Builder.Default

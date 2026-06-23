@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Check } from 'lucide-react';
+import { X, Check, Search, Layers, Tag, ShoppingBag, Shirt, Smartphone, Heart, ShoppingCart, Plane } from 'lucide-react';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import CategoryGrid from './components/CategoryGrid';
@@ -16,9 +16,73 @@ import CheckoutModal from './components/CheckoutModal';
 import AdminLogin from './components/AdminLogin';
 import AdminPanel from './components/AdminPanel';
 import MobileApp from './components/MobileApp';
+import SearchBar from './components/SearchBar';
 import { apiTracking, apiWithdrawals, apiProducts, apiDeals, apiSharedLinks, apiSharedCommissions, apiStores, apiBanners, apiAffiliate } from './services/api';
 import './index.css';
 import './App.css';
+
+const DEFAULT_STORES = [
+  {
+    id: 'amazon',
+    name: 'Amazon',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg',
+    cashbackRate: '10%',
+    category: 'all',
+    description: 'Shop millions of products across every category.',
+    isPopular: true,
+    link: 'https://www.amazon.in',
+  },
+  {
+    id: 'flipkart',
+    name: 'Flipkart',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/7/7a/Flipkart_logo.svg',
+    cashbackRate: '8%',
+    category: 'all',
+    description: 'Discover daily deals on electronics, fashion and more.',
+    isPopular: true,
+    link: 'https://www.flipkart.com',
+  },
+  {
+    id: 'myntra',
+    name: 'Myntra',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/b/bc/Myntra_Logo.png',
+    cashbackRate: '12%',
+    category: 'fashion',
+    description: 'Fashion, footwear and lifestyle at great prices.',
+    isPopular: false,
+    link: 'https://www.myntra.com',
+  },
+  {
+    id: 'ajio',
+    name: 'Ajio',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/c/c9/Ajio_Logo.svg',
+    cashbackRate: '15%',
+    category: 'fashion',
+    description: 'Trendy fashion brands with exclusive cashback offers.',
+    isPopular: false,
+    link: 'https://www.ajio.com',
+  },
+  {
+    id: 'nykaa',
+    name: 'Nykaa Beauty',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/5/5b/Nykaa_Logo.svg',
+    cashbackRate: '7%',
+    category: 'health',
+    description: 'Beauty, wellness and personal care with cashback.',
+    isPopular: false,
+    link: 'https://www.nykaa.com',
+  },
+  {
+    id: 'makemytrip',
+    name: 'MakeMyTrip',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/f/fb/MakeMyTrip_Logo.svg',
+    cashbackRate: '9%',
+    category: 'travel',
+    description: 'Book flights, hotels and holiday packages at the best price.',
+    isPopular: false,
+    link: 'https://www.makemytrip.com',
+  },
+];
 
 const ShareLanding = ({ products, currentUser, openAuthModal }) => {
   const path = window.location.pathname.startsWith('/share/') 
@@ -190,6 +254,8 @@ export default function App() {
   const [currentView, setViewRaw] = useState(getInitialView);
   const [selectedStoreId, setSelectedStoreId] = useState(null);
   const [activeCategory, setActiveCategory] = useState('all');
+  const [homeSearchQuery, setHomeSearchQuery] = useState('');
+  const [searchFilter, setSearchFilter] = useState('all');
   const [theme, setTheme] = useState('light');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -213,6 +279,7 @@ export default function App() {
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
   const [checkoutItem, setCheckoutItem] = useState(null);
   const [checkoutStep, setCheckoutStep] = useState(1); // 1: Details, 2: Success
+  const [checkoutStoreMeta, setCheckoutStoreMeta] = useState(null);
 
   // Share Modal states
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -232,7 +299,7 @@ export default function App() {
         ]);
         setProducts(productsData || []);
         setDealsData(dbDeals || []);
-        setStoresData(storesRes || []);
+        setStoresData((storesRes && storesRes.length > 0) ? storesRes : DEFAULT_STORES);
         setBannersData(activeBanners || []);
       } catch (err) {
         console.error('Failed to load catalog data:', err);
@@ -459,6 +526,13 @@ export default function App() {
     }, 1500);
   };
 
+  const finalizeCheckout = (deal, store) => {
+    setCheckoutDeal(deal);
+    setCheckoutStore(store);
+    setIsCheckoutModalOpen(true);
+    setCheckoutStep(1);
+  };
+
   const handleReferLink = async (deal, item) => {
     if (!currentUser) {
       addNotification('Please login to generate a referral link', 'error');
@@ -637,6 +711,39 @@ export default function App() {
     return combinedDeals;
   }, [dealsData, products]);
 
+  const CATEGORIES_LIST = React.useMemo(() => [
+    { id: 'fashion', name: 'Fashion', icon: Shirt },
+    { id: 'electronics', name: 'Electronics', icon: Smartphone },
+    { id: 'health', name: 'Health & Beauty', icon: Heart },
+    { id: 'grocery', name: 'Food & Grocery', icon: ShoppingCart },
+    { id: 'travel', name: 'Travel & Flights', icon: Plane },
+  ], []);
+
+  const searchedStores = React.useMemo(() => {
+    if (!homeSearchQuery.trim()) return [];
+    return storesData.filter(store => 
+      (store.name || '').toLowerCase().includes(homeSearchQuery.toLowerCase()) ||
+      (store.category || '').toLowerCase().includes(homeSearchQuery.toLowerCase())
+    );
+  }, [homeSearchQuery, storesData]);
+
+  const searchedCategories = React.useMemo(() => {
+    if (!homeSearchQuery.trim()) return [];
+    return CATEGORIES_LIST.filter(cat => 
+      (cat.name || '').toLowerCase().includes(homeSearchQuery.toLowerCase())
+    );
+  }, [homeSearchQuery, CATEGORIES_LIST]);
+
+  const searchedDeals = React.useMemo(() => {
+    if (!homeSearchQuery.trim()) return [];
+    return dynamicDeals.filter(deal => 
+      (deal.title || '').toLowerCase().includes(homeSearchQuery.toLowerCase()) ||
+      (deal.name || '').toLowerCase().includes(homeSearchQuery.toLowerCase()) ||
+      (deal.category || '').toLowerCase().includes(homeSearchQuery.toLowerCase()) ||
+      (deal.platform || '').toLowerCase().includes(homeSearchQuery.toLowerCase())
+    );
+  }, [homeSearchQuery, dynamicDeals]);
+
   if (currentView === 'admin-login') {
     return (
       <div className="admin-layout-wrapper" style={{ minHeight: '100vh', backgroundColor: 'var(--bg)' }}>
@@ -650,6 +757,16 @@ export default function App() {
           openAuthModal={() => setIsAuthModalOpen(true)}
           storesData={storesData}
           onStoreSelect={handleStoreSelect}
+          setHomeSearchQuery={setHomeSearchQuery}
+          dealsData={dynamicDeals}
+          onCategorySelect={(categoryId) => {
+            setActiveCategory(categoryId);
+            setHomeSearchQuery('');
+            setView('home');
+          }}
+          onDealSelect={(deal) => {
+            handleGrabProductDeal(deal);
+          }}
         />
         <Notification notifications={notifications} removeNotification={removeNotification} />
         <AdminLogin
@@ -722,6 +839,7 @@ export default function App() {
             onLogout={handleLogout}
             onGrabDeal={handleGrabProductDeal}
             onShareDeal={handleShareDeal}
+            setView={setView}
             onStoreSelect={(id) => {
               setSelectedStoreId(id);
               setView('store');
@@ -991,6 +1109,16 @@ export default function App() {
         openAuthModal={() => setIsAuthModalOpen(true)}
         storesData={storesData}
         onStoreSelect={handleStoreSelect}
+        setHomeSearchQuery={setHomeSearchQuery}
+        dealsData={dynamicDeals}
+        onCategorySelect={(categoryId) => {
+          setActiveCategory(categoryId);
+          setHomeSearchQuery('');
+          setView('home');
+        }}
+        onDealSelect={(deal) => {
+          handleGrabProductDeal(deal);
+        }}
       />
 
       <main className="main-container">
@@ -1005,30 +1133,137 @@ export default function App() {
               openAuthModal={() => setIsAuthModalOpen(true)}
             />
 
-            {/* Quick Categories Filter */}
-            <CategoryGrid
-              activeCategory={activeCategory}
-              onCategoryChange={setActiveCategory}
+            {/* Search Bar */}
+            <SearchBar
+              placeholder="Search products, brands, categories or stores..."
+              value={homeSearchQuery}
+              onChange={setHomeSearchQuery}
             />
 
-            {/* Main Retailers Card Grid */}
-            <StoreGrid
-              stores={filteredStores}
-              onStoreSelect={handleStoreSelect}
-            />
+            {homeSearchQuery ? (
+              <div className="search-results-section animate-fade">
+                <div className="search-results-header">
+                  <h2 className="search-results-title">
+                    Search Results for <span>"{homeSearchQuery}"</span>
+                  </h2>
+                  <span className="search-results-count">
+                    Found {searchedStores.length + searchedCategories.length + searchedDeals.length} matches
+                  </span>
+                </div>
 
-            {/* Deals Grid */}
-            <TopDeals
-              deals={dynamicDeals.slice(0, 8)}
-              onGrabDeal={handleGrabProductDeal}
-              onShareDeal={handleShareDeal}
-            />
+                {/* Filter chips */}
+                <div className="search-filter-chips">
+                  <button 
+                    className={`search-filter-chip ${searchFilter === 'all' ? 'active' : ''}`}
+                    onClick={() => setSearchFilter('all')}
+                  >
+                    All ({searchedStores.length + searchedCategories.length + searchedDeals.length})
+                  </button>
+                  <button 
+                    className={`search-filter-chip ${searchFilter === 'products' ? 'active' : ''}`}
+                    onClick={() => setSearchFilter('products')}
+                  >
+                    Products & Deals ({searchedDeals.length})
+                  </button>
+                  <button 
+                    className={`search-filter-chip ${searchFilter === 'stores' ? 'active' : ''}`}
+                    onClick={() => setSearchFilter('stores')}
+                  >
+                    Stores ({searchedStores.length})
+                  </button>
+                  <button 
+                    className={`search-filter-chip ${searchFilter === 'categories' ? 'active' : ''}`}
+                    onClick={() => setSearchFilter('categories')}
+                  >
+                    Categories ({searchedCategories.length})
+                  </button>
+                </div>
 
-            {/* Business Model Explanation */}
-            <HowItWorks />
+                {/* No Results */}
+                {searchedStores.length === 0 && searchedCategories.length === 0 && searchedDeals.length === 0 && (
+                  <div className="no-results-card animate-scale">
+                    <div className="no-results-icon">🔍</div>
+                    <h3 style={{ color: 'var(--text-bold)', fontWeight: 800 }}>No results found</h3>
+                    <p className="no-results-text">We couldn't find any stores, categories or products matching your search query. Try another keyword!</p>
+                  </div>
+                )}
 
-            {/* Customer Review Sliders */}
-            <Testimonials />
+                {/* Matching Categories */}
+                {(searchFilter === 'all' || searchFilter === 'categories') && searchedCategories.length > 0 && (
+                  <div className="search-results-group">
+                    <h3 className="search-results-group-title">📂 Matching Categories</h3>
+                    <div className="search-categories-grid">
+                      {searchedCategories.map(cat => {
+                        const Icon = cat.icon || Layers;
+                        return (
+                          <div 
+                            key={cat.id} 
+                            className="search-category-badge"
+                            onClick={() => {
+                              setActiveCategory(cat.id);
+                              setHomeSearchQuery('');
+                            }}
+                          >
+                            <Icon size={16} style={{ color: 'var(--primary)' }} />
+                            <span>{cat.name}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Matching Stores */}
+                {(searchFilter === 'all' || searchFilter === 'stores') && searchedStores.length > 0 && (
+                  <div className="search-results-group">
+                    <h3 className="search-results-group-title">🏢 Matching Stores</h3>
+                    <StoreGrid
+                      stores={searchedStores}
+                      onStoreSelect={handleStoreSelect}
+                    />
+                  </div>
+                )}
+
+                {/* Matching Products & Deals */}
+                {(searchFilter === 'all' || searchFilter === 'products') && searchedDeals.length > 0 && (
+                  <div className="search-results-group">
+                    <h3 className="search-results-group-title">🏷️ Matching Products & Deals</h3>
+                    <TopDeals
+                      deals={searchedDeals}
+                      onGrabDeal={handleGrabProductDeal}
+                      onShareDeal={handleShareDeal}
+                    />
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                {/* Quick Categories Filter */}
+                <CategoryGrid
+                  activeCategory={activeCategory}
+                  onCategoryChange={setActiveCategory}
+                />
+
+                {/* Main Retailers Card Grid */}
+                <StoreGrid
+                  stores={filteredStores}
+                  onStoreSelect={handleStoreSelect}
+                />
+
+                {/* Deals Grid */}
+                <TopDeals
+                  deals={dynamicDeals.slice(0, 8)}
+                  onGrabDeal={handleGrabProductDeal}
+                  onShareDeal={handleShareDeal}
+                />
+
+                {/* Business Model Explanation */}
+                <HowItWorks />
+
+                {/* Customer Review Sliders */}
+                <Testimonials />
+              </>
+            )}
           </>
         )}
 

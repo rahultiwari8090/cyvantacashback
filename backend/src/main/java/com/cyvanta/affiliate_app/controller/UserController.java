@@ -1,11 +1,19 @@
 package com.cyvanta.affiliate_app.controller;
 
+import com.cyvanta.affiliate_app.model.AdminActivityLog;
+import com.cyvanta.affiliate_app.model.AdminLoginHistory;
+import com.cyvanta.affiliate_app.model.AdminPermissions;
 import com.cyvanta.affiliate_app.model.User;
 import com.cyvanta.affiliate_app.model.Wallet;
+import com.cyvanta.affiliate_app.repository.AdminActivityLogRepository;
+import com.cyvanta.affiliate_app.repository.AdminLoginHistoryRepository;
 import com.cyvanta.affiliate_app.repository.UserRepository;
 import com.cyvanta.affiliate_app.service.WalletService;
 import com.cyvanta.affiliate_app.service.EmailService;
+import com.cyvanta.affiliate_app.service.SmsService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,12 +28,16 @@ import java.util.Random;
 
 @RestController
 @RequestMapping("/api/users")
+@Slf4j
 @RequiredArgsConstructor
 public class UserController {
 
     private final UserRepository userRepository;
+    private final AdminActivityLogRepository adminActivityLogRepository;
+    private final AdminLoginHistoryRepository adminLoginHistoryRepository;
     private final WalletService walletService;
     private final EmailService emailService;
+    private final SmsService smsService;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @GetMapping
@@ -50,10 +62,15 @@ public class UserController {
             if (updatedUser.getEmail() != null) user.setEmail(updatedUser.getEmail());
             if (updatedUser.getPhone() != null) user.setPhone(updatedUser.getPhone());
             if (updatedUser.getStatus() != null) user.setStatus(updatedUser.getStatus());
-            
+            if (updatedUser.getRole() != null && updatedUser.getRole() != user.getRole()) {
+                user.setRole(updatedUser.getRole());
+                user.setPermissions(AdminPermissions.defaultForRole(updatedUser.getRole()));
+            }
+            if (updatedUser.getPermissions() != null) {
+                user.setPermissions(updatedUser.getPermissions());
+            }
             // Handle null explicitly if sharedCommissionRate is meant to be reset
             user.setSharedCommissionRate(updatedUser.getSharedCommissionRate());
-            
             return ResponseEntity.ok(userRepository.save(user));
         }).orElse(ResponseEntity.notFound().build());
     }
@@ -61,29 +78,48 @@ public class UserController {
     // --- User Registration ---
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@RequestBody Map<String, String> body) {
-        String name = body.get("name");
-        String email = body.get("email");
-        String password = body.get("password");
+        String rawName = body.get("name");
+        String rawEmail = body.get("email");
+        String rawPhone = body.get("phone");
+        String rawIdentifier = body.get("identifier");
+        String rawPassword = body.get("password");
 
-        if (email == null || password == null) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Email and password are required"));
+        String name = normalize(rawName);
+        String email = normalizeEmail(rawEmail);
+        String phone = normalizePhone(rawPhone);
+        String password = normalize(rawPassword);
+
+        if (email == null && phone == null && rawIdentifier != null) {
+            String normalizedIdentifier = normalizeIdentifier(rawIdentifier);
+            if (normalizedIdentifier != null) {
+                if (normalizedIdentifier.contains("@")) {
+                    email = normalizedIdentifier;
+                } else {
+                    phone = normalizedIdentifier;
+                }
+            }
+        }
+
+        if ((email == null && phone == null) || password == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Email/Phone and password are required"));
         }
 
         // Check if user already exists
-        Optional<User> existingUserOpt = userRepository.findByEmail(email);
+        Optional<User> existingUserOpt = email != null ? userRepository.findByEmail(email) : findUserByPhone(phone);
+        
         if (existingUserOpt.isPresent()) {
             User existingUser = existingUserOpt.get();
             if (Boolean.TRUE.equals(existingUser.getIsVerified()) || !"pending".equals(existingUser.getStatus())) {
-                return ResponseEntity.badRequest().body(Map.of("error", "User with this email already exists"));
+                return ResponseEntity.badRequest().body(Map.of("error", "User already exists"));
             } else {
                 // User exists but pending, resend OTP
                 String otp = String.format("%06d", new Random().nextInt(999999));
                 existingUser.setOtp(otp);
                 existingUser.setOtpExpiry(LocalDateTime.now().plusMinutes(10));
-                existingUser.setPasswordHash(passwordEncoder.encode(password)); // Update password just in case
+                existingUser.setPasswordHash(passwordEncoder.encode(password));
                 userRepository.save(existingUser);
-                emailService.sendOtpEmail(email, otp);
-                return ResponseEntity.ok(Map.of("requireOtp", true, "message", "OTP resent to email", "email", email, "otp", otp));
+                sendOtp(existingUser, otp);
+                return ResponseEntity.ok(Map.of("requireOtp", true, "message", "OTP resent", "identifier", email != null ? email : phone));
             }
         }
 
@@ -93,10 +129,10 @@ public class UserController {
         String otp = String.format("%06d", new Random().nextInt(999999));
 
         User user = User.builder()
-                .name(name != null ? name : email.split("@")[0])
+                .name(name != null ? name : (email != null ? email.split("@")[0] : "User-" + phone.substring(phone.length() - 4)))
                 .email(email)
+                .phone(phone)
                 .passwordHash(passwordEncoder.encode(password))
-                .phone(body.getOrDefault("phone", null))
                 .referralCode(referralCode)
                 .referredBy(referredBy)
                 .role(User.Role.USER)
@@ -107,23 +143,43 @@ public class UserController {
                 .build();
 
         userRepository.save(user);
-        emailService.sendOtpEmail(email, otp);
+        sendOtp(user, otp);
 
-        return ResponseEntity.ok(Map.of("requireOtp", true, "message", "OTP sent to email", "email", email, "otp", otp));
+        return ResponseEntity.ok(Map.of("requireOtp", true, "message", "OTP sent", "identifier", email != null ? email : phone));
+    }
+
+    private void sendOtp(User user, String otp) {
+        if (user.getEmail() != null) {
+            log.info("[OTP] Sending OTP via email to {}", user.getEmail());
+            emailService.sendOtpEmail(user.getEmail(), otp);
+        } else if (user.getPhone() != null) {
+            log.info("[OTP] Sending OTP via SMS to phone={}", user.getPhone());
+            boolean sent = smsService.sendOtpSms(user.getPhone(), otp);
+            if (!sent) {
+                log.warn("[OTP] SMS delivery failed or provider not configured. Phone: {}", user.getPhone());
+                log.warn("[OTP] *** DEV FALLBACK *** OTP for {} is: {}", user.getPhone(), otp);
+            } else {
+                log.info("[OTP] SMS OTP sent successfully to {}", user.getPhone());
+            }
+        } else {
+            log.error("[OTP] User {} has neither email nor phone — cannot send OTP!", user.getId());
+        }
     }
 
     // --- OTP Verification ---
     @PostMapping("/verify-otp")
     public ResponseEntity<?> verifyOtp(@RequestBody Map<String, String> body) {
-        String email = body.get("email");
-        String otp = body.get("otp");
+        String identifier = normalizeIdentifier(body.get("identifier")); // email or phone
+        String otp = normalize(body.get("otp"));
 
-        if (email == null || otp == null) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Email and OTP are required"));
+        if (identifier == null || otp == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Identifier and OTP are required"));
         }
 
-        return userRepository.findByEmail(email).map(user -> {
-            if (Boolean.TRUE.equals(user.getIsVerified())) {
+        Optional<User> userOpt = identifier.contains("@") ? userRepository.findByEmail(identifier) : findUserByPhone(identifier);
+
+        return userOpt.map(user -> {
+            if (Boolean.TRUE.equals(user.getIsVerified()) && !"pending".equals(user.getStatus())) {
                 return ResponseEntity.badRequest().body(Map.of("error", "Account is already verified"));
             }
             if (user.getOtp() == null || !user.getOtp().equals(otp)) {
@@ -149,13 +205,15 @@ public class UserController {
     // --- Resend OTP ---
     @PostMapping("/resend-otp")
     public ResponseEntity<?> resendOtp(@RequestBody Map<String, String> body) {
-        String email = body.get("email");
-        if (email == null) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Email is required"));
+        String identifier = normalizeIdentifier(body.get("identifier"));
+        if (identifier == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Identifier is required"));
         }
 
-        return userRepository.findByEmail(email).map(user -> {
-            if (Boolean.TRUE.equals(user.getIsVerified())) {
+        Optional<User> userOpt = identifier.contains("@") ? userRepository.findByEmail(identifier) : findUserByPhone(identifier);
+
+        return userOpt.map(user -> {
+            if (Boolean.TRUE.equals(user.getIsVerified()) && !"pending".equals(user.getStatus())) {
                 return ResponseEntity.badRequest().body(Map.of("error", "Account is already verified"));
             }
             
@@ -163,24 +221,41 @@ public class UserController {
             user.setOtp(otp);
             user.setOtpExpiry(LocalDateTime.now().plusMinutes(10));
             userRepository.save(user);
-            emailService.sendOtpEmail(email, otp);
-            return ResponseEntity.ok((Object) Map.of("message", "OTP resent successfully", "otp", otp));
+            sendOtp(user, otp);
+            return ResponseEntity.ok((Object) Map.of("message", "OTP resent successfully"));
         }).orElse(ResponseEntity.badRequest().body(Map.of("error", "User not found")));
     }
 
     // --- User Login ---
     @PostMapping("/login")
     public ResponseEntity<?> loginUser(@RequestBody Map<String, String> body) {
-        String email = body.get("email");
-        String password = body.get("password");
+        String emailIdentifier = normalizeIdentifier(body.get("email"));
+        String phoneIdentifier = normalizeIdentifier(body.get("phone"));
+        final String identifier = emailIdentifier != null ? emailIdentifier : (phoneIdentifier != null ? phoneIdentifier : normalizeIdentifier(body.get("identifier")));
+        
+        String password = normalize(body.get("password"));
 
-        if (email == null || password == null) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Email and password are required"));
+        if (identifier == null || password == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Identifier and password are required"));
         }
 
-        return userRepository.findByEmail(email).map(user -> {
+        Optional<User> userOpt = identifier.contains("@") ? userRepository.findByEmail(identifier) : findUserByPhone(identifier);
+
+        return userOpt.map(user -> {
             if (Boolean.FALSE.equals(user.getIsVerified()) || "pending".equals(user.getStatus())) {
-                return ResponseEntity.status(403).body((Object) Map.of("error", "Please verify your email to log in.", "requireOtp", true));
+                // Generate and send a fresh OTP so the user can verify
+                String otp = String.format("%06d", new Random().nextInt(999999));
+                user.setOtp(otp);
+                user.setOtpExpiry(LocalDateTime.now().plusMinutes(10));
+                userRepository.save(user);
+                sendOtp(user, otp);
+                log.info("[LOGIN] Unverified user {} attempted login, sending fresh OTP", identifier);
+                return ResponseEntity.status(403).body((Object) Map.of(
+                    "error", "Please verify your account to log in.",
+                    "requireOtp", true,
+                    "message", "A verification code has been sent to " + identifier,
+                    "identifier", identifier
+                ));
             }
 
             String stored = user.getPasswordHash();
@@ -207,59 +282,197 @@ public class UserController {
     }
 
     // --- Admin Login ---
-  @PostMapping("/admin/login")
-public ResponseEntity<?> loginAdmin(@RequestBody Map<String, String> body) {
+    @PostMapping("/admin/login")
+    public ResponseEntity<?> loginAdmin(@RequestBody Map<String, String> body, HttpServletRequest request) {
+        String emailIdentifier = normalizeIdentifier(body.get("email"));
+        String phoneIdentifier = normalizeIdentifier(body.get("phone"));
+        final String identifier = emailIdentifier != null ? emailIdentifier : (phoneIdentifier != null ? phoneIdentifier : normalizeIdentifier(body.get("identifier")));
+        
+        String password = normalize(body.get("password"));
 
-    String email = body.get("email");
-    String password = body.get("password");
+        if (identifier == null || password == null) {
+            recordAdminLoginHistory(null, identifier, null, false, request);
+            return ResponseEntity.badRequest().body(Map.of("error", "Identifier and password are required"));
+        }
 
-    System.out.println("LOGIN EMAIL = " + email);
-    System.out.println("LOGIN PASSWORD = " + password);
+        Optional<User> userOpt = identifier.contains("@") ? userRepository.findByEmail(identifier) : findUserByPhone(identifier);
 
-    return userRepository.findByEmail(email).map(user -> {
+        if (userOpt.isEmpty()) {
+            recordAdminLoginHistory(null, identifier, null, false, request);
+            return ResponseEntity.status(401).body(Map.of("error", "Admin user not found"));
+        }
 
-        System.out.println("FOUND USER = " + user.getEmail());
-        System.out.println("DB PASSWORD = " + user.getPasswordHash());
-        System.out.println("ROLE = " + user.getRole());
-
+        User user = userOpt.get();
         String stored = user.getPasswordHash();
-        boolean ok;
-        if (stored != null && (stored.startsWith("$2a$") || stored.startsWith("$2b$") || stored.startsWith("$2y$"))) {
-            ok = passwordEncoder.matches(password, stored);
-        } else {
-            ok = password.equals(stored);
+        boolean ok = stored != null && (stored.startsWith("$") ? passwordEncoder.matches(password, stored) : password.equals(stored));
+        boolean isAdmin = isAdminRole(user);
+
+        if (!ok || !isAdmin) {
+            recordAdminLoginHistory(user, identifier, user.getRole() != null ? user.getRole().toString() : null, false, request);
+            if (!ok) {
+                return ResponseEntity.status(401).body(Map.of("error", "Invalid credentials"));
+            }
+            return ResponseEntity.status(403).body(Map.of("error", "Access denied. Admin role required."));
         }
 
-        if (!ok) {
-            System.out.println("PASSWORD MISMATCH");
-            return ResponseEntity.status(401)
-                    .body(Map.of("error", "Invalid credentials"));
+        if (Boolean.FALSE.equals(user.getIsVerified()) || "pending".equals(user.getStatus())) {
+            String otp = String.format("%06d", new Random().nextInt(999999));
+            user.setOtp(otp);
+            user.setOtpExpiry(LocalDateTime.now().plusMinutes(10));
+            userRepository.save(user);
+            sendOtp(user, otp);
+            recordAdminLoginHistory(user, identifier, user.getRole().toString(), false, request);
+            return ResponseEntity.status(403).body(Map.of(
+                    "error", "Admin account needs verification",
+                    "requireOtp", true,
+                    "message", "OTP sent to your registered email or phone",
+                    "identifier", identifier
+            ));
         }
 
-        if (user.getRole() != User.Role.ADMIN) {
-            System.out.println("NOT AN ADMIN");
-            return ResponseEntity.status(403)
-                    .body(Map.of("error", "Access denied. Admin role required."));
-        }
+        // Refresh permissions on every login to ensure they match the role
+        // (handles existing admins created before module-level permissions were added)
+        AdminPermissions freshPermissions = AdminPermissions.defaultForRole(user.getRole());
+        user.setPermissions(freshPermissions);
+        userRepository.save(user);
 
-        System.out.println("PASSWORD MATCHED");
-
+        recordAdminLoginHistory(user, identifier, user.getRole().toString(), true, request);
         return ResponseEntity.ok(Map.of(
                 "id", user.getId(),
                 "name", user.getName(),
                 "email", user.getEmail(),
+                "phone", user.getPhone() != null ? user.getPhone() : "",
                 "role", user.getRole().toString(),
                 "isAdmin", true,
-                "status", user.getStatus()
+                "status", user.getStatus(),
+                "permissions", freshPermissions
         ));
-
-    }).orElseGet(() -> {
-        System.out.println("USER NOT FOUND");
-        return ResponseEntity.status(401)
-                .body(Map.of("error", "Admin user not found"));
-    });
-}
+    }
     
+    // --- Create New Admin (SUPER_ADMIN only) ---
+    @PostMapping("/admin/create")
+    public ResponseEntity<?> createAdmin(@RequestBody Map<String, String> body, @RequestHeader(value = "X-Admin-Id", required = false) String adminId) {
+        // Verify the requester is SUPER_ADMIN or ADMIN
+        if (adminId == null || adminId.isEmpty()) {
+            return ResponseEntity.status(403).body(Map.of("error", "Admin authentication required"));
+        }
+        Optional<User> requesterOpt = userRepository.findById(adminId);
+        if (requesterOpt.isEmpty() || (requesterOpt.get().getRole() != User.Role.SUPER_ADMIN && requesterOpt.get().getRole() != User.Role.ADMIN)) {
+            return ResponseEntity.status(403).body(Map.of("error", "Only Super Admin or Admin can create new admin accounts"));
+        }
+
+        String name = normalize(body.get("name"));
+        String email = normalizeEmail(body.get("email"));
+        String phone = normalizePhone(body.get("phone"));
+        String password = normalize(body.get("password"));
+        String roleStr = normalize(body.get("role"));
+
+        if (name == null || password == null || (email == null && phone == null)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Name, email/phone, and password are required"));
+        }
+
+        // Check if user already exists
+        if (email != null && userRepository.findByEmail(email).isPresent()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "A user with this email already exists"));
+        }
+
+        User.Role role = User.Role.ADMIN;
+        if (roleStr != null) {
+            try {
+                role = User.Role.valueOf(roleStr);
+            } catch (IllegalArgumentException e) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Invalid role: " + roleStr));
+            }
+        }
+
+        String referralCode = generateReferralCode(name);
+        User newAdmin = User.builder()
+                .name(name)
+                .email(email)
+                .phone(phone)
+                .passwordHash(passwordEncoder.encode(password))
+                .referralCode(referralCode)
+                .role(role)
+                .permissions(AdminPermissions.defaultForRole(role))
+                .status("active")
+                .isVerified(true)
+                .build();
+
+        User saved = userRepository.save(newAdmin);
+
+        // Log activity
+        adminActivityLogRepository.save(AdminActivityLog.builder()
+                .adminId(adminId)
+                .adminEmail(requesterOpt.get().getEmail())
+                .adminRole(requesterOpt.get().getRole().toString())
+                .action("CREATE_ADMIN")
+                .target(saved.getEmail())
+                .details("Created new admin with role: " + role)
+                .build());
+
+        return ResponseEntity.ok(Map.of(
+                "message", "Admin account created successfully",
+                "id", saved.getId(),
+                "name", saved.getName(),
+                "email", saved.getEmail() != null ? saved.getEmail() : "",
+                "role", saved.getRole().toString(),
+                "permissions", saved.getPermissions()
+        ));
+    }
+
+    // --- Get All Admins ---
+    @GetMapping("/admins")
+    public ResponseEntity<List<User>> getAllAdmins() {
+        List<User> admins = userRepository.findAll().stream()
+                .filter(this::isAdminRole)
+                .toList();
+        return ResponseEntity.ok(admins);
+    }
+
+    // --- Change Admin Role (SUPER_ADMIN only) ---
+    @PutMapping("/{id}/role")
+    public ResponseEntity<?> changeAdminRole(@PathVariable String id, @RequestBody Map<String, String> body, @RequestHeader(value = "X-Admin-Id", required = false) String adminId) {
+        // Verify the requester is SUPER_ADMIN or ADMIN
+        if (adminId == null || adminId.isEmpty()) {
+            return ResponseEntity.status(403).body(Map.of("error", "Admin authentication required"));
+        }
+        Optional<User> requesterOpt = userRepository.findById(adminId);
+        if (requesterOpt.isEmpty() || (requesterOpt.get().getRole() != User.Role.SUPER_ADMIN && requesterOpt.get().getRole() != User.Role.ADMIN)) {
+            return ResponseEntity.status(403).body(Map.of("error", "Only Super Admin or Admin can change admin roles"));
+        }
+
+        String roleStr = normalize(body.get("role"));
+        if (roleStr == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Role is required"));
+        }
+
+        User.Role newRole;
+        try {
+            newRole = User.Role.valueOf(roleStr);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid role: " + roleStr));
+        }
+
+        return userRepository.findById(id).map(user -> {
+            User.Role oldRole = user.getRole();
+            user.setRole(newRole);
+            user.setPermissions(AdminPermissions.defaultForRole(newRole));
+            User saved = userRepository.save(user);
+
+            // Log activity
+            adminActivityLogRepository.save(AdminActivityLog.builder()
+                    .adminId(adminId)
+                    .adminEmail(requesterOpt.get().getEmail())
+                    .adminRole(requesterOpt.get().getRole().toString())
+                    .action("CHANGE_ROLE")
+                    .target(saved.getEmail())
+                    .details("Role changed from " + oldRole + " to " + newRole)
+                    .build());
+
+            return ResponseEntity.ok(saved);
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
     // --- Helper: Build user response with wallet data ---
 
     private Map<String, Object> buildUserResponse(User user, Wallet wallet) {
@@ -273,6 +486,9 @@ public ResponseEntity<?> loginAdmin(@RequestBody Map<String, String> body) {
         response.put("status", user.getStatus());
         response.put("joinDate", user.getJoinDate());
         response.put("sharedCommissionRate", user.getSharedCommissionRate());
+        response.put("role", user.getRole() != null ? user.getRole().toString() : User.Role.USER.toString());
+        response.put("isAdmin", user.getRole() != null && user.getRole() != User.Role.USER);
+        response.put("permissions", user.getPermissions() != null ? user.getPermissions() : AdminPermissions.defaultForRole(user.getRole()));
 
         Map<String, Double> walletData = new HashMap<>();
         walletData.put("confirmed", wallet.getApprovedBalance());
@@ -281,6 +497,81 @@ public ResponseEntity<?> loginAdmin(@RequestBody Map<String, String> body) {
         response.put("wallet", walletData);
 
         return response;
+    }
+
+    private String normalize(String value) {
+        return (value == null || value.trim().isEmpty()) ? null : value.trim();
+    }
+
+    private String normalizeEmail(String email) {
+        if (email == null || email.trim().isEmpty()) return null;
+        return email.trim().toLowerCase();
+    }
+
+    private String normalizePhone(String phone) {
+        if (phone == null || phone.trim().isEmpty()) return null;
+        String normalized = phone.trim().replaceAll("[^\\d+]", "");
+        if (normalized.startsWith("00")) {
+            normalized = "+" + normalized.substring(2);
+        } else if (normalized.startsWith("+")) {
+            normalized = "+" + normalized.substring(1).replaceAll("[^\\d]", "");
+        } else {
+            // Remove non-digits
+            normalized = normalized.replaceAll("[^\\d]", "");
+            // If 10 digits, assume Indian number and add +91 prefix
+            if (normalized.length() == 10) {
+                normalized = "+91" + normalized;
+            } else if (normalized.length() > 0 && !normalized.startsWith("+")) {
+                // For other lengths, assume already has country code but missing + prefix
+                if (normalized.length() >= 11) {
+                    normalized = "+" + normalized;
+                }
+            }
+        }
+        if (normalized.isEmpty()) return null;
+        return normalized;
+    }
+
+    private String normalizeIdentifier(String identifier) {
+        if (identifier == null || identifier.trim().isEmpty()) return null;
+        identifier = identifier.trim();
+        return identifier.contains("@") ? normalizeEmail(identifier) : normalizePhone(identifier);
+    }
+
+    private Optional<User> findUserByPhone(String phone) {
+        if (phone == null) return Optional.empty();
+        Optional<User> userOpt = userRepository.findByPhone(phone);
+        if (userOpt.isPresent()) return userOpt;
+
+        String digits = phone.replaceAll("[^\\d]", "");
+        if (!digits.equals(phone)) {
+            userOpt = userRepository.findByPhone(digits);
+            if (userOpt.isPresent()) return userOpt;
+        }
+        if (!phone.startsWith("+")) {
+            userOpt = userRepository.findByPhone("+" + digits);
+            if (userOpt.isPresent()) return userOpt;
+        }
+        return Optional.empty();
+    }
+
+    private boolean isAdminRole(User user) {
+        if (user == null || user.getRole() == null) return false;
+        return switch (user.getRole()) {
+            case SUPER_ADMIN, ADMIN, CONTENT_MANAGER, AFFILIATE_MANAGER, SUPPORT_ADMIN -> true;
+            default -> false;
+        };
+    }
+
+    private void recordAdminLoginHistory(User user, String identifier, String role, boolean success, HttpServletRequest request) {
+        adminLoginHistoryRepository.save(AdminLoginHistory.builder()
+                .adminId(user != null ? user.getId() : null)
+                .email(identifier)
+                .role(role)
+                .success(success)
+                .ipAddress(request != null ? request.getRemoteAddr() : null)
+                .userAgent(request != null ? request.getHeader("User-Agent") : null)
+                .build());
     }
 
     // --- Helper: Generate referral code ---

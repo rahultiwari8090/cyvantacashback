@@ -20,4 +20,8 @@ public class Settings {
     private Double minimumWithdrawal;
     private Double sharedCommissionPercent;
     private Integer sharedCommissionHoldDays;
+    private String seoTitle;
+    private String seoDescription;
+    private String seoKeywords;
+    private String seoImageUrl;
 }

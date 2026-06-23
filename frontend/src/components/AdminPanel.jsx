@@ -16,12 +16,17 @@ import {
   Menu,
   Truck,
   Globe,
+  FileText,
+  ShieldCheck,
 } from 'lucide-react';
 import '../Admin.css';
 
 // Subcomponents to import
 import AdminDashboard from './AdminDashboard';
 import AdminUsers from './AdminUsers';
+import AdminRoles from './AdminRoles';
+import AdminActivityLogs from './AdminActivityLogs';
+import AdminLoginHistory from './AdminLoginHistory';
 import AdminProducts from './AdminProducts';
 import AdminWithdrawals from './AdminWithdrawals';
 import AdminClickLogs from './AdminClickLogs';
@@ -34,6 +39,7 @@ import AdminDeals from './AdminDeals';
 import AdminStores from './AdminStores';
 import AdminBanners from './AdminBanners';
 import AdminAffiliateNetwork from './AdminAffiliateNetwork';
+import AdminSEO from './AdminSEO';
 
 import {
   apiUsers,
@@ -50,19 +56,21 @@ import {
   apiBanners,
   apiCashback,
   apiTracking,
-  apiAffiliate
+  apiAffiliate,
+  apiAdmin
 } from '../services/api';
 
 export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, onAddNotification }) {
   const getInitialTab = () => {
     const hash = window.location.hash;
     if (hash === '#/admin/users') return 'users';
-    if (hash === '#/admin/products') return 'products';
+    if (hash === '#/admin/roles') return 'roles';    if (hash === '#/admin/roles') return 'roles';    if (hash === '#/admin/products') return 'products';
     if (hash === '#/admin/withdrawals') return 'withdrawals';
     if (hash === '#/admin/click-logs') return 'click-logs';
     if (hash === '#/admin/conversions') return 'conversions';
     if (hash === '#/admin/referrals') return 'referrals';
     if (hash === '#/admin/settings') return 'settings';
+    if (hash === '#/admin/seo') return 'seo';
     if (hash === '#/admin/shared-commissions') return 'shared-commissions';
     if (hash === '#/admin/categories') return 'categories';
     if (hash === '#/admin/deals') return 'deals';
@@ -71,12 +79,16 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
 
     const path = window.location.pathname;
     if (path === '/admin/users') return 'users';
+    if (path === '/admin/roles') return 'roles';
     if (path === '/admin/products') return 'products';
     if (path === '/admin/withdrawals') return 'withdrawals';
     if (path === '/admin/click-logs') return 'click-logs';
     if (path === '/admin/conversions') return 'conversions';
     if (path === '/admin/referrals') return 'referrals';
     if (hash === '#/admin/settings') return 'settings';
+    if (hash === '#/admin/seo') return 'seo';
+    if (hash === '#/admin/activity-logs') return 'activity-logs';
+    if (hash === '#/admin/login-history') return 'login-history';
     if (hash === '#/admin/shared-commissions') return 'shared-commissions';
     if (hash === '#/admin/categories') return 'categories';
     if (hash === '#/admin/deals') return 'deals';
@@ -129,6 +141,8 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
   const [conversions, setConversions] = useState([]);
   const [sharedLinks, setSharedLinks] = useState([]);
   const [sharedCommissions, setSharedCommissions] = useState([]);
+  const [activityLogs, setActivityLogs] = useState([]);
+  const [loginHistory, setLoginHistory] = useState([]);
   const [categories, setCategories] = useState([]);
   const [deals, setDeals] = useState([]);
   const [storesData, setStoresData] = useState([]);
@@ -138,6 +152,10 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
     totalCashbackPaid: 0.00,
     totalWithdrawPaid: 0.00,
     pendingWithdrawals: 0.00,
+    totalApprovedBalance: 0.00,
+    totalPendingBalance: 0.00,
+    totalWithdrawnAmount: 0.00,
+    totalWalletBalance: 0.00,
     transactions: [],
   });
 
@@ -165,7 +183,9 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
           storesRes,
           bannersData,
           sharedLinksData,
-          sharedCommissionsData
+          sharedCommissionsData,
+          activityLogsData,
+          loginHistoryData
         ] = await Promise.all([
           apiUsers.getAll().catch(e => { console.warn('Users fetch failed', e); return []; }),
           apiProducts.getAll().catch(e => { console.warn('Products fetch failed', e); return []; }),
@@ -183,7 +203,9 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
           apiStores.getAll().catch(e => { console.warn('Stores fetch failed', e); return []; }),
           apiBanners.getAll().catch(e => { console.warn('Banners fetch failed', e); return []; }),
           apiSharedLinks.getAll().catch(e => { console.warn('Shared links fetch failed', e); return []; }),
-          apiSharedCommissions.getAll().catch(e => { console.warn('Shared comms fetch failed', e); return []; })
+          apiSharedCommissions.getAll().catch(e => { console.warn('Shared comms fetch failed', e); return []; }),
+          apiAdmin.getActivityLogs().catch(e => { console.warn('Activity logs fetch failed', e); return []; }),
+          apiAdmin.getLoginHistory().catch(e => { console.warn('Login history fetch failed', e); return []; })
         ]);
 
         setUsers(usersData || []);
@@ -216,6 +238,10 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
           totalCashbackPaid: 0.00,
           totalWithdrawPaid: 0.00,
           pendingWithdrawals: 0.00,
+          totalApprovedBalance: 0.00,
+          totalPendingBalance: 0.00,
+          totalWithdrawnAmount: 0.00,
+          totalWalletBalance: 0.00,
           transactions: [],
         });
         setGlobalSettings(settingsData || {
@@ -268,12 +294,10 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
   const adminInitials = currentUser && currentUser.name ? currentUser.name.substring(0, 2).toUpperCase() : "AD";
 
   // Sidebar menu configuration mapping
-  const menuItems = [
+  const allMenuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'users', label: 'Users', icon: UsersIcon },
-    { id: 'products', label: 'Products', icon: ShoppingBag },
-    { id: 'withdrawals', label: 'Withdrawals', icon: Wallet },
-    { id: 'click-logs', label: 'Click Logs', icon: MousePointer },
+    { id: 'roles', label: 'Roles & Permissions', icon: ShieldCheck },
     { id: 'conversions', label: 'Conversions', icon: CheckSquare },
     { id: 'shared-commissions', label: 'Shared Commissions', icon: Share2 },
     { id: 'referrals', label: 'Referrals', icon: Share2 },
@@ -282,8 +306,31 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
     { id: 'categories', label: 'Categories', icon: ShoppingBag },
     { id: 'deals', label: 'Deals', icon: Gift },
     { id: 'affiliate-network', label: 'Affiliate Network', icon: Globe },
+    { id: 'seo', label: 'SEO', icon: FileText },
     { id: 'settings', label: 'Settings', icon: SettingsIcon },
   ];
+
+  // Filter menu items based on admin role's allowedModules
+  const adminRole = currentUser?.role || 'USER';
+  const isSuperAdmin = adminRole === 'SUPER_ADMIN';
+
+  // Fallback module lists for when permissions.allowedModules is missing (old sessions)
+  const ROLE_MODULE_DEFAULTS = {
+    'SUPER_ADMIN': null, // null = all modules
+    'ADMIN': ['dashboard', 'users', 'products', 'withdrawals', 'click-logs', 'conversions', 'referrals', 'shared-commissions', 'categories', 'deals', 'stores', 'banners', 'affiliate-network', 'seo', 'settings', 'finance'],
+    'CONTENT_MANAGER': ['dashboard', 'products', 'categories', 'deals', 'stores', 'banners', 'seo'],
+    'AFFILIATE_MANAGER': ['dashboard', 'users', 'conversions', 'referrals', 'shared-commissions', 'click-logs', 'affiliate-network', 'finance'],
+    'SUPPORT_ADMIN': ['dashboard', 'users', 'withdrawals', 'conversions'],
+  };
+
+  const rawAllowedModules = currentUser?.permissions?.allowedModules;
+  const allowedModules = (rawAllowedModules && rawAllowedModules.length > 0)
+    ? rawAllowedModules
+    : (ROLE_MODULE_DEFAULTS[adminRole] || []);
+
+  const menuItems = (isSuperAdmin || adminRole === 'ADMIN')
+    ? allMenuItems
+    : allMenuItems.filter(item => allowedModules.includes(item.id));
 
   // Helper actions
   const addProduct = async (prod) => {
@@ -644,9 +691,43 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
     }
   };
 
-  // Render active route panel
+  // Helper: check if current admin can access a given module
+  const canAccessModule = (moduleId) => {
+    if (isSuperAdmin || adminRole === 'ADMIN') return true;
+    return allowedModules.includes(moduleId);
+  };
+
+  // Permission helpers for action-level control
+  const canAdd = currentUser?.permissions?.add !== false;
+  const canEdit = currentUser?.permissions?.edit !== false;
+  const canDelete = currentUser?.permissions?.delete !== false;
 
   const renderContent = () => {
+    // Guard: if admin navigates to a tab they don't have access to
+    if (!canAccessModule(activeTab)) {
+      return (
+        <div style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          minHeight: '400px', gap: '16px', textAlign: 'center', padding: '40px',
+        }}>
+          <div style={{
+            width: '64px', height: '64px', borderRadius: '50%',
+            backgroundColor: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <ShieldCheck size={28} color="#ef4444" />
+          </div>
+          <h3 style={{ color: 'var(--text-bold)', margin: 0 }}>Access Denied</h3>
+          <p style={{ color: 'var(--text)', fontSize: '14px', maxWidth: '400px' }}>
+            Your role <strong>{(adminRole || '').replace('_', ' ')}</strong> doesn't have permission to access this module.
+            Contact a Super Admin to request access.
+          </p>
+          <button className="admin-btn admin-btn-primary" onClick={() => setActiveTab('dashboard')}>
+            Go to Dashboard
+          </button>
+        </div>
+      );
+    }
+
     switch (activeTab) {
       case 'dashboard':
         return (
@@ -668,6 +749,16 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
             setUsers={setUsers}
             onEditUser={editUser}
             onAddNotification={onAddNotification}
+          />
+        );
+      case 'roles':
+        return (
+          <AdminRoles
+            users={users}
+            setUsers={setUsers}
+            onEditUser={editUser}
+            onAddNotification={onAddNotification}
+            currentUser={currentUser}
           />
         );
       case 'products':
@@ -752,6 +843,13 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
         );
       case 'affiliate-network':
         return <AdminAffiliateNetwork addNotification={onAddNotification} />;
+      case 'seo':
+        return (
+          <AdminSEO
+            globalSettings={globalSettings}
+            onSaveSettings={updateGlobalSettings}
+          />
+        );
       case 'settings':
         return (
           <AdminSettings
@@ -759,6 +857,10 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
             onSaveSettings={updateGlobalSettings}
           />
         );
+      case 'activity-logs':
+        return <AdminActivityLogs activityLogs={activityLogs} />;
+      case 'login-history':
+        return <AdminLoginHistory loginHistory={loginHistory} />;
       default:
         return (
           <AdminDashboard
@@ -901,7 +1003,20 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
               <div className="admin-avatar">{adminInitials}</div>
               <div className="admin-profile-info">
                 <span className="admin-profile-name">{adminName}</span>
-                <span className="admin-profile-email">{adminEmail}</span>
+                <span className="admin-profile-email" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {adminEmail}
+                  <span style={{
+                    fontSize: '9px',
+                    padding: '1px 6px',
+                    borderRadius: '10px',
+                    backgroundColor: isSuperAdmin ? '#fef3c7' : '#dbeafe',
+                    color: isSuperAdmin ? '#92400e' : '#1e40af',
+                    fontWeight: '600',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {(adminRole || 'ADMIN').replace('_', ' ')}
+                  </span>
+                </span>
               </div>
             </div>
 

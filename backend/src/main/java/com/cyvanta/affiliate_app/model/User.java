@@ -38,7 +38,11 @@ public class User {
 
     private String referredBy; // referral code of the person who invited them
 
-    private Role role;
+    @Builder.Default
+    private Role role = Role.USER;
+
+    @Builder.Default
+    private AdminPermissions permissions = AdminPermissions.defaultForRole(Role.USER);
 
     // Frontend-compatible status field ("active", "blocked")
     @Builder.Default
@@ -67,6 +71,11 @@ public class User {
     }
 
     public enum Role {
-        USER, ADMIN
+        USER,
+        SUPER_ADMIN,
+        ADMIN,
+        CONTENT_MANAGER,
+        AFFILIATE_MANAGER,
+        SUPPORT_ADMIN
     }
 }

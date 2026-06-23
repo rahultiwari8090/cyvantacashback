@@ -1,5 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Sun, Moon, ShoppingBag, User, Wallet, LogOut, ChevronDown } from 'lucide-react';
+import { Search, Sun, Moon, ShoppingBag, User, Wallet, LogOut, ChevronDown, Folder, Tag } from 'lucide-react';
+
+const CATEGORIES = [
+  { id: 'fashion', name: 'Fashion' },
+  { id: 'electronics', name: 'Electronics' },
+  { id: 'health', name: 'Health & Beauty' },
+  { id: 'grocery', name: 'Food & Grocery' },
+  { id: 'travel', name: 'Travel & Flights' },
+];
 
 export default function Header({
   currentView,
@@ -11,17 +19,61 @@ export default function Header({
   openAuthModal,
   storesData,
   onStoreSelect,
+  setHomeSearchQuery,
+  dealsData = [],
+  onCategorySelect,
+  onDealSelect,
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const searchRef = useRef(null);
 
-  // Filter stores based on search query
-  const suggestions = searchQuery.trim()
-    ? storesData.filter((store) =>
-        (store.name || '').toLowerCase().includes(searchQuery.toLowerCase())
+  // Filter stores, categories, and deals based on search query
+  const getSuggestions = () => {
+    if (!searchQuery.trim()) return [];
+    const query = searchQuery.toLowerCase();
+    
+    const matchedStores = (storesData || [])
+      .filter(store => (store.name || '').toLowerCase().includes(query))
+      .slice(0, 4)
+      .map(store => ({
+        type: 'store',
+        id: store.id,
+        name: store.name,
+        logo: store.logo,
+        badge: `Up to ${store.cashbackRate} Cashback`,
+        original: store
+      }));
+      
+    const matchedCategories = CATEGORIES
+      .filter(cat => cat.name.toLowerCase().includes(query))
+      .slice(0, 3)
+      .map(cat => ({
+        type: 'category',
+        id: cat.id,
+        name: cat.name,
+        badge: 'Category'
+      }));
+      
+    const matchedDeals = (dealsData || [])
+      .filter(deal => 
+        (deal.title || '').toLowerCase().includes(query) ||
+        (deal.name || '').toLowerCase().includes(query)
       )
-    : [];
+      .slice(0, 4)
+      .map(deal => ({
+        type: 'deal',
+        id: deal.id,
+        name: deal.title || deal.name,
+        logo: deal.image,
+        badge: `₹${deal.dealPrice || deal.price || 0} (+₹${deal.cashbackEarned || deal.cashbackAmount || 0} CB)`,
+        original: deal
+      }));
+      
+    return [...matchedStores, ...matchedCategories, ...matchedDeals];
+  };
+
+  const suggestions = getSuggestions();
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -33,8 +85,18 @@ export default function Header({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleSuggestionClick = (store) => {
-    onStoreSelect(store.id);
+  const handleSuggestionClick = (item) => {
+    if (item.type === 'store') {
+      onStoreSelect(item.id);
+    } else if (item.type === 'category') {
+      if (onCategorySelect) {
+        onCategorySelect(item.id);
+      }
+    } else if (item.type === 'deal') {
+      if (onDealSelect) {
+        onDealSelect(item.original);
+      }
+    }
     setSearchQuery('');
     setShowSuggestions(false);
   };
@@ -56,7 +118,7 @@ export default function Header({
             <Search size={18} className="search-icon" />
             <input
               type="text"
-              placeholder="Search for Flipkart, Myntra, Amazon & 500+ stores..."
+              placeholder="Search products, brands, categories or stores..."
               className="search-input"
               value={searchQuery}
               onChange={(e) => {
@@ -64,21 +126,75 @@ export default function Header({
                 setShowSuggestions(true);
               }}
               onFocus={() => setShowSuggestions(true)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  if (setHomeSearchQuery) {
+                    setHomeSearchQuery(searchQuery);
+                    setView('home');
+                    setShowSuggestions(false);
+                  }
+                }
+              }}
             />
           </div>
 
           {/* Autocomplete Suggestions */}
           {showSuggestions && suggestions.length > 0 && (
             <div className="search-suggestions">
-              {suggestions.map((store) => (
+              {suggestions.map((item) => (
                 <div
-                  key={store.id}
+                  key={`${item.type}-${item.id}`}
                   className="suggestion-item animate-fade"
-                  onClick={() => handleSuggestionClick(store)}
+                  onClick={() => handleSuggestionClick(item)}
                 >
-                  <img src={store.logo} alt={store.name} className="suggestion-img" />
-                  <span className="suggestion-text">{store.name}</span>
-                  <span className="suggestion-tag">Up to {store.cashbackRate} Commission</span>
+                  {item.type === 'store' && (
+                    <img src={item.logo} alt="" className="suggestion-img" />
+                  )}
+                  {item.type === 'deal' && (
+                    item.logo ? (
+                      <img src={item.logo} alt="" className="suggestion-img" />
+                    ) : (
+                      <div style={{
+                        width: '28px',
+                        height: '28px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: '4px',
+                        backgroundColor: 'var(--bg)',
+                        border: '1px solid var(--border)',
+                        color: 'var(--primary)',
+                        flexShrink: 0
+                      }}>
+                        <Tag size={14} />
+                      </div>
+                    )
+                  )}
+                  {item.type === 'category' && (
+                    <div style={{
+                      width: '28px',
+                      height: '28px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: '4px',
+                      backgroundColor: 'var(--bg)',
+                      border: '1px solid var(--border)',
+                      color: 'var(--primary)',
+                      flexShrink: 0
+                    }}>
+                      <Folder size={14} />
+                    </div>
+                  )}
+                  <span className="suggestion-text">{item.name}</span>
+                  <span 
+                    className="suggestion-tag"
+                    style={{
+                      color: item.type === 'category' ? '#3b82f6' : item.type === 'deal' ? '#f59e0b' : '#10b981'
+                    }}
+                  >
+                    {item.badge}
+                  </span>
                 </div>
               ))}
             </div>
