@@ -241,3 +241,17 @@ export const apiCategories = {
   delete: (id) => request(`/categories/${id}`, { method: 'DELETE' })
 };
 
+export const apiTickets = {
+  // User endpoints
+  create: (ticket) => request('/tickets', { method: 'POST', body: JSON.stringify(ticket) }),
+  getByUser: (userId) => request(`/tickets/user/${userId}`),
+  getById: (id) => request(`/tickets/${id}`),
+  addMessage: (id, message) => request(`/tickets/${id}/messages`, { method: 'POST', body: JSON.stringify(message) }),
+  // Admin endpoints
+  getAll: () => request('/tickets'),
+  getStats: () => request('/tickets/stats'),
+  updateStatus: (id, status) => request(`/tickets/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
+  updatePriority: (id, priority) => request(`/tickets/${id}/priority`, { method: 'PUT', body: JSON.stringify({ priority }) }),
+  assign: (id, adminId, adminName) => request(`/tickets/${id}/assign`, { method: 'PUT', body: JSON.stringify({ adminId, adminName }) }),
+  delete: (id) => request(`/tickets/${id}`, { method: 'DELETE' }),
+};

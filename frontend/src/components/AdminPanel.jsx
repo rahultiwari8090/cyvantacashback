@@ -18,6 +18,7 @@ import {
   Globe,
   FileText,
   ShieldCheck,
+  HelpCircle,
 } from 'lucide-react';
 import '../Admin.css';
 
@@ -41,6 +42,7 @@ import AdminBanners from './AdminBanners';
 import AdminAffiliateNetwork from './AdminAffiliateNetwork';
 import AdminSEO from './AdminSEO';
 import AdminLedger from './AdminLedger';
+import AdminTickets from './AdminTickets';
 
 import {
   apiUsers,
@@ -97,6 +99,7 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
     if (path === '/admin/banners' || hash === '#/admin/banners') return 'banners';
     if (path === '/admin/affiliate-network' || hash === '#/admin/affiliate-network') return 'affiliate-network';
     if (path === '/admin/ledger' || hash === '#/admin/ledger') return 'ledger';
+    if (path === '/admin/tickets' || hash === '#/admin/tickets') return 'tickets';
     return 'dashboard';
   };
 
@@ -313,6 +316,7 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
     { id: 'affiliate-network', label: 'Affiliate Network', icon: Globe },
     { id: 'ledger', label: 'Ledger Management', icon: Wallet },
     { id: 'seo', label: 'SEO', icon: FileText },
+    { id: 'tickets', label: 'Support Tickets', icon: HelpCircle },
     { id: 'settings', label: 'Settings', icon: SettingsIcon },
   ];
 
@@ -323,10 +327,10 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
   // Fallback module lists for when permissions.allowedModules is missing (old sessions)
   const ROLE_MODULE_DEFAULTS = {
     'SUPER_ADMIN': null, // null = all modules
-    'ADMIN': ['dashboard', 'users', 'products', 'withdrawals', 'click-logs', 'conversions', 'referrals', 'shared-commissions', 'categories', 'deals', 'stores', 'banners', 'affiliate-network', 'ledger', 'seo', 'settings', 'finance'],
+    'ADMIN': ['dashboard', 'users', 'products', 'withdrawals', 'click-logs', 'conversions', 'referrals', 'shared-commissions', 'categories', 'deals', 'stores', 'banners', 'affiliate-network', 'ledger', 'seo', 'settings', 'finance', 'tickets'],
     'CONTENT_MANAGER': ['dashboard', 'products', 'categories', 'deals', 'stores', 'banners', 'seo'],
     'AFFILIATE_MANAGER': ['dashboard', 'users', 'conversions', 'referrals', 'shared-commissions', 'click-logs', 'affiliate-network', 'ledger', 'finance'],
-    'SUPPORT_ADMIN': ['dashboard', 'users', 'withdrawals', 'conversions'],
+    'SUPPORT_ADMIN': ['dashboard', 'users', 'withdrawals', 'conversions', 'tickets'],
   };
 
   const rawAllowedModules = currentUser?.permissions?.allowedModules;
@@ -865,6 +869,8 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
             onSaveSettings={updateGlobalSettings}
           />
         );
+      case 'tickets':
+        return <AdminTickets adminUser={currentUser} />;
       case 'activity-logs':
         return <AdminActivityLogs activityLogs={activityLogs} />;
       case 'login-history':

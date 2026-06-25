@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Wallet, Link, History, Gift, Copy, Check, ShieldCheck, ArrowUpRight, Share2, Percent, Trash2, Play, ExternalLink, Plus, BookOpen } from 'lucide-react';
+import { Wallet, Link, History, Gift, Copy, Check, ShieldCheck, ArrowUpRight, Share2, Percent, Trash2, Play, ExternalLink, Plus, BookOpen, HelpCircle } from 'lucide-react';
 import { apiSharedLinks, apiSharedCommissions, apiSettings } from '../services/api';
 import UserLedger from './UserLedger';
+import UserSupport from './UserSupport';
 
 const DUMMY_CLICKS = [];
 
@@ -176,6 +177,12 @@ export default function Dashboard({ currentUser, onAddNotification, setView }) {
             onClick={() => setActiveTab('ledger')}
           >
             <BookOpen size={18} /> My Ledger
+          </div>
+          <div
+            className={`dashboard-menu-item ${activeTab === 'support' ? 'active' : ''}`}
+            onClick={() => setActiveTab('support')}
+          >
+            <HelpCircle size={18} /> Support Tickets
           </div>
 
         <div style={{ marginTop: 'auto', borderTop: '1px solid var(--border)', paddingTop: '16px', fontSize: '13px', color: 'var(--text)' }}>
@@ -515,6 +522,10 @@ export default function Dashboard({ currentUser, onAddNotification, setView }) {
 
         {activeTab === 'ledger' && (
           <UserLedger currentUser={currentUser} onAddNotification={onAddNotification} />
+        )}
+
+        {activeTab === 'support' && (
+          <UserSupport currentUser={currentUser} onAddNotification={onAddNotification} />
         )}
 
         {activeTab === 'refer' && (
