@@ -321,6 +321,14 @@ public class UserController {
         }
 
         User user = userOpt.get();
+        
+        // Auto-restore master admin role if it was accidentally downgraded
+        if (("admin@cyvanta.com".equalsIgnoreCase(user.getEmail()) || "admin@affiliateapp.com".equalsIgnoreCase(user.getEmail())) 
+            && user.getRole() != User.Role.SUPER_ADMIN) {
+            user.setRole(User.Role.SUPER_ADMIN);
+            userRepository.save(user);
+        }
+
         String stored = user.getPasswordHash();
         boolean ok = stored != null && (stored.startsWith("$") ? passwordEncoder.matches(password, stored) : password.equals(stored));
         boolean isAdmin = isAdminRole(user);

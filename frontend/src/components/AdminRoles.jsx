@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Search, ShieldCheck, ShieldAlert, Eye, Edit2, UserPlus, Trash2, Crown, Shield, Users, Headphones, PenTool } from 'lucide-react';
+import { Search, ShieldCheck, ShieldAlert, Eye, Edit2, UserPlus, Trash2, Crown, Shield, Users, Headphones, PenTool, CheckSquare } from 'lucide-react';
 import { AdminTable, AdminModal, AdminFormInput, AdminFormSelect } from './AdminComponents';
-import { apiAdminManagement } from '../services/api';
+import { apiAdminManagement, apiUsers } from '../services/api';
 
 const ROLE_OPTIONS = [
   { value: 'SUPER_ADMIN', label: 'Super Admin', icon: Crown, color: '#f59e0b', description: 'Full access to everything, can manage other admins' },
@@ -12,12 +12,12 @@ const ROLE_OPTIONS = [
 ];
 
 const PERMISSION_LABELS = [
-  { key: 'view', label: 'View' },
-  { key: 'add', label: 'Add' },
-  { key: 'edit', label: 'Edit' },
-  { key: 'delete', label: 'Delete' },
-  { key: 'export', label: 'Export' },
-  { key: 'settings', label: 'Settings' },
+  { key: 'view', label: 'View Records' },
+  { key: 'add', label: 'Add New' },
+  { key: 'edit', label: 'Edit Existing' },
+  { key: 'delete', label: 'Delete Records' },
+  { key: 'export', label: 'Export Data' },
+  { key: 'settings', label: 'Change Settings' },
   { key: 'manageAdmins', label: 'Manage Admins' },
 ];
 
@@ -36,11 +36,22 @@ const MODULE_LABELS = {
   'stores': 'Stores',
   'banners': 'Banners',
   'affiliate-network': 'Affiliate Network',
+  'ledger': 'Ledger Management',
   'seo': 'SEO',
   'settings': 'Settings',
   'activity-logs': 'Activity Logs',
   'login-history': 'Login History',
   'finance': 'Finance',
+};
+
+const ALL_MODULES = Object.keys(MODULE_LABELS);
+
+const ROLE_MODULE_DEFAULTS = {
+  'SUPER_ADMIN': ALL_MODULES,
+  'ADMIN': ['dashboard', 'users', 'products', 'withdrawals', 'click-logs', 'conversions', 'referrals', 'shared-commissions', 'categories', 'deals', 'stores', 'banners', 'affiliate-network', 'ledger', 'seo', 'settings', 'finance'],
+  'CONTENT_MANAGER': ['dashboard', 'products', 'categories', 'deals', 'stores', 'banners', 'seo'],
+  'AFFILIATE_MANAGER': ['dashboard', 'users', 'conversions', 'referrals', 'shared-commissions', 'click-logs', 'affiliate-network', 'ledger', 'finance'],
+  'SUPPORT_ADMIN': ['dashboard', 'users', 'withdrawals', 'conversions'],
 };
 
 const ROLE_BADGE_COLORS = {
@@ -57,24 +68,34 @@ export default function AdminRoles({ users, setUsers, onEditUser, onAddNotificat
   const [selectedUser, setSelectedUser] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  
+  // Edit states
   const [editRole, setEditRole] = useState('USER');
   const [editPermissions, setEditPermissions] = useState({
     view: false, add: false, edit: false, delete: false, export: false, settings: false, manageAdmins: false,
   });
+  const [editAllowedModules, setEditAllowedModules] = useState([]);
 
-  // Create admin form state
+  // Create states
   const [newAdminName, setNewAdminName] = useState('');
   const [newAdminEmail, setNewAdminEmail] = useState('');
   const [newAdminPhone, setNewAdminPhone] = useState('');
   const [newAdminPassword, setNewAdminPassword] = useState('');
   const [newAdminRole, setNewAdminRole] = useState('ADMIN');
+  const [newAdminPermissions, setNewAdminPermissions] = useState({
+    view: true, add: true, edit: true, delete: true, export: true, settings: true, manageAdmins: false,
+  });
+  const [newAdminAllowedModules, setNewAdminAllowedModules] = useState(ROLE_MODULE_DEFAULTS['ADMIN']);
   const [creating, setCreating] = useState(false);
 
-  const isSuperAdmin = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN';
+  const isSuperAdmin = currentUser?.role === 'SUPER_ADMIN';
 
+  // Handlers for edit role modal
   const openEditModal = (user) => {
     setSelectedUser(user);
     setEditRole(user.role || 'USER');
+    
+    // Set permissions mapping
     setEditPermissions({
       view: !!user.permissions?.view,
       add: !!user.permissions?.add,
@@ -84,24 +105,70 @@ export default function AdminRoles({ users, setUsers, onEditUser, onAddNotificat
       settings: !!user.permissions?.settings,
       manageAdmins: !!user.permissions?.manageAdmins,
     });
+
+    const allowed = user.permissions?.allowedModules;
+    if (allowed && allowed.length > 0) {
+      setEditAllowedModules(allowed);
+    } else {
+      // Default to role mapping if not present
+      setEditAllowedModules(ROLE_MODULE_DEFAULTS[user.role] || []);
+    }
+
     setIsEditModalOpen(true);
+  };
+
+  const handleRoleChange = (role, isEdit = true) => {
+    if (isEdit) {
+      setEditRole(role);
+      setEditAllowedModules(ROLE_MODULE_DEFAULTS[role] || []);
+    } else {
+      setNewAdminRole(role);
+      setNewAdminAllowedModules(ROLE_MODULE_DEFAULTS[role] || []);
+    }
+  };
+
+  const toggleModule = (module, isEdit = true) => {
+    if (isEdit) {
+      setEditAllowedModules(prev => 
+        prev.includes(module) ? prev.filter(m => m !== module) : [...prev, module]
+      );
+    } else {
+      setNewAdminAllowedModules(prev => 
+        prev.includes(module) ? prev.filter(m => m !== module) : [...prev, module]
+      );
+    }
+  };
+
+  const selectAllModules = (isEdit = true) => {
+    if (isEdit) setEditAllowedModules(ALL_MODULES);
+    else setNewAdminAllowedModules(ALL_MODULES);
+  };
+
+  const deselectAllModules = (isEdit = true) => {
+    if (isEdit) setEditAllowedModules([]);
+    else setNewAdminAllowedModules([]);
   };
 
   const handleSave = async (e) => {
     e.preventDefault();
     if (!selectedUser) return;
 
+    const fullPermissions = { ...editPermissions, allowedModules: editAllowedModules };
+
     if (isSuperAdmin) {
       try {
-        const updatedUser = await apiAdminManagement.changeRole(selectedUser.id, editRole, currentUser.id);
-        setUsers((prev) => prev.map((u) => (u.id === selectedUser.id ? { ...u, ...updatedUser } : u)));
-        onAddNotification(`Role updated to ${editRole} for ${selectedUser.name}.`, 'success');
+        // Change role triggers backend logging and resets permissions, so we must manually update permissions right after
+        await apiAdminManagement.changeRole(selectedUser.id, editRole, currentUser.id);
+        const finalUser = await apiUsers.update(selectedUser.id, { role: editRole, permissions: fullPermissions });
+        
+        setUsers((prev) => prev.map((u) => (u.id === selectedUser.id ? { ...u, role: editRole, permissions: finalUser.permissions } : u)));
+        onAddNotification(`Role and specific permissions updated for ${selectedUser.name}.`, 'success');
       } catch (err) {
         console.error(err);
-        onAddNotification('Failed to update role: ' + (err.message || 'Unknown error'), 'error');
+        onAddNotification('Failed to update role/permissions: ' + (err.message || 'Unknown error'), 'error');
       }
     } else {
-      const updated = { role: editRole, permissions: editPermissions };
+      const updated = { role: editRole, permissions: fullPermissions };
       onEditUser(selectedUser.id, updated);
       setUsers((prev) => prev.map((u) => (u.id === selectedUser.id ? { ...u, ...updated } : u)));
       onAddNotification('Admin role and permissions updated.', 'success');
@@ -126,17 +193,21 @@ export default function AdminRoles({ users, setUsers, onEditUser, onAddNotificat
         role: newAdminRole,
       }, currentUser.id);
 
-      // Refresh users list
+      const fullPermissions = { ...newAdminPermissions, allowedModules: newAdminAllowedModules };
+      
+      // Update the newly created admin with the custom permissions
+      const finalUser = await apiUsers.update(result.id, { role: newAdminRole, permissions: fullPermissions });
+
       setUsers((prev) => [...prev, {
-        id: result.id,
-        name: result.name,
-        email: result.email,
-        role: result.role,
-        permissions: result.permissions,
+        id: finalUser.id,
+        name: finalUser.name,
+        email: finalUser.email,
+        role: finalUser.role,
+        permissions: finalUser.permissions,
         status: 'active',
       }]);
 
-      onAddNotification(`Admin "${result.name}" created with role ${result.role}!`, 'success');
+      onAddNotification(`Admin "${result.name}" created with custom access rights!`, 'success');
       setIsCreateModalOpen(false);
       resetCreateForm();
     } catch (err) {
@@ -153,13 +224,39 @@ export default function AdminRoles({ users, setUsers, onEditUser, onAddNotificat
     setNewAdminPhone('');
     setNewAdminPassword('');
     setNewAdminRole('ADMIN');
+    setNewAdminAllowedModules(ROLE_MODULE_DEFAULTS['ADMIN']);
+    setNewAdminPermissions({
+      view: true, add: true, edit: true, delete: true, export: true, settings: true, manageAdmins: false,
+    });
   };
 
-  // Only show admin users
-  const adminUsers = users.filter((user) => {
-    const role = user.role || 'USER';
-    return role !== 'USER';
-  });
+  // Render Module Checkboxes
+  const renderModuleSelection = (allowedModules, isEdit) => (
+    <div style={{ marginTop: '16px', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+        <h4 style={{ margin: 0, fontSize: '14px', color: 'var(--text-bold)' }}>Allowed Pages & Modules</h4>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button type="button" onClick={() => selectAllModules(isEdit)} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--bg)', cursor: 'pointer' }}>Select All</button>
+          <button type="button" onClick={() => deselectAllModules(isEdit)} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--bg)', cursor: 'pointer' }}>Clear All</button>
+        </div>
+      </div>
+      
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+        {ALL_MODULES.map(mod => (
+          <label key={mod} className="admin-checkbox-card" style={{ padding: '8px 12px' }}>
+            <input
+              type="checkbox"
+              checked={allowedModules.includes(mod)}
+              onChange={() => toggleModule(mod, isEdit)}
+            />
+            <span style={{ fontSize: '13px' }}>{MODULE_LABELS[mod]}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+
+  const adminUsers = users.filter((user) => user.role && user.role !== 'USER');
 
   const filteredUsers = adminUsers.filter((user) => {
     if (!searchQuery.trim()) return true;
@@ -175,17 +272,9 @@ export default function AdminRoles({ users, setUsers, onEditUser, onAddNotificat
     const Icon = roleInfo?.icon || Shield;
     return (
       <span style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '5px',
-        padding: '4px 10px',
-        borderRadius: '20px',
-        fontSize: '11px',
-        fontWeight: '600',
-        backgroundColor: colors.bg,
-        color: colors.text,
-        border: `1px solid ${colors.border}`,
-        whiteSpace: 'nowrap',
+        display: 'inline-flex', alignItems: 'center', gap: '5px',
+        padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '600',
+        backgroundColor: colors.bg, color: colors.text, border: `1px solid ${colors.border}`, whiteSpace: 'nowrap',
       }}>
         <Icon size={12} />
         {roleInfo?.label || role}
@@ -197,7 +286,7 @@ export default function AdminRoles({ users, setUsers, onEditUser, onAddNotificat
 
   const renderRow = (user) => {
     const moduleCount = user.permissions?.allowedModules?.length || 0;
-    const totalModules = Object.keys(MODULE_LABELS).length;
+    const totalModules = ALL_MODULES.length;
     return (
       <tr key={user.id} className="animate-fade">
         <td>
@@ -231,7 +320,7 @@ export default function AdminRoles({ users, setUsers, onEditUser, onAddNotificat
         </td>
         <td>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button className="admin-btn-icon" onClick={() => openEditModal(user)} title="Edit Role" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <button className="admin-btn-icon" onClick={() => openEditModal(user)} title="Edit Role & Permissions" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Edit2 size={14} />
             </button>
           </div>
@@ -245,29 +334,22 @@ export default function AdminRoles({ users, setUsers, onEditUser, onAddNotificat
       <div className="admin-page-header">
         <div className="admin-page-title">
           <h2>Admin Roles & Permissions</h2>
-          <p>Manage admin roles, module access, and create new admin accounts</p>
+          <p>Create admins and granularly assign specific modules and access rights</p>
         </div>
       </div>
 
-      {/* Role Overview Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '14px', marginBottom: '24px' }}>
         {ROLE_OPTIONS.filter(r => r.value !== 'USER').map((role) => {
           const Icon = role.icon;
           const count = adminUsers.filter(u => u.role === role.value).length;
           return (
             <div key={role.value} style={{
-              padding: '16px',
-              borderRadius: '12px',
-              border: `1px solid ${role.color}22`,
-              backgroundColor: `${role.color}08`,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '8px',
+              padding: '16px', borderRadius: '12px', border: `1px solid ${role.color}22`,
+              backgroundColor: `${role.color}08`, display: 'flex', flexDirection: 'column', gap: '8px',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div style={{
-                  width: '32px', height: '32px', borderRadius: '8px',
-                  backgroundColor: `${role.color}20`,
+                  width: '32px', height: '32px', borderRadius: '8px', backgroundColor: `${role.color}20`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
                   <Icon size={16} color={role.color} />
@@ -277,7 +359,6 @@ export default function AdminRoles({ users, setUsers, onEditUser, onAddNotificat
                   <div style={{ fontSize: '11px', color: 'var(--text)' }}>{count} user{count !== 1 ? 's' : ''}</div>
                 </div>
               </div>
-              <div style={{ fontSize: '11px', color: 'var(--text)', lineHeight: '1.4' }}>{role.description}</div>
             </div>
           );
         })}
@@ -300,8 +381,7 @@ export default function AdminRoles({ users, setUsers, onEditUser, onAddNotificat
             onClick={() => setIsCreateModalOpen(true)}
             style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           >
-            <UserPlus size={16} />
-            Add New Admin
+            <UserPlus size={16} /> Add Custom Admin
           </button>
         )}
       </div>
@@ -321,57 +401,43 @@ export default function AdminRoles({ users, setUsers, onEditUser, onAddNotificat
         <AdminModal
           isOpen={isEditModalOpen}
           onClose={() => setIsEditModalOpen(false)}
-          title={`Edit Role — ${selectedUser.name}`}
+          title={`Edit Access — ${selectedUser.name}`}
           footer={
             <>
               <button className="admin-btn admin-btn-secondary" onClick={() => setIsEditModalOpen(false)}>Cancel</button>
               <button className="admin-btn admin-btn-primary" onClick={handleSave}>
-                {isSuperAdmin ? 'Update Role' : 'Save Changes'}
+                Save Permissions
               </button>
             </>
           }
         >
           <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <AdminFormSelect
-              label="Role"
-              id="admin-role"
-              value={editRole}
-              onChange={(e) => setEditRole(e.target.value)}
-              options={isSuperAdmin ? ROLE_OPTIONS : ROLE_OPTIONS.filter(r => r.value !== 'SUPER_ADMIN')}
-            />
+              <AdminFormSelect
+                label="Base Role Template"
+                id="admin-role"
+                value={editRole}
+                onChange={(e) => handleRoleChange(e.target.value, true)}
+                options={isSuperAdmin ? ROLE_OPTIONS : ROLE_OPTIONS.filter(r => r.value !== 'SUPER_ADMIN')}
+              />
 
-            {/* Show role description */}
-            {editRole && (
-              <div style={{
-                padding: '12px',
-                borderRadius: '8px',
-                backgroundColor: 'var(--bg)',
-                border: '1px solid var(--border)',
-                fontSize: '12px',
-                color: 'var(--text)',
-              }}>
-                <strong style={{ color: 'var(--text-bold)' }}>Role Access:</strong>
-                <p style={{ margin: '6px 0 0', lineHeight: '1.5' }}>
-                  {ROLE_OPTIONS.find(r => r.value === editRole)?.description || 'Standard user role'}
-                </p>
+              <div>
+                <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', color: 'var(--text-bold)' }}>Global Actions</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  {PERMISSION_LABELS.map((perm) => (
+                    <label key={perm.key} className="admin-checkbox-card" style={{ padding: '8px 12px' }}>
+                      <input
+                        type="checkbox"
+                        checked={editPermissions[perm.key] || false}
+                        onChange={(e) => setEditPermissions((prev) => ({ ...prev, [perm.key]: e.target.checked }))}
+                      />
+                      <span style={{ fontSize: '13px' }}>{perm.label}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
-            )}
 
-            {!isSuperAdmin && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                {PERMISSION_LABELS.map((perm) => (
-                  <label key={perm.key} className="admin-checkbox-card">
-                    <input
-                      type="checkbox"
-                      checked={editPermissions[perm.key] || false}
-                      onChange={(e) => setEditPermissions((prev) => ({ ...prev, [perm.key]: e.target.checked }))}
-                    />
-                    <span>{perm.label}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-          </form>
+              {renderModuleSelection(editAllowedModules, true)}
+            </form>
         </AdminModal>
       )}
 
@@ -379,7 +445,7 @@ export default function AdminRoles({ users, setUsers, onEditUser, onAddNotificat
       <AdminModal
         isOpen={isCreateModalOpen}
         onClose={() => { setIsCreateModalOpen(false); resetCreateForm(); }}
-        title="Create New Admin Account"
+        title="Create Custom Admin Account"
         footer={
           <>
             <button className="admin-btn admin-btn-secondary" onClick={() => { setIsCreateModalOpen(false); resetCreateForm(); }}>Cancel</button>
@@ -389,62 +455,43 @@ export default function AdminRoles({ users, setUsers, onEditUser, onAddNotificat
           </>
         }
       >
-        <form onSubmit={handleCreateAdmin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <AdminFormInput
-            label="Full Name *"
-            id="new-admin-name"
-            value={newAdminName}
-            onChange={(e) => setNewAdminName(e.target.value)}
-            placeholder="Enter admin name"
-          />
-          <AdminFormInput
-            label="Email"
-            id="new-admin-email"
-            type="email"
-            value={newAdminEmail}
-            onChange={(e) => setNewAdminEmail(e.target.value)}
-            placeholder="admin@example.com"
-          />
-          <AdminFormInput
-            label="Phone"
-            id="new-admin-phone"
-            value={newAdminPhone}
-            onChange={(e) => setNewAdminPhone(e.target.value)}
-            placeholder="+91XXXXXXXXXX"
-          />
-          <AdminFormInput
-            label="Password *"
-            id="new-admin-password"
-            type="password"
-            value={newAdminPassword}
-            onChange={(e) => setNewAdminPassword(e.target.value)}
-            placeholder="Set a strong password"
-          />
-          <AdminFormSelect
-            label="Admin Role *"
-            id="new-admin-role"
-            value={newAdminRole}
-            onChange={(e) => setNewAdminRole(e.target.value)}
-            options={ROLE_OPTIONS.filter(r => r.value !== 'USER')}
-          />
+          <form onSubmit={handleCreateAdmin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <AdminFormInput label="Full Name *" id="new-admin-name" value={newAdminName} onChange={(e) => setNewAdminName(e.target.value)} placeholder="Enter admin name" />
+              <AdminFormInput label="Email" id="new-admin-email" type="email" value={newAdminEmail} onChange={(e) => setNewAdminEmail(e.target.value)} placeholder="admin@example.com" />
+            </div>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <AdminFormInput label="Phone" id="new-admin-phone" value={newAdminPhone} onChange={(e) => setNewAdminPhone(e.target.value)} placeholder="+91XXXXXXXXXX" />
+              <AdminFormInput label="Password *" id="new-admin-password" type="password" value={newAdminPassword} onChange={(e) => setNewAdminPassword(e.target.value)} placeholder="Set a strong password" />
+            </div>
 
-          {/* Show what this role can access */}
-          {newAdminRole && (
-            <div style={{
-              padding: '12px',
-              borderRadius: '8px',
-              backgroundColor: 'var(--bg)',
-              border: '1px solid var(--border)',
-            }}>
-              <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-bold)', marginBottom: '8px' }}>
-                This role will have access to:
-              </div>
-              <div style={{ fontSize: '11px', color: 'var(--text)', lineHeight: '1.5' }}>
-                {ROLE_OPTIONS.find(r => r.value === newAdminRole)?.description}
+            <AdminFormSelect
+              label="Base Role Template (Auto-fills permissions)"
+              id="new-admin-role"
+              value={newAdminRole}
+              onChange={(e) => handleRoleChange(e.target.value, false)}
+              options={ROLE_OPTIONS.filter(r => r.value !== 'USER')}
+            />
+
+            <div>
+              <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', color: 'var(--text-bold)' }}>Global Actions</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                {PERMISSION_LABELS.map((perm) => (
+                  <label key={perm.key} className="admin-checkbox-card" style={{ padding: '8px 12px' }}>
+                    <input
+                      type="checkbox"
+                      checked={newAdminPermissions[perm.key] || false}
+                      onChange={(e) => setNewAdminPermissions((prev) => ({ ...prev, [perm.key]: e.target.checked }))}
+                    />
+                    <span style={{ fontSize: '13px' }}>{perm.label}</span>
+                  </label>
+                ))}
               </div>
             </div>
-          )}
-        </form>
+
+            {renderModuleSelection(newAdminAllowedModules, false)}
+          </form>
       </AdminModal>
     </div>
   );

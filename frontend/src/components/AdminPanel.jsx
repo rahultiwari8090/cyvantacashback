@@ -334,7 +334,7 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
     ? rawAllowedModules
     : (ROLE_MODULE_DEFAULTS[adminRole] || []);
 
-  const menuItems = (isSuperAdmin || adminRole === 'ADMIN')
+  const menuItems = isSuperAdmin
     ? allMenuItems
     : allMenuItems.filter(item => allowedModules.includes(item.id));
 

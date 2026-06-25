@@ -39,7 +39,7 @@ public class AdminPermissions {
     public static final List<String> ALL_MODULES = Arrays.asList(
         "dashboard", "users", "roles", "products", "withdrawals",
         "click-logs", "conversions", "referrals", "shared-commissions",
-        "categories", "deals", "stores", "banners", "affiliate-network",
+        "categories", "deals", "stores", "banners", "affiliate-network", "ledger",
         "seo", "settings", "activity-logs", "login-history", "finance"
     );
 
@@ -72,7 +72,7 @@ public class AdminPermissions {
                         .allowedModules(Arrays.asList(
                             "dashboard", "users", "products", "withdrawals",
                             "click-logs", "conversions", "referrals", "shared-commissions",
-                            "categories", "deals", "stores", "banners", "affiliate-network",
+                            "categories", "deals", "stores", "banners", "affiliate-network", "ledger",
                             "seo", "settings", "finance"
                         ))
                         .build();
@@ -101,7 +101,7 @@ public class AdminPermissions {
                         .manageAdmins(false)
                         .allowedModules(Arrays.asList(
                             "dashboard", "users", "conversions", "referrals",
-                            "shared-commissions", "click-logs", "affiliate-network",
+                            "shared-commissions", "click-logs", "affiliate-network", "ledger",
                             "finance"
                         ))
                         .build();

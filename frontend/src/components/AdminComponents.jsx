@@ -1,12 +1,13 @@
 import React from 'react';
+import ReactDOM from 'react-dom';
 import { ChevronLeft, ChevronRight, Inbox, X, FileText, Download } from 'lucide-react';
 import { exportToCSV, exportToPDF } from '../utils/exportUtils';
 
-// Reusable Modal Component
+// Reusable Modal Component — rendered via Portal to escape sticky/overflow stacking contexts
 export function AdminModal({ isOpen, onClose, title, children, footer }) {
   if (!isOpen) return null;
 
-  return (
+  return ReactDOM.createPortal(
     <div className="admin-modal-backdrop" onClick={onClose}>
       <div className="admin-modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="admin-modal-header">
@@ -18,7 +19,8 @@ export function AdminModal({ isOpen, onClose, title, children, footer }) {
         <div className="admin-modal-body">{children}</div>
         {footer && <div className="admin-modal-footer">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
