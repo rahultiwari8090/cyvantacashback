@@ -31,7 +31,7 @@ export default function AuthModal({ isOpen, onClose, onLogin }) {
     setError('');
     setSuccessMessage('');
     setLoading(true);
-    setSuccessMessage('Connecting to server... this may take a moment on first load.');
+    setSuccessMessage('Connecting... If the free server is asleep, this may take up to 2 minutes. Please wait.');
 
     if (activeTab === 'login') {
       if (!identifier || !password) {
@@ -66,7 +66,7 @@ export default function AuthModal({ isOpen, onClose, onLogin }) {
               .catch(console.error);
           } else {
             const msg = (err.message === 'Failed to fetch' || err.name === 'TypeError')
-              ? 'Unable to reach server. The server may be starting up — please try again in a few seconds.'
+              ? 'Unable to reach server. The free server is starting up — please try again in a minute or two.'
               : (err.message || 'Login failed. Please try again.');
             setError(msg);
             setSuccessMessage('');
@@ -100,7 +100,7 @@ export default function AuthModal({ isOpen, onClose, onLogin }) {
             setSuccessMessage(err.message || 'OTP sent to your email or phone.');
           } else {
             const msg = (err.message === 'Failed to fetch' || err.name === 'TypeError')
-              ? 'Unable to reach server. The server may be starting up — please try again in a few seconds.'
+              ? 'Unable to reach server. The free server is starting up — please try again in a minute or two.'
               : (err.message || 'Registration failed. Please try again.');
             setError(msg);
             setSuccessMessage('');

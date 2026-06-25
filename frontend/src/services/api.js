@@ -1,9 +1,14 @@
-const localHostnames = ['localhost', '127.0.0.1', '::1'];
-const isLocalhost = typeof window !== 'undefined' && localHostnames.includes(window.location.hostname);
-export const BASE_URL = import.meta.env.VITE_API_URL || (isLocalhost ? 'http://localhost:8080/api' : 'https://cyvantacashback-3.onrender.com/api');
-
 // Detect if running inside Capacitor native shell (Android/iOS)
 const isCapacitorNative = typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+
+// IMPORTANT: APK runs on 'localhost', so we must NOT use localhost:8080 logic for the APK.
+// We force the Render URL for the APK/Native build.
+const localHostnames = ['localhost', '127.0.0.1', '::1'];
+const isLocalhost = typeof window !== 'undefined' && localHostnames.includes(window.location.hostname);
+
+export const BASE_URL = import.meta.env.VITE_API_URL ||
+  (isCapacitorNative ? 'https://cyvantacashback-3.onrender.com/api' :
+   (isLocalhost ? 'http://localhost:8080/api' : 'https://cyvantacashback-3.onrender.com/api'));
 
 console.log(`[API Service] Running in BACKEND (${BASE_URL}) mode. Native: ${isCapacitorNative}`);
 
@@ -30,9 +35,9 @@ async function request(url, options = {}, retryCount = 0) {
     config.mode = options.mode || 'cors';
   }
 
-  // Add a 60-second timeout to handle Render free-tier cold starts
+  // Add a 180-second timeout to handle Render free-tier cold starts (takes ~130s to wake up)
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 60000);
+  const timeoutId = setTimeout(() => controller.abort(), 180000);
   config.signal = controller.signal;
 
   try {
