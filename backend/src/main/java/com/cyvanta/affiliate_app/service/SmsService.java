@@ -125,14 +125,14 @@ public class SmsService {
                     return true;
                 }
                 log.error("[SMS] Fast2SMS rejected request: {}", message);
-                return false;
+                throw new RuntimeException("Fast2SMS Error: " + message);
             } else {
                 log.error("[SMS] Fast2SMS HTTP Error: {} - {}", response.getStatusCode(), response.getBody());
-                return false;
+                throw new RuntimeException("Fast2SMS HTTP Error: " + response.getStatusCode());
             }
         } catch (Exception e) {
             log.error("[SMS] Fast2SMS sendOtp failed for {}: {}", phone, e.getMessage());
-            return false;
+            throw new RuntimeException("Fast2SMS Error: " + e.getMessage());
         }
     }
 
