@@ -104,6 +104,8 @@ public class SmsService {
             HttpHeaders headers = new HttpHeaders();
             headers.set("authorization", fast2smsApiKey);
             headers.set("cache-control", "no-cache");
+            headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
+            headers.set("Accept", "*/*");
 
             HttpEntity<String> request = new HttpEntity<>(null, headers);
 
