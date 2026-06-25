@@ -15,6 +15,9 @@ import org.springframework.web.client.RestTemplate;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @Slf4j
 @Service
 public class SmsService {
@@ -91,26 +94,24 @@ public class SmsService {
             return false;
         }
 
-        // Fast2SMS Quick SMS API (route=q means Quick/International — no DLT needed)
-        String url = "https://www.fast2sms.com/dev/bulkV2"
-            + "?authorization=" + fast2smsApiKey
-            + "&route=q"
-            + "&message=" + java.net.URLEncoder.encode(
-                "Your Cyvanta Cashback verification code is " + otp + ". Valid for 10 minutes. Do not share.", 
-                java.nio.charset.StandardCharsets.UTF_8)
-            + "&numbers=" + mobileNumber;
+        String url = "https://www.fast2sms.com/dev/bulkV2";
 
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.set("authorization", fast2smsApiKey);
-            headers.set("cache-control", "no-cache");
+            headers.setContentType(MediaType.APPLICATION_JSON);
             headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
             headers.set("Accept", "*/*");
 
-            HttpEntity<String> request = new HttpEntity<>(null, headers);
+            Map<String, String> body = new HashMap<>();
+            body.put("route", "q");
+            body.put("message", "Your Cyvanta Cashback verification code is " + otp + ". Valid for 10 minutes. Do not share.");
+            body.put("numbers", mobileNumber);
 
-            log.info("[SMS] Sending OTP via Fast2SMS Quick Route to {} (mobile={})", phone, mobileNumber);
-            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, request, String.class);
+            HttpEntity<Map<String, String>> request = new HttpEntity<>(body, headers);
+
+            log.info("[SMS] Sending OTP via Fast2SMS POST Quick Route to {} (mobile={})", phone, mobileNumber);
+            ResponseEntity<String> response = restTemplate.postForEntity(url, request, String.class);
 
             log.info("[SMS] Fast2SMS response: status={}, body={}", response.getStatusCode(), response.getBody());
 
