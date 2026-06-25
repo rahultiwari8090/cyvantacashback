@@ -45,6 +45,11 @@ public class UserController {
         return ResponseEntity.ok(userRepository.findAll());
     }
 
+    @GetMapping("/health")
+    public ResponseEntity<Map<String, String>> healthCheck() {
+        return ResponseEntity.ok(Map.of("status", "UP", "message", "User Controller is reachable"));
+    }
+
     @PutMapping("/{id}/status")
     public ResponseEntity<User> updateStatus(@PathVariable String id, @RequestBody Map<String, String> body) {
         return userRepository.findById(id).map(user -> {
@@ -76,6 +81,11 @@ public class UserController {
     }
 
     // --- User Registration ---
+    @GetMapping("/health")
+    public ResponseEntity<String> healthCheck() {
+        return ResponseEntity.ok("OK");
+    }
+
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@RequestBody Map<String, String> body) {
         String rawName = body.get("name");
@@ -84,23 +94,24 @@ public class UserController {
         String rawIdentifier = body.get("identifier");
         String rawPassword = body.get("password");
 
+        log.info("[REGISTER] Attempting registration for rawIdentifier={}", rawIdentifier);
+
         String name = normalize(rawName);
         String email = normalizeEmail(rawEmail);
         String phone = normalizePhone(rawPhone);
         String password = normalize(rawPassword);
 
-        if (email == null && phone == null && rawIdentifier != null) {
-            String normalizedIdentifier = normalizeIdentifier(rawIdentifier);
-            if (normalizedIdentifier != null) {
-                if (normalizedIdentifier.contains("@")) {
-                    email = normalizedIdentifier;
-                } else {
-                    phone = normalizedIdentifier;
-                }
+        // Logic for mixed identifier (email OR phone in one field)
+        if (rawIdentifier != null && (email == null && phone == null)) {
+            String normalizedId = normalizeIdentifier(rawIdentifier);
+            if (normalizedId != null) {
+                if (normalizedId.contains("@")) email = normalizedId;
+                else phone = normalizedId;
             }
         }
 
         if ((email == null && phone == null) || password == null) {
+            log.warn("[REGISTER] Validation failed: email={}, phone={}, password={}", email, phone, password != null ? "PRESENT" : "NULL");
             return ResponseEntity.badRequest().body(Map.of("error", "Email/Phone and password are required"));
         }
 
