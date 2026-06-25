@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiAffiliate, apiUsers, apiProducts } from '../services/api';
 import { Network, CheckCircle, XCircle } from 'lucide-react';
+import { ExportDataButton } from './AdminComponents';
 
 export default function AdminAffiliateNetwork({ addNotification }) {
   const [clicks, setClicks] = useState([]);
@@ -58,6 +59,37 @@ export default function AdminAffiliateNetwork({ addNotification }) {
     }
   };
 
+  const exportClicksColumns = [
+    { header: 'Date', dataKey: 'date' },
+    { header: 'Buyer', dataKey: 'buyer' },
+    { header: 'Referrer ShareID', dataKey: 'shareId' },
+    { header: 'Product', dataKey: 'product' },
+    { header: 'Tracking ID', dataKey: 'trackingId' },
+    { header: 'Order ID', dataKey: 'orderId' },
+    { header: 'Status', dataKey: 'status' }
+  ];
+
+  const formattedClicks = clicks.map(c => ({
+    ...c,
+    date: new Date(c.createdAt).toLocaleDateString(),
+    buyer: c.buyerId ? usersMap[c.buyerId] || c.buyerId : 'Guest',
+    product: c.productId ? productsMap[c.productId] || c.productId : 'N/A'
+  }));
+
+  const exportCommissionsColumns = [
+    { header: 'Date', dataKey: 'date' },
+    { header: 'Tracking ID', dataKey: 'trackingId' },
+    { header: 'Referrer', dataKey: 'referrer' },
+    { header: 'Payout Amount (INR)', dataKey: 'amount' },
+    { header: 'Status', dataKey: 'status' }
+  ];
+
+  const formattedCommissions = commissions.map(c => ({
+    ...c,
+    date: new Date(c.createdAt).toLocaleDateString(),
+    referrer: usersMap[c.referrerId] || c.referrerId
+  }));
+
   return (
     <div className="admin-affiliate-network animate-fade" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <div className="admin-page-header">
@@ -66,7 +98,10 @@ export default function AdminAffiliateNetwork({ addNotification }) {
       </div>
 
       <div className="history-card" style={{ padding: '24px', borderRadius: '12px', border: '1px solid var(--border)', backgroundColor: 'var(--card-bg)' }}>
-        <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '16px' }}>Network Click Tracking</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <h3 style={{ fontSize: '16px', fontWeight: 700 }}>Network Click Tracking</h3>
+          <ExportDataButton data={formattedClicks} columns={exportClicksColumns} filename="Affiliate_Clicks" />
+        </div>
         <div className="table-responsive">
           <table className="history-table">
             <thead>
@@ -120,7 +155,10 @@ export default function AdminAffiliateNetwork({ addNotification }) {
       </div>
 
       <div className="history-card" style={{ padding: '24px', borderRadius: '12px', border: '1px solid var(--border)', backgroundColor: 'var(--card-bg)' }}>
-        <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '16px' }}>Commission Payout History</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <h3 style={{ fontSize: '16px', fontWeight: 700 }}>Commission Payout History</h3>
+          <ExportDataButton data={formattedCommissions} columns={exportCommissionsColumns} filename="Affiliate_Commissions" />
+        </div>
         <div className="table-responsive">
           <table className="history-table">
             <thead>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Edit2, Trash2, Tag, Percent } from 'lucide-react';
-import { AdminTable, AdminModal, AdminFormInput, AdminFormSelect } from './AdminComponents';
+import { AdminTable, AdminModal, AdminFormInput, AdminFormSelect, ExportDataButton } from './AdminComponents';
 
 export default function AdminStores({ stores, onAddStore, onEditStore, onDeleteStore, onAddNotification }) {
   const [currentPage, setCurrentPage] = useState(1);
@@ -172,6 +172,14 @@ export default function AdminStores({ stores, onAddStore, onEditStore, onDeleteS
     </tr>
   );
 
+  const exportColumns = [
+    { header: 'Store Name', dataKey: 'name' },
+    { header: 'Category', dataKey: 'category' },
+    { header: 'Commission Rate', dataKey: 'cashbackRate' },
+    { header: 'Popular', dataKey: 'isPopular' },
+    { header: 'Status', dataKey: 'status' }
+  ];
+
   return (
     <div className="admin-stores-tab animate-fade">
       <div className="admin-page-header">
@@ -179,10 +187,13 @@ export default function AdminStores({ stores, onAddStore, onEditStore, onDeleteS
           <h2>Stores & Offers</h2>
           <p>Manage retail partners, cashback rates, and active promotional coupons</p>
         </div>
-        <button className="admin-btn admin-btn-primary" onClick={openAddModal}>
-          <Plus size={16} />
-          Add Store
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <ExportDataButton data={stores} columns={exportColumns} filename="Stores" />
+          <button className="admin-btn admin-btn-primary" onClick={openAddModal}>
+            <Plus size={16} />
+            Add Store
+          </button>
+        </div>
       </div>
 
       <AdminTable

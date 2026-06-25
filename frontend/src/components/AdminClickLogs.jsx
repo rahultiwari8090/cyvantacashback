@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Search, Filter, ShieldCheck } from 'lucide-react';
-import { AdminTable } from './AdminComponents';
+import { AdminTable, ExportDataButton } from './AdminComponents';
 
 export default function AdminClickLogs({ clickLogs }) {
   const [currentPage, setCurrentPage] = useState(1);
@@ -33,12 +33,23 @@ export default function AdminClickLogs({ clickLogs }) {
     </tr>
   );
 
+  const exportColumns = [
+    { header: 'Click ID', dataKey: 'clickId' },
+    { header: 'User Name', dataKey: 'userName' },
+    { header: 'Product Name', dataKey: 'productName' },
+    { header: 'Target Network', dataKey: 'network' },
+    { header: 'Click Date', dataKey: 'date' }
+  ];
+
   return (
     <div className="admin-click-logs-tab animate-fade">
       <div className="admin-page-header">
         <div className="admin-page-title">
           <h2>Click Tracking Logs</h2>
           <p>Read-only audits of outbound clicks redirecting to merchant platforms</p>
+        </div>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <ExportDataButton data={clickLogs} columns={exportColumns} filename="Click_Logs" />
         </div>
       </div>
 

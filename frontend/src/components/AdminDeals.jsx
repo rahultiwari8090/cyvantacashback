@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
-import { AdminTable, AdminModal, AdminFormInput } from './AdminComponents';
+import { AdminTable, AdminModal, AdminFormInput, ExportDataButton } from './AdminComponents';
 
 export default function AdminDeals({ deals, onAddDeal, onDeleteDeal }) {
   const [currentPage, setCurrentPage] = useState(1);
@@ -93,6 +93,13 @@ export default function AdminDeals({ deals, onAddDeal, onDeleteDeal }) {
     </tr>
   );
 
+  const exportColumns = [
+    { header: 'Deal Name', dataKey: 'name' },
+    { header: 'Offer Text', dataKey: 'offerText' },
+    { header: 'Cashback', dataKey: 'cashback' },
+    { header: 'Status', dataKey: 'status' }
+  ];
+
   return (
     <div className="admin-deals-tab animate-fade">
       <div className="admin-page-header">
@@ -100,10 +107,13 @@ export default function AdminDeals({ deals, onAddDeal, onDeleteDeal }) {
           <h2>Deals & Banners</h2>
           <p>Configure homepage featured banners and promo codes</p>
         </div>
-        <button className="admin-btn admin-btn-primary" onClick={openAddModal}>
-          <Plus size={16} />
-          Add Featured Deal
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <ExportDataButton data={deals} columns={exportColumns} filename="Deals" />
+          <button className="admin-btn admin-btn-primary" onClick={openAddModal}>
+            <Plus size={16} />
+            Add Featured Deal
+          </button>
+        </div>
       </div>
 
       <AdminTable

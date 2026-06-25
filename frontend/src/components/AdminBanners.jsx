@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Edit2, Trash2, Image } from 'lucide-react';
-import { AdminTable, AdminModal, AdminFormInput, AdminFormSelect } from './AdminComponents';
+import { AdminTable, AdminModal, AdminFormInput, AdminFormSelect, ExportDataButton } from './AdminComponents';
 
 export default function AdminBanners({ banners, onAddBanner, onEditBanner, onDeleteBanner, onAddNotification }) {
   const [currentPage, setCurrentPage] = useState(1);
@@ -109,6 +109,15 @@ export default function AdminBanners({ banners, onAddBanner, onEditBanner, onDel
     </tr>
   );
 
+  const exportColumns = [
+    { header: 'Store', dataKey: 'storeName' },
+    { header: 'Title', dataKey: 'title' },
+    { header: 'Tag', dataKey: 'tag' },
+    { header: 'Cashback Rate', dataKey: 'cashbackRate' },
+    { header: 'CTA', dataKey: 'cta' },
+    { header: 'Status', dataKey: 'isActive' }
+  ];
+
   return (
     <div className="admin-banners-tab animate-fade">
       <div className="admin-page-header">
@@ -116,10 +125,13 @@ export default function AdminBanners({ banners, onAddBanner, onEditBanner, onDel
           <h2>Hero Banners</h2>
           <p>Manage the top homepage sliding banners and promotions.</p>
         </div>
-        <button className="admin-btn admin-btn-primary" onClick={openAddModal}>
-          <Plus size={16} />
-          Add Banner
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <ExportDataButton data={banners} columns={exportColumns} filename="Banners" />
+          <button className="admin-btn admin-btn-primary" onClick={openAddModal}>
+            <Plus size={16} />
+            Add Banner
+          </button>
+        </div>
       </div>
 
       <AdminTable

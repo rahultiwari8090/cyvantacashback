@@ -1,5 +1,6 @@
 import React from 'react';
-import { ChevronLeft, ChevronRight, Inbox, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Inbox, X, FileText, Download } from 'lucide-react';
+import { exportToCSV, exportToPDF } from '../utils/exportUtils';
 
 // Reusable Modal Component
 export function AdminModal({ isOpen, onClose, title, children, footer }) {
@@ -171,6 +172,30 @@ export function SkeletonLoader({ rows = 3 }) {
           <div className="admin-skeleton-line" style={{ width: '60%', height: '14px' }} />
         </div>
       ))}
+    </div>
+  );
+}
+
+// Export Data Buttons Component
+export function ExportDataButton({ data, columns, filename }) {
+  return (
+    <div style={{ display: 'flex', gap: '8px' }}>
+      <button 
+        className="admin-btn admin-btn-secondary" 
+        onClick={() => exportToCSV(data, columns, filename)}
+        title="Export as CSV"
+      >
+        <Download size={16} />
+        CSV
+      </button>
+      <button 
+        className="admin-btn admin-btn-secondary" 
+        onClick={() => exportToPDF(data, columns, filename, `${filename} Report`)}
+        title="Export as PDF"
+      >
+        <FileText size={16} />
+        PDF
+      </button>
     </div>
   );
 }

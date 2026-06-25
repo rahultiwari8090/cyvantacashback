@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
-import { AdminTable, AdminModal, AdminFormInput, AdminFormSelect } from './AdminComponents';
+import { AdminTable, AdminModal, AdminFormInput, AdminFormSelect, ExportDataButton } from './AdminComponents';
 
 export default function AdminCategories({ categories, onAddCategory, onDeleteCategory, onEditCategory }) {
   const [currentPage, setCurrentPage] = useState(1);
@@ -85,6 +85,13 @@ export default function AdminCategories({ categories, onAddCategory, onDeleteCat
     </tr>
   );
 
+  const exportColumns = [
+    { header: 'Category Name', dataKey: 'name' },
+    { header: 'Icon Symbol', dataKey: 'icon' },
+    { header: 'Status', dataKey: 'status' },
+    { header: 'Created Date', dataKey: 'created' }
+  ];
+
   return (
     <div className="admin-categories-tab animate-fade">
       <div className="admin-page-header">
@@ -92,10 +99,13 @@ export default function AdminCategories({ categories, onAddCategory, onDeleteCat
           <h2>Categories</h2>
           <p>Manage store categories and routing rules</p>
         </div>
-        <button className="admin-btn admin-btn-primary" onClick={openAddModal}>
-          <Plus size={16} />
-          Add Category
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <ExportDataButton data={categories} columns={exportColumns} filename="Categories" />
+          <button className="admin-btn admin-btn-primary" onClick={openAddModal}>
+            <Plus size={16} />
+            Add Category
+          </button>
+        </div>
       </div>
 
       <AdminTable

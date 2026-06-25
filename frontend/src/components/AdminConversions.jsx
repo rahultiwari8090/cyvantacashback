@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Search, Filter, Eye, DollarSign } from 'lucide-react';
-import { AdminTable, AdminModal, AdminFormInput, AdminFormSelect } from './AdminComponents';
+import { AdminTable, AdminModal, AdminFormInput, AdminFormSelect, ExportDataButton } from './AdminComponents';
 
 export default function AdminConversions({ conversions, onAdjustConversion, onAddNotification }) {
   const [currentPage, setCurrentPage] = useState(1);
@@ -84,12 +84,23 @@ export default function AdminConversions({ conversions, onAdjustConversion, onAd
     </tr>
   );
 
+  const exportColumns = [
+    { header: 'Sub ID', dataKey: 'subId' },
+    { header: 'Click ID', dataKey: 'clickId' },
+    { header: 'Commission (INR)', dataKey: 'commission' },
+    { header: 'Status', dataKey: 'status' },
+    { header: 'Log Date', dataKey: 'date' }
+  ];
+
   return (
     <div className="admin-conversions-tab animate-fade">
       <div className="admin-page-header">
         <div className="admin-page-title">
           <h2>Conversion Management</h2>
           <p>Verify retailer conversions, commission payouts, and make manual credit adjustments</p>
+        </div>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <ExportDataButton data={conversions} columns={exportColumns} filename="Conversions" />
         </div>
       </div>
 

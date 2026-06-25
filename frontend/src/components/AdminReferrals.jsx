@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Award, Share2, DollarSign, TrendingUp } from 'lucide-react';
-import { AdminTable } from './AdminComponents';
+import { AdminTable, ExportDataButton } from './AdminComponents';
 
 export default function AdminReferrals({ users }) {
   const [currentPage, setCurrentPage] = useState(1);
@@ -67,12 +67,22 @@ export default function AdminReferrals({ users }) {
     </tr>
   );
 
+  const exportColumns = [
+    { header: 'Rank', dataKey: 'rank' },
+    { header: 'User / Referrer', dataKey: 'user' },
+    { header: 'Invites Settled', dataKey: 'invites' },
+    { header: 'Total Bonus Earnings (INR)', dataKey: 'earnings' }
+  ];
+
   return (
     <div className="admin-referrals-tab animate-fade">
       <div className="admin-page-header">
         <div className="admin-page-title">
           <h2>Referrals & Analytics</h2>
           <p>Analyze referral networks, top performance nodes, and bonuses</p>
+        </div>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <ExportDataButton data={leaderboard} columns={exportColumns} filename="Referrals_Leaderboard" />
         </div>
       </div>
 

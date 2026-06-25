@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, Search, Filter, Edit2, Download, Terminal, Settings } from 'lucide-react';
-import { AdminTable, AdminModal, AdminFormInput, AdminFormSelect, AdminFormSwitch } from './AdminComponents';
+import { AdminTable, AdminModal, AdminFormInput, AdminFormSelect, AdminFormSwitch, ExportDataButton } from './AdminComponents';
 import { apiUpload } from '../services/api';
 
 // Mock Generator for Affiliate API responses
@@ -468,6 +468,16 @@ export default function AdminProducts({ products, stores = [], categories = [], 
     </tr>
   );
 
+  const exportColumns = [
+    { header: 'ID', dataKey: 'id' },
+    { header: 'Product Name', dataKey: 'name' },
+    { header: 'Platform', dataKey: 'platform' },
+    { header: 'Category', dataKey: 'category' },
+    { header: 'Price', dataKey: 'price' },
+    { header: 'Commission (%)', dataKey: 'cashbackValue' },
+    { header: 'Status', dataKey: 'status' }
+  ];
+
   return (
     <div className="admin-products-tab animate-fade">
       <div className="admin-page-header">
@@ -476,6 +486,7 @@ export default function AdminProducts({ products, stores = [], categories = [], 
           <p>Add, edit, and delete store products and configure commission rates</p>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
+          <ExportDataButton data={products} columns={exportColumns} filename="Products" />
           <button className="admin-btn admin-btn-secondary" onClick={openBulkModal}>
             <Download size={16} />
             Bulk Import API

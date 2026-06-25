@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Check, X, Search, Filter, Eye } from 'lucide-react';
-import { AdminTable, AdminModal } from './AdminComponents';
+import { AdminTable, AdminModal, ExportDataButton } from './AdminComponents';
 
 export default function AdminWithdrawals({ withdrawRequests, onApprove, onReject }) {
   const [currentPage, setCurrentPage] = useState(1);
@@ -73,12 +73,24 @@ export default function AdminWithdrawals({ withdrawRequests, onApprove, onReject
     </tr>
   );
 
+  const exportColumns = [
+    { header: 'ID', dataKey: 'id' },
+    { header: 'User Name', dataKey: 'userName' },
+    { header: 'Amount (INR)', dataKey: 'amount' },
+    { header: 'UPI Address', dataKey: 'upiId' },
+    { header: 'Date', dataKey: 'date' },
+    { header: 'Status', dataKey: 'status' }
+  ];
+
   return (
     <div className="admin-withdrawals-tab animate-fade">
       <div className="admin-page-header">
         <div className="admin-page-title">
           <h2>Withdrawal Management</h2>
           <p>Review and settle user cash-out claims to UPI bank handles</p>
+        </div>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <ExportDataButton data={withdrawRequests} columns={exportColumns} filename="Withdrawals" />
         </div>
       </div>
 
