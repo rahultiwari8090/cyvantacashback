@@ -40,6 +40,7 @@ import AdminStores from './AdminStores';
 import AdminBanners from './AdminBanners';
 import AdminAffiliateNetwork from './AdminAffiliateNetwork';
 import AdminSEO from './AdminSEO';
+import AdminLedger from './AdminLedger';
 
 import {
   apiUsers,
@@ -95,6 +96,7 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
     if (path === '/admin/stores' || hash === '#/admin/stores') return 'stores';
     if (path === '/admin/banners' || hash === '#/admin/banners') return 'banners';
     if (path === '/admin/affiliate-network' || hash === '#/admin/affiliate-network') return 'affiliate-network';
+    if (path === '/admin/ledger' || hash === '#/admin/ledger') return 'ledger';
     return 'dashboard';
   };
 
@@ -309,6 +311,7 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
     { id: 'categories', label: 'Categories', icon: ShoppingBag },
     { id: 'deals', label: 'Deals', icon: Gift },
     { id: 'affiliate-network', label: 'Affiliate Network', icon: Globe },
+    { id: 'ledger', label: 'Ledger Management', icon: Wallet },
     { id: 'seo', label: 'SEO', icon: FileText },
     { id: 'settings', label: 'Settings', icon: SettingsIcon },
   ];
@@ -320,9 +323,9 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
   // Fallback module lists for when permissions.allowedModules is missing (old sessions)
   const ROLE_MODULE_DEFAULTS = {
     'SUPER_ADMIN': null, // null = all modules
-    'ADMIN': ['dashboard', 'users', 'products', 'withdrawals', 'click-logs', 'conversions', 'referrals', 'shared-commissions', 'categories', 'deals', 'stores', 'banners', 'affiliate-network', 'seo', 'settings', 'finance'],
+    'ADMIN': ['dashboard', 'users', 'products', 'withdrawals', 'click-logs', 'conversions', 'referrals', 'shared-commissions', 'categories', 'deals', 'stores', 'banners', 'affiliate-network', 'ledger', 'seo', 'settings', 'finance'],
     'CONTENT_MANAGER': ['dashboard', 'products', 'categories', 'deals', 'stores', 'banners', 'seo'],
-    'AFFILIATE_MANAGER': ['dashboard', 'users', 'conversions', 'referrals', 'shared-commissions', 'click-logs', 'affiliate-network', 'finance'],
+    'AFFILIATE_MANAGER': ['dashboard', 'users', 'conversions', 'referrals', 'shared-commissions', 'click-logs', 'affiliate-network', 'ledger', 'finance'],
     'SUPPORT_ADMIN': ['dashboard', 'users', 'withdrawals', 'conversions'],
   };
 
@@ -807,6 +810,8 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
             onAddNotification={onAddNotification}
           />
         );
+      case 'ledger':
+        return <AdminLedger users={users} />;
       case 'categories':
         return (
           <AdminCategories

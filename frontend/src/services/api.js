@@ -174,7 +174,9 @@ export const apiAnalytics = {
 };
 
 export const apiFinance = {
-  getData: () => request('/finance')
+  getData: () => request('/finance'),
+  getLedger: () => request('/finance/ledger'),
+  getWallets: () => request('/finance/wallets')
 };
 
 export const apiWallet = {
