@@ -81,10 +81,6 @@ public class UserController {
     }
 
     // --- User Registration ---
-    @GetMapping("/health")
-    public ResponseEntity<String> healthCheck() {
-        return ResponseEntity.ok("OK");
-    }
 
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@RequestBody Map<String, String> body) {
@@ -154,9 +150,12 @@ public class UserController {
                 .build();
 
         userRepository.save(user);
-        sendOtp(user, otp);
-
-        return ResponseEntity.ok(Map.of("requireOtp", true, "message", "OTP sent", "identifier", email != null ? email : phone));
+        try {
+            sendOtp(user, otp);
+            return ResponseEntity.ok(Map.of("requireOtp", true, "message", "OTP sent", "identifier", email != null ? email : phone));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
     }
 
     private void sendOtp(User user, String otp) {
@@ -169,11 +168,13 @@ public class UserController {
             if (!sent) {
                 log.warn("[OTP] SMS delivery failed or provider not configured. Phone: {}", user.getPhone());
                 log.warn("[OTP] *** DEV FALLBACK *** OTP for {} is: {}", user.getPhone(), otp);
+                // The exception is now thrown from smsService directly!
             } else {
                 log.info("[OTP] SMS OTP sent successfully to {}", user.getPhone());
             }
         } else {
             log.error("[OTP] User {} has neither email nor phone — cannot send OTP!", user.getId());
+            throw new RuntimeException("User has neither email nor phone");
         }
     }
 
@@ -227,13 +228,16 @@ public class UserController {
             if (Boolean.TRUE.equals(user.getIsVerified()) && !"pending".equals(user.getStatus())) {
                 return ResponseEntity.badRequest().body(Map.of("error", "Account is already verified"));
             }
-            
             String otp = String.format("%06d", new Random().nextInt(999999));
             user.setOtp(otp);
             user.setOtpExpiry(LocalDateTime.now().plusMinutes(10));
             userRepository.save(user);
-            sendOtp(user, otp);
-            return ResponseEntity.ok((Object) Map.of("message", "OTP resent successfully"));
+            try {
+                sendOtp(user, otp);
+                return ResponseEntity.ok((Object) Map.of("message", "OTP resent successfully"));
+            } catch (Exception e) {
+                return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+            }
         }).orElse(ResponseEntity.badRequest().body(Map.of("error", "User not found")));
     }
 
@@ -254,19 +258,22 @@ public class UserController {
 
         return userOpt.map(user -> {
             if (Boolean.FALSE.equals(user.getIsVerified()) || "pending".equals(user.getStatus())) {
-                // Generate and send a fresh OTP so the user can verify
                 String otp = String.format("%06d", new Random().nextInt(999999));
                 user.setOtp(otp);
                 user.setOtpExpiry(LocalDateTime.now().plusMinutes(10));
                 userRepository.save(user);
-                sendOtp(user, otp);
                 log.info("[LOGIN] Unverified user {} attempted login, sending fresh OTP", identifier);
-                return ResponseEntity.status(403).body((Object) Map.of(
-                    "error", "Please verify your account to log in.",
-                    "requireOtp", true,
-                    "message", "A verification code has been sent to " + identifier,
-                    "identifier", identifier
-                ));
+                try {
+                    sendOtp(user, otp);
+                    return ResponseEntity.status(403).body((Object) Map.of(
+                        "error", "Please verify your account to log in.",
+                        "requireOtp", true,
+                        "message", "A verification code has been sent to " + identifier,
+                        "identifier", identifier
+                    ));
+                } catch (Exception e) {
+                    return ResponseEntity.status(500).body((Object) Map.of("error", e.getMessage()));
+                }
             }
 
             String stored = user.getPasswordHash();

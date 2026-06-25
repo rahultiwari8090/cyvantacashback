@@ -72,7 +72,7 @@ public class SmsService {
         log.info("===========================================");
         log.info("[SMS SIMULATOR] OTP for {}: {}", phone, otp);
         log.info("===========================================");
-        return false;
+        throw new RuntimeException("No valid SMS provider configured or all providers failed.");
     }
 
     // ==================== Fast2SMS Quick Route ====================
@@ -121,12 +121,16 @@ public class SmsService {
                     log.info("[SMS] Fast2SMS OTP sent successfully to {}", mobileNumber);
                     return true;
                 }
-                log.error("[SMS] Fast2SMS returned: return={}, message={}", returnValue, message);
+                log.error("[SMS] Fast2SMS rejected request: {}", message);
+                return false;
+            } else {
+                log.error("[SMS] Fast2SMS HTTP Error: {} - {}", response.getStatusCode(), response.getBody());
+                return false;
             }
         } catch (Exception e) {
             log.error("[SMS] Fast2SMS sendOtp failed for {}: {}", phone, e.getMessage());
+            return false;
         }
-        return false;
     }
 
     /**
