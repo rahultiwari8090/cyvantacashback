@@ -98,7 +98,7 @@ public class SmsService {
 
         try {
             HttpHeaders headers = new HttpHeaders();
-            headers.set("authorization", fast2smsApiKey);
+            headers.set("authorization", fast2smsApiKey != null ? fast2smsApiKey.trim() : "");
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
             headers.set("Accept", "*/*");
