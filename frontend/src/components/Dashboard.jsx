@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Wallet, Link, History, Gift, Copy, Check, ShieldCheck, ArrowUpRight, Share2, Percent, Trash2, Play, ExternalLink, Plus } from 'lucide-react';
+import { Wallet, Link, History, Gift, Copy, Check, ShieldCheck, ArrowUpRight, Share2, Percent, Trash2, Play, ExternalLink, Plus, BookOpen } from 'lucide-react';
 import { apiSharedLinks, apiSharedCommissions, apiSettings } from '../services/api';
+import UserLedger from './UserLedger';
 
 const DUMMY_CLICKS = [];
 
@@ -169,6 +170,12 @@ export default function Dashboard({ currentUser, onAddNotification, setView }) {
             onClick={() => setActiveTab('refer')}
           >
             <Link size={18} /> Refer & Earn 10%
+          </div>
+          <div
+            className={`dashboard-menu-item ${activeTab === 'ledger' ? 'active' : ''}`}
+            onClick={() => setActiveTab('ledger')}
+          >
+            <BookOpen size={18} /> My Ledger
           </div>
 
         <div style={{ marginTop: 'auto', borderTop: '1px solid var(--border)', paddingTop: '16px', fontSize: '13px', color: 'var(--text)' }}>
@@ -504,6 +511,10 @@ export default function Dashboard({ currentUser, onAddNotification, setView }) {
               )}
             </div>
           </div>
+        )}
+
+        {activeTab === 'ledger' && (
+          <UserLedger currentUser={currentUser} onAddNotification={onAddNotification} />
         )}
 
         {activeTab === 'refer' && (

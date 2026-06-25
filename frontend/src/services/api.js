@@ -180,7 +180,9 @@ export const apiFinance = {
 };
 
 export const apiWallet = {
-  getLedger: (userId) => request(`/wallet/${userId}/ledger`)
+  getLedger: (userId) => request(`/wallet/${userId}/ledger`),
+  getFullLedger: (userId) => request(`/wallet/${userId}/full-ledger`),
+  getBalance: (userId) => request(`/wallet/${userId}`),
 };
 
 export const apiSettings = {
