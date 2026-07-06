@@ -112,8 +112,8 @@ export default function AuthModal({ isOpen, onClose, onLogin }) {
 
   const handleOtpSubmit = (e) => {
     e.preventDefault();
-    if (!otp || otp.length < 6) {
-      setError('Please enter a valid 6-digit OTP');
+    if (!otp || otp.length < 4) {
+      setError('Please enter the OTP from your SMS');
       return;
     }
 
@@ -315,19 +315,23 @@ export default function AuthModal({ isOpen, onClose, onLogin }) {
                 />
                 <input
                   type="text"
-                  placeholder="Enter 6-digit code"
+                  placeholder="Enter OTP code"
                   className="form-input"
-                  style={{ paddingLeft: '36px', width: '100%', letterSpacing: '2px', textAlign: 'center', fontSize: '16px', fontWeight: 'bold' }}
+                  style={{ paddingLeft: '36px', width: '100%', letterSpacing: '4px', textAlign: 'center', fontSize: '20px', fontWeight: 'bold' }}
                   value={otp}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                   disabled={loading}
                   required
                   maxLength={6}
+                  autoComplete="one-time-code"
+                  inputMode="numeric"
                 />
               </div>
             </div>
 
-            <button type="submit" className="btn-auth-submit" disabled={loading || otp.length < 6}>
+            <button type="submit" className="btn-auth-submit" disabled={loading || otp.length < 4}
+              style={{ opacity: (loading || otp.length < 4) ? 0.5 : 1, cursor: (loading || otp.length < 4) ? 'not-allowed' : 'pointer' }}
+            >
               {loading ? 'Verifying...' : 'Verify OTP & Continue'}
             </button>
 

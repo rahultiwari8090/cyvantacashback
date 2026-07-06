@@ -116,6 +116,7 @@ public class SmsService {
                 + "?countryCode=" + countryCode
                 + "&customerId=" + customerId
                 + "&flowType=SMS"
+                + "&otpLength=6"
                 + "&mobileNumber=" + mobile;
 
         try {
