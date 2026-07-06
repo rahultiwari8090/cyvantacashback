@@ -164,11 +164,19 @@ public class UserController {
             emailService.sendOtpEmail(user.getEmail(), otp);
         } else if (user.getPhone() != null) {
             log.info("[OTP] Sending OTP via SMS to phone={}", user.getPhone());
-            String verificationId = smsService.sendOtpSms(user.getPhone(), otp);
-            // Persist verificationId in DB so it survives server restarts
-            user.setMcVerificationId(verificationId);
-            userRepository.save(user);
-            log.info("[OTP] SMS OTP sent successfully to {}, verificationId saved", user.getPhone());
+            try {
+                String verificationId = smsService.sendOtpSms(user.getPhone(), otp);
+                // Persist verificationId so it survives server restarts
+                user.setMcVerificationId(verificationId);
+                userRepository.save(user);
+                log.info("[OTP] SMS OTP sent successfully to {}, verificationId={}", user.getPhone(), verificationId);
+            } catch (Exception e) {
+                // MessageCentral failed (rate limit, network, etc.) — fall back to local OTP
+                log.warn("[OTP] MessageCentral failed for {}: {}. Falling back to local OTP.", user.getPhone(), e.getMessage());
+                user.setMcVerificationId(null); // null signals: use local OTP for verification
+                userRepository.save(user);
+                // Don't rethrow — user will verify with local OTP
+            }
         } else {
             log.error("[OTP] User {} has neither email nor phone — cannot send OTP!", user.getId());
             throw new RuntimeException("User has neither email nor phone");
@@ -193,21 +201,28 @@ public class UserController {
             }
 
             boolean otpValid;
-            if (user.getPhone() != null && smsService.isMessageCentralActive()) {
-                // Phone-based OTP: validate via MessageCentral VerifyNow API using persisted verificationId
+            if (user.getPhone() != null && smsService.isMessageCentralActive() && user.getMcVerificationId() != null) {
+                // Phone-based: validate via MessageCentral using persisted verificationId
                 String verificationId = user.getMcVerificationId();
-                log.info("[OTP] Validating phone OTP via MessageCentral for {}, verificationId={}", user.getPhone(), verificationId);
+                log.info("[OTP] Validating via MessageCentral for {}, verificationId={}", user.getPhone(), verificationId);
                 otpValid = smsService.verifyMessageCentralOtp(verificationId, otp);
+                if (!otpValid) {
+                    // MessageCentral rejected — also try local OTP as backup
+                    log.warn("[OTP] MessageCentral rejected, trying local OTP fallback");
+                    otpValid = user.getOtp() != null && user.getOtp().equals(otp)
+                            && user.getOtpExpiry() != null && user.getOtpExpiry().isAfter(LocalDateTime.now());
+                }
                 if (!otpValid) {
                     return ResponseEntity.badRequest().body(Map.of("error", "Invalid or expired OTP code"));
                 }
             } else {
-                // Email-based OTP: validate against local DB copy
+                // Email-based OR MessageCentral was unavailable (fallback to local OTP)
+                log.info("[OTP] Validating via local DB OTP for identifier={}", identifier);
                 if (user.getOtp() == null || !user.getOtp().equals(otp)) {
                     return ResponseEntity.badRequest().body(Map.of("error", "Invalid OTP code"));
                 }
                 if (user.getOtpExpiry() == null || user.getOtpExpiry().isBefore(LocalDateTime.now())) {
-                    return ResponseEntity.badRequest().body(Map.of("error", "OTP has expired"));
+                    return ResponseEntity.badRequest().body(Map.of("error", "OTP has expired. Please request a new one."));
                 }
             }
 

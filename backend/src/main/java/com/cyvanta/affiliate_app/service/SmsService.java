@@ -159,6 +159,7 @@ public class SmsService {
     private boolean validateOtpRequest(String verificationId, String code) {
         String url = BASE_URL + "/verification/v3/validateOtp"
                 + "?countryCode=" + countryCode
+                + "&customerId=" + customerId
                 + "&verificationId=" + verificationId
                 + "&code=" + code;
 
@@ -172,12 +173,12 @@ public class SmsService {
 
             HttpEntity<Void> request = new HttpEntity<>(headers);
 
-            // Use exchange() instead of postForEntity() so we can read body even on 4xx
+            // Use GET — MessageCentral /verification/v3/validateOtp is a GET endpoint
             ResponseEntity<String> response;
             try {
-                response = restTemplate.exchange(url, org.springframework.http.HttpMethod.POST, request, String.class);
+                response = restTemplate.exchange(url, org.springframework.http.HttpMethod.GET, request, String.class);
             } catch (org.springframework.web.client.HttpClientErrorException ex) {
-                // MessageCentral returns 4xx on wrong OTP — read body anyway
+                // Read body even on 4xx
                 log.warn("[SMS] validateOtp HTTP error: status={}, body={}", ex.getStatusCode(), ex.getResponseBodyAsString());
                 return parseValidateResponse(ex.getResponseBodyAsString());
             }
