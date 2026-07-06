@@ -117,6 +117,7 @@ public class SmsService {
                 + "&customerId=" + customerId
                 + "&flowType=SMS"
                 + "&otpLength=6"
+                + "&otpExpiresIn=600"
                 + "&mobileNumber=" + mobile;
 
         try {
@@ -151,6 +152,9 @@ public class SmsService {
     /**
      * POST /verification/v3/validateOtp?countryCode=&verificationId=&code=
      * Header: authToken: <static token>
+     *
+     * MessageCentral may return HTTP 4xx with a JSON body even on invalid OTP,
+     * so we must read the body regardless of status code.
      */
     private boolean validateOtpRequest(String verificationId, String code) {
         String url = BASE_URL + "/verification/v3/validateOtp"
@@ -158,28 +162,72 @@ public class SmsService {
                 + "&verificationId=" + verificationId
                 + "&code=" + code;
 
+        log.info("[SMS] Calling validateOtp URL: {}", url);
+
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.set("authToken", authToken.trim());
+            headers.set("customerId", customerId.trim());
             headers.setContentType(MediaType.APPLICATION_JSON);
 
             HttpEntity<Void> request = new HttpEntity<>(headers);
-            ResponseEntity<String> response = restTemplate.postForEntity(url, request, String.class);
 
-            log.info("[SMS] Validate OTP response: status={}, body={}", response.getStatusCode(), response.getBody());
-
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                JsonNode json = objectMapper.readTree(response.getBody());
-
-                if (json.has("verificationStatus"))
-                    return "VERIFICATION_COMPLETED".equalsIgnoreCase(json.get("verificationStatus").asText());
-                if (json.has("data") && json.get("data").has("verificationStatus"))
-                    return "VERIFICATION_COMPLETED".equalsIgnoreCase(json.get("data").get("verificationStatus").asText());
-                if (json.has("responseCode"))
-                    return json.get("responseCode").asInt() == 200;
+            // Use exchange() instead of postForEntity() so we can read body even on 4xx
+            ResponseEntity<String> response;
+            try {
+                response = restTemplate.exchange(url, org.springframework.http.HttpMethod.POST, request, String.class);
+            } catch (org.springframework.web.client.HttpClientErrorException ex) {
+                // MessageCentral returns 4xx on wrong OTP — read body anyway
+                log.warn("[SMS] validateOtp HTTP error: status={}, body={}", ex.getStatusCode(), ex.getResponseBodyAsString());
+                return parseValidateResponse(ex.getResponseBodyAsString());
             }
+
+            log.info("[SMS] validateOtp response: status={}, body={}", response.getStatusCode(), response.getBody());
+            return parseValidateResponse(response.getBody());
+
         } catch (Exception e) {
-            log.error("[SMS] validateOtpRequest exception: {}", e.getMessage());
+            log.error("[SMS] validateOtpRequest exception: {}", e.getMessage(), e);
+        }
+        return false;
+    }
+
+    /** Parse MessageCentral validateOtp response — handles all known response shapes */
+    private boolean parseValidateResponse(String body) {
+        if (body == null || body.isBlank()) {
+            log.warn("[SMS] validateOtp: empty response body");
+            return false;
+        }
+        try {
+            JsonNode json = objectMapper.readTree(body);
+            log.info("[SMS] Parsed validateOtp JSON: {}", json);
+
+            // Shape 1: top-level verificationStatus
+            if (json.has("verificationStatus")) {
+                String status = json.get("verificationStatus").asText();
+                log.info("[SMS] verificationStatus (top-level): {}", status);
+                return "VERIFICATION_COMPLETED".equalsIgnoreCase(status);
+            }
+            // Shape 2: data.verificationStatus
+            if (json.has("data") && json.get("data").has("verificationStatus")) {
+                String status = json.get("data").get("verificationStatus").asText();
+                log.info("[SMS] verificationStatus (in data): {}", status);
+                return "VERIFICATION_COMPLETED".equalsIgnoreCase(status);
+            }
+            // Shape 3: top-level responseCode == 200
+            if (json.has("responseCode")) {
+                int code = json.get("responseCode").asInt();
+                log.info("[SMS] responseCode: {}", code);
+                return code == 200;
+            }
+            // Shape 4: data.responseCode == "200"
+            if (json.has("data") && json.get("data").has("responseCode")) {
+                String code = json.get("data").get("responseCode").asText();
+                log.info("[SMS] data.responseCode: {}", code);
+                return "200".equals(code);
+            }
+            log.warn("[SMS] Unknown validateOtp response shape: {}", body);
+        } catch (Exception e) {
+            log.error("[SMS] parseValidateResponse error: {}", e.getMessage());
         }
         return false;
     }
