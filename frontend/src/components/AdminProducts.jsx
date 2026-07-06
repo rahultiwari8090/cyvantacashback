@@ -98,7 +98,7 @@ export default function AdminProducts({ products, stores = [], categories = [], 
   // Credentials
   const [awsAccessKey, setAwsAccessKey] = useState('AKIAIOSFODNN7EXAMPLE');
   const [awsSecretKey, setAwsSecretKey] = useState('wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY');
-  const [awsAssociateTag, setAwsAssociateTag] = useState('cyvanta-21');
+  const [awsAssociateTag, setAwsAssociateTag] = useState('liomart-21');
   const [showCredentials, setShowCredentials] = useState(false);
 
   // Raw states
@@ -169,7 +169,7 @@ export default function AdminProducts({ products, stores = [], categories = [], 
       `[GET] Querying GET /paapi5/searchitems?Keywords=${encodeURIComponent(apiKeyword)}&Category=${apiCategory}...`,
       `[NET] Request routed to regional endpoint. Connection successful.`,
       `[PARSE] JSON response received (200 OK). Parsing product nodes...`,
-      `[SYNC] Mapping vendor schema fields to Cyvanta product standards...`,
+      `[SYNC] Mapping vendor schema fields to LIO MART product standards...`,
       `[SUCCESS] Correctly loaded ${apiLimit} mock affiliate products. Select items to import below.`
     ];
 

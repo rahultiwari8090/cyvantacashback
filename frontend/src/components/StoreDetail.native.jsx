@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Share } from 'react-native';
 import { ArrowLeft, Clock, Copy, Check, ShieldAlert, Sparkles, ExternalLink } from 'lucide-react-native';
 
-export default function StoreDetail({ store, onBack, onAddNotification, theme }) {
+export default function StoreDetail({ store, onBack, onAddNotification, theme, deals = [], onGrabDeal }) {
   const [copiedCouponId, setCopiedCouponId] = useState(null);
   const [activatingDealId, setActivatingDealId] = useState(null);
 
@@ -147,12 +147,48 @@ export default function StoreDetail({ store, onBack, onAddNotification, theme })
         ))}
       </View>
 
+      {/* Deals Section */}
+      {deals && deals.length > 0 && (
+        <View style={{ marginBottom: 20 }}>
+          <Text style={[styles.sectionTitle, themeStyles.text, { marginBottom: 12 }]}>Featured Products & Deals</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dealsScroll}>
+            {deals.map((deal) => {
+              const discountPercent = Math.round(((deal.retailPrice - deal.dealPrice) / deal.retailPrice) * 100) || 33;
+              const finalEffectivePrice = (deal.dealPrice - deal.cashbackEarned).toFixed(2);
+              return (
+                <TouchableOpacity key={deal.id} style={[styles.homeDealCard, themeStyles.card]} onPress={() => onGrabDeal && onGrabDeal(deal)}>
+                  <View style={styles.dealDiscountTag}>
+                    <Text style={styles.dealDiscountTagText}>{discountPercent}% OFF</Text>
+                  </View>
+                  <Image source={{ uri: deal.image }} style={styles.homeDealImage} resizeMode="contain" />
+                  <View style={styles.homeDealInfo}>
+                    <Text style={[styles.homeDealTitle, themeStyles.text]} numberOfLines={1}>{deal.title}</Text>
+                    <View style={styles.homeDealPrices}>
+                      <Text style={[styles.homeDealRetail, themeStyles.textMuted]}>₹{deal.retailPrice.toFixed(2)}</Text>
+                      <Text style={[styles.homeDealSpecial, themeStyles.text]}>₹{deal.dealPrice.toFixed(2)}</Text>
+                    </View>
+                    <Text style={styles.homeDealCashback}>+₹{deal.cashbackEarned.toFixed(2)} CB</Text>
+                    <View style={styles.homeDealEffectiveRow}>
+                      <Text style={styles.homeDealEffectiveLabel}>Effective Price:</Text>
+                      <Text style={styles.homeDealEffectiveValue}>₹{finalEffectivePrice}</Text>
+                    </View>
+                    <TouchableOpacity style={[styles.homeDealGrabBtn, { backgroundColor: '#ff4f2f' }]} onPress={() => onGrabDeal && onGrabDeal(deal)}>
+                      <Text style={styles.homeDealGrabBtnText}>Grab Deal</Text>
+                    </TouchableOpacity>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
+
       {/* Guidelines Card */}
       <View style={[styles.guidelinesCard, themeStyles.card]}>
         <Text style={[styles.cardTitle, themeStyles.text]}>How to earn Cashback?</Text>
         <View style={styles.bulletItem}>
           <Text style={styles.bulletSymbol}>•</Text>
-          <Text style={[styles.bulletText, themeStyles.textMuted]}>Always start your session by clicking out from Cyvanta.</Text>
+          <Text style={[styles.bulletText, themeStyles.textMuted]}>Always start your session by clicking out from LIO MART.</Text>
         </View>
         <View style={styles.bulletItem}>
           <Text style={styles.bulletSymbol}>•</Text>
@@ -176,7 +212,7 @@ export default function StoreDetail({ store, onBack, onAddNotification, theme })
         </View>
         <Text style={[styles.termsText, isDark && { color: '#fca5a5' }]}>
           Cashback is not paid on bulk purchases, wholesale transactions, or cancelled/returned orders.
-          Cashback tracking may take up to 48 hours to display as "Pending" in your Cyvanta wallet.
+          Cashback tracking may take up to 48 hours to display as "Pending" in your LIO MART wallet.
         </Text>
       </View>
     </ScrollView>
@@ -406,5 +442,98 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#991b1b',
     lineHeight: 15,
+  },
+  dealsScroll: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  homeDealCard: {
+    width: 170,
+    borderRadius: 12,
+    padding: 10,
+    marginRight: 12,
+    position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.02,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  dealDiscountTag: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: '#ff4f2f',
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    zIndex: 2,
+  },
+  dealDiscountTagText: {
+    color: '#fff',
+    fontSize: 8,
+    fontWeight: '800',
+  },
+  homeDealImage: {
+    width: '100%',
+    height: 90,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    marginBottom: 6,
+  },
+  homeDealInfo: {
+    gap: 2,
+  },
+  homeDealTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  homeDealPrices: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  homeDealRetail: {
+    fontSize: 10,
+    textDecorationLine: 'line-through',
+  },
+  homeDealSpecial: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  homeDealCashback: {
+    fontSize: 10,
+    color: '#10b981',
+    fontWeight: '700',
+  },
+  homeDealEffectiveRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+    paddingTop: 4,
+    marginTop: 4,
+  },
+  homeDealEffectiveLabel: {
+    fontSize: 9,
+    color: '#94a3b8',
+    fontWeight: '600',
+  },
+  homeDealEffectiveValue: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#ff4f2f',
+  },
+  homeDealGrabBtn: {
+    borderRadius: 6,
+    paddingVertical: 5,
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  homeDealGrabBtnText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
   },
 });

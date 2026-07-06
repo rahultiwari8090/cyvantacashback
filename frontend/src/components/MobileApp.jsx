@@ -26,8 +26,12 @@ import {
   Heart,
   ShoppingCart,
   Plane,
-  Sparkles
+  Sparkles,
+  BookOpen,
+  HelpCircle
 } from 'lucide-react';
+import UserLedger from './UserLedger';
+import UserSupport from './UserSupport';
 
 const STORES_INFO = [
   { platform: 'Amazon', logo: 'https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg', cashbackPercent: 10.0 },
@@ -300,8 +304,8 @@ export default function MobileApp({
       {/* Top Application Header */}
       <div className="mobile-app-header">
         <div className="app-branding">
-          <div className="app-logo-bullet">C</div>
-          <span>Cyvanta Mobile</span>
+          <img src="/logo.webp" alt="Lio Mart" style={{ width: '28px', height: '28px', objectFit: 'contain', marginRight: '8px' }} />
+          <span>LIO MART</span>
         </div>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1071,6 +1075,34 @@ export default function MobileApp({
             </div>
           </div>
         )}
+        {activeTab === 'ledger' && (
+          <div className="mobile-screen-tab-panel animate-fade">
+            {isGuest ? (
+              <div className="app-empty-state-card">
+                <AlertCircle size={32} style={{ color: 'var(--primary)', marginBottom: '8px' }} />
+                <h4>Login Required</h4>
+                <p>Please login to view your financial ledger.</p>
+                <button className="app-login-btn" style={{ margin: '12px auto 0' }} onClick={openAuthModal}>Login / Sign Up</button>
+              </div>
+            ) : (
+              <UserLedger currentUser={currentUser} onAddNotification={onAddNotification} />
+            )}
+          </div>
+        )}
+        {activeTab === 'support' && (
+          <div className="mobile-screen-tab-panel animate-fade">
+            {isGuest ? (
+              <div className="app-empty-state-card">
+                <AlertCircle size={32} style={{ color: 'var(--primary)', marginBottom: '8px' }} />
+                <h4>Login Required</h4>
+                <p>Please login to access the support system.</p>
+                <button className="app-login-btn" style={{ margin: '12px auto 0' }} onClick={openAuthModal}>Login / Sign Up</button>
+              </div>
+            ) : (
+              <UserSupport currentUser={currentUser} onAddNotification={onAddNotification} />
+            )}
+          </div>
+        )}
       </>
     )}
   </div>
@@ -1215,6 +1247,22 @@ export default function MobileApp({
         >
           <Clock size={18} />
           <span>Track</span>
+        </div>
+
+        <div 
+          className={`app-nav-item ${activeTab === 'ledger' ? 'active' : ''}`}
+          onClick={() => setActiveTab('ledger')}
+        >
+          <BookOpen size={18} />
+          <span>Ledger</span>
+        </div>
+
+        <div 
+          className={`app-nav-item ${activeTab === 'support' ? 'active' : ''}`}
+          onClick={() => setActiveTab('support')}
+        >
+          <HelpCircle size={18} />
+          <span>Support</span>
         </div>
 
         <div 

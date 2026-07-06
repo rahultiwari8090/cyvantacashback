@@ -7,7 +7,7 @@ export default function HowItWorks() {
       <div className="section-header">
         <div className="section-title-wrap">
           <Info className="section-icon" size={24} />
-          <h3 className="section-title">How Cyvanta Works</h3>
+          <h3 className="section-title">How LIO MART Works</h3>
         </div>
       </div>
 

@@ -1954,12 +1954,25 @@
   border-radius: 99px;
 }
 
+/* Mobile App Layout Root */
+.mobile-app-layout-root {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: fixed;
+  top: 0;
+  left: 0;
+  background-color: var(--bg);
+}
+
 /* Mobile App Layout Wrapper */
 .mobile-app-container {
   flex: 1;
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
   width: 100%;
   position: relative;
   background-color: var(--bg);
@@ -2079,7 +2092,8 @@
   color: var(--text);
   opacity: 0.6;
   cursor: pointer;
-  width: 50px;
+  flex: 1;
+  max-width: 75px;
   transition: all 0.2s ease;
 }
 

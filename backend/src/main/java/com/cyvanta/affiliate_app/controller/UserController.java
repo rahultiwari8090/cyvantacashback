@@ -164,14 +164,11 @@ public class UserController {
             emailService.sendOtpEmail(user.getEmail(), otp);
         } else if (user.getPhone() != null) {
             log.info("[OTP] Sending OTP via SMS to phone={}", user.getPhone());
-            boolean sent = smsService.sendOtpSms(user.getPhone(), otp);
-            if (!sent) {
-                log.warn("[OTP] SMS delivery failed or provider not configured. Phone: {}", user.getPhone());
-                log.warn("[OTP] *** DEV FALLBACK *** OTP for {} is: {}", user.getPhone(), otp);
-                // The exception is now thrown from smsService directly!
-            } else {
-                log.info("[OTP] SMS OTP sent successfully to {}", user.getPhone());
-            }
+            String verificationId = smsService.sendOtpSms(user.getPhone(), otp);
+            // Persist verificationId in DB so it survives server restarts
+            user.setMcVerificationId(verificationId);
+            userRepository.save(user);
+            log.info("[OTP] SMS OTP sent successfully to {}, verificationId saved", user.getPhone());
         } else {
             log.error("[OTP] User {} has neither email nor phone — cannot send OTP!", user.getId());
             throw new RuntimeException("User has neither email nor phone");
@@ -194,17 +191,31 @@ public class UserController {
             if (Boolean.TRUE.equals(user.getIsVerified()) && !"pending".equals(user.getStatus())) {
                 return ResponseEntity.badRequest().body(Map.of("error", "Account is already verified"));
             }
-            if (user.getOtp() == null || !user.getOtp().equals(otp)) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Invalid OTP code"));
-            }
-            if (user.getOtpExpiry() == null || user.getOtpExpiry().isBefore(LocalDateTime.now())) {
-                return ResponseEntity.badRequest().body(Map.of("error", "OTP has expired"));
+
+            boolean otpValid;
+            if (user.getPhone() != null && smsService.isMessageCentralActive()) {
+                // Phone-based OTP: validate via MessageCentral VerifyNow API using persisted verificationId
+                String verificationId = user.getMcVerificationId();
+                log.info("[OTP] Validating phone OTP via MessageCentral for {}, verificationId={}", user.getPhone(), verificationId);
+                otpValid = smsService.verifyMessageCentralOtp(verificationId, otp);
+                if (!otpValid) {
+                    return ResponseEntity.badRequest().body(Map.of("error", "Invalid or expired OTP code"));
+                }
+            } else {
+                // Email-based OTP: validate against local DB copy
+                if (user.getOtp() == null || !user.getOtp().equals(otp)) {
+                    return ResponseEntity.badRequest().body(Map.of("error", "Invalid OTP code"));
+                }
+                if (user.getOtpExpiry() == null || user.getOtpExpiry().isBefore(LocalDateTime.now())) {
+                    return ResponseEntity.badRequest().body(Map.of("error", "OTP has expired"));
+                }
             }
 
             user.setIsVerified(true);
             user.setStatus("active");
             user.setOtp(null);
             user.setOtpExpiry(null);
+            user.setMcVerificationId(null); // clear after successful verification
             User savedUser = userRepository.save(user);
 
             Wallet wallet = walletService.getOrCreateWallet(savedUser.getId());

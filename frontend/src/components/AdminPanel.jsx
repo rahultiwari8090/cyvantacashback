@@ -294,7 +294,7 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
     return () => clearInterval(interval);
   }, [trackedOrders]);
 
-  const adminEmail = currentUser ? currentUser.email : "admin@cyvanta.com";
+  const adminEmail = currentUser ? currentUser.email : "admin@liomart.com";
   const adminName = currentUser ? currentUser.name : "Administrator";
   const adminInitials = currentUser && currentUser.name ? currentUser.name.substring(0, 2).toUpperCase() : "AD";
 
@@ -895,12 +895,29 @@ export default function AdminPanel({ currentUser, onLogout, theme, toggleTheme, 
 
   return (
     <div className="admin-layout animate-fade">
+      {/* Mobile Sidebar Backdrop */}
+      {isMobileOpen && (
+        <div
+          className="admin-sidebar-backdrop"
+          onClick={() => setIsMobileOpen(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            backdropFilter: 'blur(2px)',
+            zIndex: 99,
+          }}
+        />
+      )}
       {/* Sidebar Component */}
       <aside className={`admin-sidebar ${isSidebarCollapsed ? 'collapsed' : ''} ${isMobileOpen ? 'mobile-open' : ''}`}>
         <div className="admin-sidebar-logo" onClick={() => setActiveTab('dashboard')}>
-          <div className="logo-icon">C</div>
+          <div className="logo-icon">L</div>
           <h2>
-            Cyvanta<span>Admin</span>
+            LIO<span> MART Admin</span>
           </h2>
         </div>
 

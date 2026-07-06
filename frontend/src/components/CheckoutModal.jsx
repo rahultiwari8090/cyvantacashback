@@ -23,7 +23,7 @@ export default function CheckoutModal({ deal, store, onClose, onPlaceOrder }) {
       }, 2500);
       
       // Attempt actual UPI intent for mobile devices
-      const upiUrl = `upi://pay?pa=merchant@upi&pn=Cyvanta&am=${totalAmount}&cu=INR`;
+      const upiUrl = `upi://pay?pa=merchant@upi&pn=LioMart&am=${totalAmount}&cu=INR`;
       if (typeof window !== 'undefined' && /Mobi|Android/i.test(navigator.userAgent)) {
         window.location.href = upiUrl;
       }

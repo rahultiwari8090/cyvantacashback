@@ -67,12 +67,7 @@ export default function Dashboard({ currentUser, onAddNotification, setView }) {
         userSharePercent: 100
       });
       const defaultShortUrl = `${window.location.origin}/#/share/${newLink.id}`;
-      const correctShortUrl = newLink.shortUrl
-        ? newLink.shortUrl.includes('cyvanta.cashback')
-          ? newLink.shortUrl.replace('https://cyvanta.cashback', window.location.origin + '/#')
-          : newLink.shortUrl
-        : defaultShortUrl;
-      const savedLink = { ...newLink, shortUrl: correctShortUrl };
+      const savedLink = { ...newLink, shortUrl: defaultShortUrl };
       setSharedLinks(prev => [savedLink, ...prev]);
       setGeneratedShortUrl(correctShortUrl);
       setNewLinkProduct('');
@@ -115,8 +110,7 @@ export default function Dashboard({ currentUser, onAddNotification, setView }) {
   };
 
   const handleCopySharedLink = (linkUrl, linkId) => {
-    const correctLink = linkUrl.includes('cyvanta.cashback') ? linkUrl.replace('https://cyvanta.cashback', window.location.origin + '/#') : linkUrl;
-    navigator.clipboard.writeText(correctLink);
+    navigator.clipboard.writeText(linkUrl);
     setCopiedSharedId(linkId);
     onAddNotification('Shared link copied to clipboard!', 'success');
     setTimeout(() => setCopiedSharedId(null), 2000);
@@ -187,7 +181,7 @@ export default function Dashboard({ currentUser, onAddNotification, setView }) {
 
         <div style={{ marginTop: 'auto', borderTop: '1px solid var(--border)', paddingTop: '16px', fontSize: '13px', color: 'var(--text)' }}>
           <span style={{ fontWeight: 600, display: 'block', marginBottom: '4px' }}>Help & Support</span>
-          Email: support@cyvanta.com
+          Email: support@liomart.com
         </div>
         </div>
       </div>
@@ -406,9 +400,7 @@ export default function Dashboard({ currentUser, onAddNotification, setView }) {
                     </thead>
                     <tbody>
                       {sharedLinks.map(link => {
-                        const displayLink = link.shortUrl
-                          ? (link.shortUrl.includes('cyvanta.cashback') ? link.shortUrl.replace('https://cyvanta.cashback', window.location.origin + '/#') : link.shortUrl)
-                          : `${window.location.origin}/#/share/${link.id}`;
+                        const displayLink = link.shortUrl || `${window.location.origin}/#/share/${link.id}`;
                         return (
                           <tr key={link.id}>
                             <td>{link.date}</td>

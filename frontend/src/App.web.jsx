@@ -517,13 +517,11 @@ export default function App() {
     }
     
     const link = storeItem?.link || dealItem?.affiliateUrl || dealItem?.link;
-    setTimeout(() => {
-      if (link) {
-        window.open(link, '_blank');
-      } else {
-        window.open('https://google.com', '_blank');
-      }
-    }, 1500);
+    if (link) {
+      window.open(link, '_blank');
+    } else {
+      window.open('https://google.com', '_blank');
+    }
   };
 
   const finalizeCheckout = (deal, store) => {
@@ -549,8 +547,8 @@ export default function App() {
         productUrl: item.link || 'https://google.com',
         userSharePercent: 100
       });
-      if (generated.shortUrl && generated.shortUrl.includes('cyvanta.cashback')) {
-         generated.shortUrl = generated.shortUrl.replace('https://cyvanta.cashback', window.location.origin + '/#');
+      if (generated.shortUrl && generated.shortUrl.includes('liomart.com')) {
+         generated.shortUrl = generated.shortUrl.replace('https://liomart.com', window.location.origin + '/#');
       }
       setGeneratedShareData(generated);
       setIsShareModalOpen(true);
@@ -709,7 +707,7 @@ export default function App() {
     }
 
     return combinedDeals;
-  }, [dealsData, products]);
+  }, [dealsData, products, storesData]);
 
   const CATEGORIES_LIST = React.useMemo(() => [
     { id: 'fashion', name: 'Fashion', icon: Shirt },
@@ -808,17 +806,29 @@ export default function App() {
     const selectedStore = storesData.find((s) => s.id === selectedStoreId);
 
     return (
-      <div id="root" style={{ minHeight: '100vh', backgroundColor: 'var(--bg)' }}>
+      <div className="mobile-app-layout-root">
         <Notification notifications={notifications} removeNotification={removeNotification} />
         
         {currentView === 'store' && selectedStore ? (
-          <div style={{ padding: '12px' }}>
+          <div style={{ padding: '12px 12px 40px 12px', overflowY: 'auto', flex: 1, height: '100%' }}>
             <StoreDetail
               store={selectedStore}
               onBack={() => setView('home')}
               onAddNotification={addNotification}
               deals={dynamicDeals.filter(d => {
-                return d.platform && selectedStore?.name && d.platform.toLowerCase() === selectedStore.name.toLowerCase();
+                if (!d.platform || !selectedStore?.name) return false;
+                const dealPlatform = d.platform.trim().toLowerCase();
+                const storeName = selectedStore.name.trim().toLowerCase();
+
+                // Match exact name, contains, or common aliases
+                if (dealPlatform === storeName || dealPlatform.includes(storeName) || storeName.includes(dealPlatform)) {
+                  return true;
+                }
+
+                // Fallback for storeId matching if available
+                if (d.storeId && d.storeId === selectedStore.id) return true;
+
+                return false;
               })}
               onGrabDeal={handleGrabProductDeal}
               onShareDeal={handleShareDeal}
@@ -1273,7 +1283,10 @@ export default function App() {
             onBack={() => setView('home')}
             onAddNotification={addNotification}
             deals={dynamicDeals.filter(d => {
-              return d.platform && selectedStore?.name && d.platform.toLowerCase() === selectedStore.name.toLowerCase();
+              if (!d.platform || !selectedStore?.name) return false;
+              const p = d.platform.trim().toLowerCase();
+              const s = selectedStore.name.trim().toLowerCase();
+              return p === s || p.includes(s) || s.includes(p);
             })}
             onGrabDeal={handleGrabProductDeal}
             currentUser={currentUser}

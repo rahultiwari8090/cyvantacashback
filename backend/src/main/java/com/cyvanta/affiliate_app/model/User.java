@@ -55,6 +55,9 @@ public class User {
 
     private LocalDateTime otpExpiry;
 
+    /** MessageCentral verificationId — stored in DB so it survives server restarts */
+    private String mcVerificationId;
+
     @Builder.Default
     private Boolean isVerified = false;
 

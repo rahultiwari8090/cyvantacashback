@@ -169,8 +169,8 @@ export default function AuthModal({ isOpen, onClose, onLogin }) {
 
         {authStep === 'otp' && (
           <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '5px' }}>Verify Your Account</h2>
-            <p style={{ fontSize: '13px', color: 'var(--text)' }}>We sent a 6-digit code to <strong>{identifier}</strong></p>
+            <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '5px' }}>Verify Account</h2>
+            <p style={{ fontSize: '13px', color: 'var(--text)' }}>OTP sent to <strong>{identifier}</strong></p>
           </div>
         )}
 

@@ -142,7 +142,7 @@ export default function StoreDetail({ store, onBack, onAddNotification, deals, o
           <div className="store-sidebar-card">
             <h3>How tracking works?</h3>
             <ul className="sidebar-terms-list">
-              <li>Always start your session by clicking out from Cyvanta.</li>
+              <li>Always start your session by clicking out from LIO MART.</li>
               <li>Only add items to your cart <strong>after</strong> clicking out.</li>
               <li>Do not use external browser coupon plug-ins or extensions.</li>
               <li>Ensure your browser has cookies enabled and AdBlock turned off.</li>

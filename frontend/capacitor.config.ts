@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.cyvanta.affiliate.app',
-  appName: 'AffiliateAPP',
+  appName: 'LIO MART',
   webDir: 'dist',
   server: {
     // Allow the Capacitor WebView to make requests to external APIs

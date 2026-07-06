@@ -88,6 +88,7 @@ const mapProductsToDeals = (productsList, dbDealsList, storesData) => {
       return {
         ...d,
         title: d.name,
+        platform: d.platform || (d.comparisons && d.comparisons.length > 0 ? d.comparisons[0].platform : 'Amazon'),
         category: 'electronics',
         storeLogo: storesLogoMap['Amazon'] || fallbackLogo,
         retailPrice,
@@ -127,6 +128,7 @@ const mapProductsToDeals = (productsList, dbDealsList, storesData) => {
       return {
         id: p.id,
         title: p.name,
+        platform: platform,
         retailPrice,
         dealPrice,
         cashbackEarned,
@@ -331,7 +333,12 @@ export default function App() {
           store={selectedStore}
           onBack={() => setCurrentView('home')}
           onAddNotification={addNotification}
-          deals={dynamicDeals.filter(d => d.storeLogo === selectedStore.logo)}
+          deals={dynamicDeals.filter(d => {
+            if (!d.platform || !selectedStore?.name) return false;
+            const p = d.platform.trim().toLowerCase();
+            const s = selectedStore.name.trim().toLowerCase();
+            return p === s || p.includes(s) || s.includes(p);
+          })}
           onGrabDeal={handleInterceptGrabDeal}
           currentUser={currentUser}
           openAuthModal={() => setIsAuthModalOpen(true)}

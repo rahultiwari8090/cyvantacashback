@@ -121,9 +121,9 @@ export default function AdminLogin({ onLoginSuccess, onAddNotification, setView 
     <div className="admin-login-layout animate-fade">
       <div className="admin-login-card">
         <div className="admin-login-header">
-          <div className="admin-login-logo">C</div>
-          <h2>Admin Console</h2>
-          <p>Sign in to manage Cyvanta rewards & catalog</p>
+          <img src="/logo.webp" alt="Lio Mart Logo" style={{ width: '48px', height: '48px', margin: '0 auto 12px', display: 'block', objectFit: 'contain' }} />
+          <h2>LIO MART Admin</h2>
+          <p>Sign in to manage LIO MART rewards & catalog</p>
         </div>
 
         {error && (

@@ -47,10 +47,27 @@ export function AdminTable({
     if (currentPage < totalPages) onPageChange(currentPage + 1);
   };
 
+  const tableRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (!tableRef.current) return;
+    const table = tableRef.current;
+    const ths = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent);
+    const trs = table.querySelectorAll('tbody tr');
+    trs.forEach(tr => {
+      const tds = tr.querySelectorAll('td');
+      tds.forEach((td, i) => {
+        if (ths[i] && !td.getAttribute('data-label')) {
+          td.setAttribute('data-label', ths[i]);
+        }
+      });
+    });
+  }, [items, currentPage, loading]);
+
   return (
     <div className="admin-table-card">
       <div className="admin-table-wrapper">
-        <table className="admin-table">
+        <table className="admin-table" ref={tableRef}>
           <thead>
             <tr>
               {headers.map((h, i) => (

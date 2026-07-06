@@ -2,303 +2,210 @@ package com.cyvanta.affiliate_app.service;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import java.util.HashMap;
-import java.util.Map;
 
+/**
+ * SmsService — MessageCentral VerifyNow OTP Integration
+ *
+ * Uses a static pre-generated authToken from the MessageCentral console
+ * (avoids re-generating tokens which requires an active subscription).
+ *
+ * Flow:
+ *  1. sendOtpSms()              — POST /verification/v3/send → OTP sent to phone, verificationId stored
+ *  2. verifyMessageCentralOtp() — POST /verification/v3/validateOtp → validates code entered by user
+ */
 @Slf4j
 @Service
 public class SmsService {
 
+    private static final String BASE_URL = "https://cpaas.messagecentral.com";
+
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @Value("${sms.provider:}")
-    private String provider;
+    @Value("${sms.messagecentral.customer-id:}")
+    private String customerId;
 
-    // --- Fast2SMS Config ---
-    @Value("${sms.fast2sms.api-key:}")
-    private String fast2smsApiKey;
+    /** Static long-lived auth token from MessageCentral console → Developer Guide → API Credentials */
+    @Value("${sms.messagecentral.auth-token:}")
+    private String authToken;
 
-    // --- Twilio Config (fallback) ---
-    @Value("${sms.twilio.account-sid:}")
-    private String twilioAccountSid;
+    @Value("${sms.messagecentral.country-code:91}")
+    private String countryCode;
 
-    @Value("${sms.twilio.auth-token:}")
-    private String twilioAuthToken;
-
-    @Value("${sms.twilio.from-number:}")
-    private String twilioFromNumber;
-
-    @Value("${sms.twilio.service-id:}")
-    private String twilioServiceId;
+    // ─────────────────────────────────────────────────────────────────────────
+    // PUBLIC API
+    // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * Send OTP via SMS using the configured provider.
-     * Tries Fast2SMS first (Quick route, no DLT needed), then Twilio, then simulator fallback.
+     * Send OTP via MessageCentral VerifyNow SMS.
+     * Returns the verificationId so the caller can persist it in the database.
+     *
+     * @return verificationId from MessageCentral (never null — throws on failure)
      */
-    public boolean sendOtpSms(String phone, String otp) {
-        log.info("[SMS] Attempting to send OTP to {} via provider={}", phone, provider);
+    public String sendOtpSms(String phone, String otp) {
+        log.info("[SMS] MessageCentral: Sending OTP to {}", phone);
 
-        // --- Fast2SMS (Quick Route — no DLT needed) ---
-        if (provider != null && provider.equalsIgnoreCase("fast2sms") && hasFast2SmsConfig()) {
-            boolean sent = sendFast2SmsOtp(phone, otp);
-            if (sent) return true;
-            log.warn("[SMS] Fast2SMS failed, falling back to Twilio...");
+        if (!hasConfig()) {
+            log.error("[SMS] MessageCentral not configured — customerId or authToken missing");
+            logFallbackOtp(phone, otp);
+            throw new RuntimeException("SMS provider not configured. Please contact support.");
         }
 
-        // --- Twilio fallback ---
-        if (hasTwilioConfig()) {
-            if (twilioServiceId != null && !twilioServiceId.isBlank()) {
-                boolean sent = sendTwilioVerify(phone);
-                if (sent) return true;
-                log.warn("[SMS] Twilio Verify API failed, falling back to Messages API");
-            }
-            boolean sent = sendTwilioSms(phone, otp);
-            if (sent) return true;
-            log.warn("[SMS] Twilio Messages API also failed for {}", phone);
+        String mobile = extractMobileNumber(phone);
+        if (mobile.isEmpty()) {
+            throw new RuntimeException("Invalid phone number: " + phone);
         }
 
-        // Simulator fallback — always log the OTP for dev/testing
-        log.info("===========================================");
-        log.info("[SMS SIMULATOR] OTP for {}: {}", phone, otp);
-        log.info("===========================================");
-        throw new RuntimeException("No valid SMS provider configured or all providers failed.");
+        String verificationId = sendOtpRequest(mobile);
+        if (verificationId == null) {
+            logFallbackOtp(phone, otp);
+            throw new RuntimeException("Failed to send OTP via MessageCentral. Please try again.");
+        }
+
+        log.info("[SMS] OTP sent to {}. verificationId={}", mobile, verificationId);
+        return verificationId;
     }
 
-    // ==================== Fast2SMS Quick Route ====================
-
     /**
-     * Send OTP using Fast2SMS Quick SMS route (no DLT registration needed).
-     * Uses international ILDO gateway — works with any Indian number.
-     * OTP is generated by our app and sent as a message.
-     * Verification is done locally in our DB (not via Fast2SMS API).
+     * Validate OTP code entered by user against MessageCentral.
+     * The verificationId must be retrieved from the database and passed in.
+     *
+     * @param verificationId verificationId stored in DB from the send step
+     * @param code           OTP entered by user
+     * @return true if valid
      */
-    private boolean sendFast2SmsOtp(String phone, String otp) {
-        // Extract 10-digit Indian mobile number (remove +91 or 91 prefix)
-        String mobileNumber = extractIndianMobile(phone);
-        if (mobileNumber == null) {
-            log.error("[SMS] Cannot extract valid 10-digit Indian number from {}", phone);
+    public boolean verifyMessageCentralOtp(String verificationId, String code) {
+        if (verificationId == null || verificationId.isBlank()) {
+            log.warn("[SMS] verificationId is null/blank — cannot validate OTP.");
             return false;
         }
 
-        String url = "https://www.fast2sms.com/dev/bulkV2";
+        boolean valid = validateOtpRequest(verificationId, code);
+        if (valid) {
+            log.info("[SMS] OTP validated for verificationId={}", verificationId);
+        } else {
+            log.warn("[SMS] OTP validation failed for verificationId={}", verificationId);
+        }
+        return valid;
+    }
+
+    /** Returns true if MessageCentral is configured and active. */
+    public boolean isMessageCentralActive() {
+        return hasConfig();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // PRIVATE — MessageCentral API Calls
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * POST /verification/v3/send?countryCode=&customerId=&flowType=SMS&mobileNumber=
+     * Header: authToken: <static token>
+     *
+     * @return verificationId or null on failure
+     */
+    private String sendOtpRequest(String mobile) {
+        String url = BASE_URL + "/verification/v3/send"
+                + "?countryCode=" + countryCode
+                + "&customerId=" + customerId
+                + "&flowType=SMS"
+                + "&mobileNumber=" + mobile;
 
         try {
             HttpHeaders headers = new HttpHeaders();
-            headers.set("authorization", fast2smsApiKey != null ? fast2smsApiKey.trim() : "");
+            headers.set("authToken", authToken.trim());
             headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
-            headers.set("Accept", "*/*");
 
-            Map<String, String> body = new HashMap<>();
-            body.put("route", "q");
-            body.put("message", "Your Cyvanta Cashback verification code is " + otp + ". Valid for 10 minutes. Do not share.");
-            body.put("numbers", mobileNumber);
-
-            HttpEntity<Map<String, String>> request = new HttpEntity<>(body, headers);
-
-            log.info("[SMS] Sending OTP via Fast2SMS POST Quick Route to {} (mobile={})", phone, mobileNumber);
+            HttpEntity<Void> request = new HttpEntity<>(headers);
             ResponseEntity<String> response = restTemplate.postForEntity(url, request, String.class);
 
-            log.info("[SMS] Fast2SMS response: status={}, body={}", response.getStatusCode(), response.getBody());
+            log.info("[SMS] Send OTP response: status={}, body={}", response.getStatusCode(), response.getBody());
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 JsonNode json = objectMapper.readTree(response.getBody());
-                boolean returnValue = json.has("return") && json.get("return").asBoolean();
-                String message = json.has("message") ? json.get("message").asText() : "";
 
-                if (returnValue) {
-                    log.info("[SMS] Fast2SMS OTP sent successfully to {}", mobileNumber);
-                    return true;
-                }
-                log.error("[SMS] Fast2SMS rejected request: {}", message);
-                throw new RuntimeException("Fast2SMS Error: " + message);
+                // Try common response shapes
+                if (json.has("verificationId")) return json.get("verificationId").asText();
+                if (json.has("data") && json.get("data").has("verificationId"))
+                    return json.get("data").get("verificationId").asText();
+                if (json.has("id")) return json.get("id").asText();
+
+                log.error("[SMS] No verificationId in response: {}", response.getBody());
             } else {
-                log.error("[SMS] Fast2SMS HTTP Error: {} - {}", response.getStatusCode(), response.getBody());
-                throw new RuntimeException("Fast2SMS HTTP Error: " + response.getStatusCode());
+                log.error("[SMS] Send OTP failed: status={}, body={}", response.getStatusCode(), response.getBody());
             }
         } catch (Exception e) {
-            log.error("[SMS] Fast2SMS sendOtp failed for {}: {}", phone, e.getMessage());
-            throw new RuntimeException("Fast2SMS Error: " + e.getMessage());
+            log.error("[SMS] sendOtpRequest exception for {}: {}", mobile, e.getMessage());
         }
+        return null;
     }
 
     /**
-     * Extract 10-digit Indian mobile number from various formats.
-     * Handles: +919876543210, 919876543210, 9876543210, 09876543210
+     * POST /verification/v3/validateOtp?countryCode=&verificationId=&code=
+     * Header: authToken: <static token>
      */
-    private String extractIndianMobile(String phone) {
-        if (phone == null) return null;
-        // Remove all non-digits
-        String digits = phone.replaceAll("[^\\d]", "");
-
-        if (digits.length() == 10) {
-            return digits;
-        } else if (digits.length() == 12 && digits.startsWith("91")) {
-            return digits.substring(2);
-        } else if (digits.length() == 11 && digits.startsWith("0")) {
-            return digits.substring(1);
-        }
-        log.warn("[SMS] Could not extract 10-digit number from: {} (digits={})", phone, digits);
-        return digits.length() >= 10 ? digits.substring(digits.length() - 10) : null;
-    }
-
-    /**
-     * Check if Fast2SMS is the active provider.
-     * Fast2SMS OTP verification is done locally via our DB — no external verify API needed.
-     */
-    public boolean isFast2SmsActive() {
-        return provider != null && provider.equalsIgnoreCase("fast2sms") && hasFast2SmsConfig();
-    }
-
-    private boolean hasFast2SmsConfig() {
-        boolean configured = fast2smsApiKey != null && !fast2smsApiKey.isBlank();
-        if (!configured) {
-            log.warn("[SMS] Fast2SMS config check failed — apiKey={}",
-                fast2smsApiKey != null ? "SET" : "MISSING");
-        }
-        return configured;
-    }
-
-    // ==================== Twilio Methods (Fallback) ====================
-
-    /**
-     * Verify an OTP code that was sent via Twilio Verify API.
-     * Call this from the controller when verifying a phone-based OTP.
-     * Returns true if Twilio confirms the code is correct.
-     */
-    public boolean verifyTwilioCode(String phone, String code) {
-        if (twilioServiceId == null || twilioServiceId.isBlank() || !hasTwilioConfig()) {
-            return false;
-        }
-
-        String url = String.format(
-            "https://verify.twilio.com/v2/Services/%s/VerificationCheck",
-            twilioServiceId
-        );
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBasicAuth(twilioAccountSid, twilioAuthToken);
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-
-        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
-        body.add("To", phone);
-        body.add("Code", code);
+    private boolean validateOtpRequest(String verificationId, String code) {
+        String url = BASE_URL + "/verification/v3/validateOtp"
+                + "?countryCode=" + countryCode
+                + "&verificationId=" + verificationId
+                + "&code=" + code;
 
         try {
-            HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("authToken", authToken.trim());
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            HttpEntity<Void> request = new HttpEntity<>(headers);
             ResponseEntity<String> response = restTemplate.postForEntity(url, request, String.class);
+
+            log.info("[SMS] Validate OTP response: status={}, body={}", response.getStatusCode(), response.getBody());
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 JsonNode json = objectMapper.readTree(response.getBody());
-                String status = json.has("status") ? json.get("status").asText() : "";
-                if ("approved".equals(status)) {
-                    log.info("[SMS] Twilio Verify confirmed OTP for {}", phone);
-                    return true;
-                }
-                log.warn("[SMS] Twilio Verify check returned status={} for {}", status, phone);
+
+                if (json.has("verificationStatus"))
+                    return "VERIFICATION_COMPLETED".equalsIgnoreCase(json.get("verificationStatus").asText());
+                if (json.has("data") && json.get("data").has("verificationStatus"))
+                    return "VERIFICATION_COMPLETED".equalsIgnoreCase(json.get("data").get("verificationStatus").asText());
+                if (json.has("responseCode"))
+                    return json.get("responseCode").asInt() == 200;
             }
         } catch (Exception e) {
-            log.error("[SMS] Twilio Verify check failed for {}: {}", phone, e.getMessage());
+            log.error("[SMS] validateOtpRequest exception: {}", e.getMessage());
         }
         return false;
     }
 
-    private boolean hasTwilioConfig() {
-        boolean configured = twilioAccountSid != null && !twilioAccountSid.isBlank()
-            && twilioAuthToken != null && !twilioAuthToken.isBlank();
-        if (!configured) {
-            log.warn("[SMS] Twilio config check failed — accountSid={}, authToken={}",
-                twilioAccountSid != null ? "SET" : "MISSING",
-                twilioAuthToken != null ? "SET" : "MISSING");
-        }
-        return configured;
+    // ─────────────────────────────────────────────────────────────────────────
+    // UTILITIES
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private boolean hasConfig() {
+        return customerId != null && !customerId.isBlank()
+                && authToken != null && !authToken.isBlank();
     }
 
-    /**
-     * Use Twilio Verify API to send a verification code.
-     */
-    private boolean sendTwilioVerify(String phone) {
-        String url = String.format(
-            "https://verify.twilio.com/v2/Services/%s/Verifications",
-            twilioServiceId
-        );
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBasicAuth(twilioAccountSid, twilioAuthToken);
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-
-        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
-        body.add("To", phone);
-        body.add("Channel", "sms");
-
-        try {
-            HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
-            ResponseEntity<String> response = restTemplate.postForEntity(url, request, String.class);
-
-            if (response.getStatusCode().is2xxSuccessful()) {
-                log.info("[SMS] OTP sent via Twilio Verify API to {}", phone);
-                return true;
-            }
-
-            log.error("[SMS] Twilio Verify API responded with status {} for {}. Response: {}",
-                response.getStatusCode(), phone, response.getBody());
-        } catch (Exception e) {
-            log.error("[SMS] Twilio Verify API failed for {}: {}", phone, e.getMessage());
-            if (e.getMessage() != null && e.getMessage().contains("60200")) {
-                log.error("[SMS] Twilio Error 60200: The phone number {} is not verified. " +
-                    "On Twilio trial accounts, you can only send to verified numbers. " +
-                    "Go to https://console.twilio.com/us1/develop/phone-numbers/manage/verified " +
-                    "to add verified numbers, or upgrade your Twilio account.", phone);
-            }
-        }
-        return false;
+    private String extractMobileNumber(String phone) {
+        if (phone == null) return "";
+        String digits = phone.replaceAll("[^\\d]", "");
+        if (digits.length() == 10) return digits;
+        if (digits.length() == 12 && digits.startsWith("91")) return digits.substring(2);
+        if (digits.length() == 11 && digits.startsWith("0")) return digits.substring(1);
+        if (digits.length() > 10) return digits.substring(digits.length() - 10);
+        return digits;
     }
 
-    /**
-     * Fallback: use raw Twilio Messages API to send a custom OTP message.
-     */
-    private boolean sendTwilioSms(String to, String otp) {
-        String url = String.format("https://api.twilio.com/2010-04-01/Accounts/%s/Messages.json", twilioAccountSid);
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBasicAuth(twilioAccountSid, twilioAuthToken);
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
-        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
-        body.add("From", twilioFromNumber);
-        body.add("To", to);
-        body.add("Body", "Your Cyvanta Cashback OTP is " + otp + ". It expires in 10 minutes.");
-
-        try {
-            HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
-            ResponseEntity<String> response = restTemplate.postForEntity(url, request, String.class);
-            if (response.getStatusCode().is2xxSuccessful()) {
-                log.info("[SMS] OTP sent via Twilio Messages API to {}", to);
-                return true;
-            }
-            log.error("[SMS] Twilio Messages API responded with status {} for {}. Response: {}",
-                response.getStatusCode(), to, response.getBody());
-        } catch (Exception e) {
-            log.error("[SMS] Twilio Messages API failed for {}: {}", to, e.getMessage());
-            if (e.getMessage() != null && e.getMessage().contains("21608")) {
-                log.error("[SMS] Twilio Error 21608: The 'To' number {} is unverified. " +
-                    "Trial accounts can only send to verified caller IDs. " +
-                    "Verify the number at https://console.twilio.com or upgrade your account.", to);
-            }
-        }
-        return false;
+    private void logFallbackOtp(String phone, String otp) {
+        log.info("==========================================");
+        log.info("[SMS FALLBACK] OTP for {}: {}", phone, otp);
+        log.info("==========================================");
     }
 }

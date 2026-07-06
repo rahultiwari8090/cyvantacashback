@@ -9,13 +9,13 @@ export default function Footer({ setView }) {
           {/* Column 1: Intro */}
           <div className="footer-col" style={{ gap: '12px' }}>
             <div className="logo-section" onClick={() => setView('home')} style={{ marginBottom: '8px' }}>
-              <div className="logo-icon">C</div>
+              <img src="/logo.webp" alt="Lio Mart Logo" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
               <h2 className="logo-text">
-                Cyvanta<span>Cashback</span>
+                LIO<span> MART</span>
               </h2>
             </div>
             <p style={{ fontSize: '13px', color: 'var(--text)', lineHeight: 1.6 }}>
-              India's premium Cashback & Coupon rewards portal. Save real money on top of retail discounts
+              LIO MART is India's premium Cashback & Coupon rewards portal. Save real money on top of retail discounts
               at 500+ major stores with zero fees.
             </p>
           </div>
@@ -36,7 +36,7 @@ export default function Footer({ setView }) {
             <h4 className="footer-col-title">Company</h4>
             <ul className="footer-links-list">
               <li><a href="#how-it-works">How it Works</a></li>
-              <li><a href="#">About Cyvanta</a></li>
+              <li><a href="#">About LIO MART</a></li>
               <li><a href="#" onClick={(e) => { e.preventDefault(); setView('admin-login'); }}>Admin Portal</a></li>
               <li><a href="#">Terms & Conditions</a></li>
               <li><a href="#">Privacy Policy</a></li>
@@ -67,7 +67,7 @@ export default function Footer({ setView }) {
         <div className="footer-bottom">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <ShieldCheck size={18} style={{ color: 'var(--secondary)' }} />
-            <span>© 2026 Cyvanta Affiliate Marketing. All Rights Reserved. SSL Secured.</span>
+            <span>© 2026 LIO MART Affiliate Marketing. All Rights Reserved. SSL Secured.</span>
           </div>
 
           <div className="footer-socials">

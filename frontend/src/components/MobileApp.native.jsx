@@ -58,7 +58,7 @@ const HERO_SLIDES = [
     id: 1,
     tag: 'Limited Time Bonanza',
     title: 'Earn Real Cashback.\nWithdraw to Bank.',
-    desc: 'Shop at Amazon, Ajio, Flipkart & 500+ stores via Cyvanta and get paid real cash on top of store discounts!',
+    desc: 'Shop at Amazon, Ajio, Flipkart & 500+ stores via LIO MART and get paid real cash on top of store discounts!',
     cta: 'Browse Top Offers',
     storeName: 'Myntra Fashion',
     cashbackRate: '12%',
@@ -100,7 +100,7 @@ const CATEGORIES = [
 const TESTIMONIALS = [
   { id: 1, name: 'Aarav S.', rating: '⭐⭐⭐⭐微', text: 'Earned over ₹320 cashback in just 3 months. The bank transfer was instant. Highly recommended!' },
   { id: 2, name: 'Riya M.', rating: '⭐⭐⭐⭐⭐', text: 'Love the secure tracking timeline. I can see exactly when my cashback will unlock.' },
-  { id: 3, name: 'Vikram K.', rating: '⭐⭐⭐⭐⭐', text: 'Cyvanta tracking is flawless. Best affiliate platform right now.' },
+  { id: 3, name: 'Vikram K.', rating: '⭐⭐⭐⭐⭐', text: 'Lio Mart tracking is flawless. Best affiliate platform right now.' },
 ];
 
 const STORES_INFO = [
@@ -248,7 +248,7 @@ export default function MobileApp({
   const handleShareLink = async () => {
     try {
       await Share.share({
-        message: `Join Cyvanta Cashback and earn real money back on every purchase! Here's my link: ${refLink}`,
+        message: `Join Lio Mart Cashback and earn real money back on every purchase! Here's my link: ${refLink}`,
       });
       setCopiedLink(true);
       onAddNotification('Referral link shared!', 'success');
@@ -411,11 +411,9 @@ export default function MobileApp({
       {/* Top Application Header */}
       <View style={[styles.header, themeStyles.header]}>
         <View style={styles.branding}>
-          <View style={[styles.logoBullet, { backgroundColor: '#ff4f2f' }]}>
-            <Text style={styles.logoBulletText}>C</Text>
-          </View>
-          <Text style={[styles.brandingText, themeStyles.text]}>Cyvanta</Text>
-          <Text style={styles.brandingSubText}>Cashback</Text>
+          <Image source={{ uri: '/logo.webp' }} style={{ width: 28, height: 28, marginRight: 8 }} resizeMode="contain" />
+          <Text style={[styles.brandingText, themeStyles.text]}>LIO</Text>
+          <Text style={styles.brandingSubText}> MART</Text>
         </View>
         
         <View style={styles.headerRight}>
@@ -661,14 +659,12 @@ export default function MobileApp({
             {/* 7. Footer */}
             <View style={[styles.footer, themeStyles.borderTop]}>
               <View style={styles.brandingCenter}>
-                <View style={[styles.logoBullet, { backgroundColor: '#ff4f2f' }]}>
-                  <Text style={styles.logoBulletText}>C</Text>
-                </View>
-                <Text style={[styles.brandingText, themeStyles.text]}>Cyvanta</Text>
-                <Text style={styles.brandingSubText}>Cashback</Text>
+                <Image source={{ uri: '/logo.webp' }} style={{ width: 24, height: 24, marginRight: 6 }} resizeMode="contain" />
+                <Text style={[styles.brandingText, themeStyles.text]}>LIO</Text>
+                <Text style={styles.brandingSubText}> MART</Text>
               </View>
               <Text style={[styles.footerText, themeStyles.textMuted]}>Save Real Money & Coupons at 500+ Stores</Text>
-              <Text style={styles.footerCopyright}>© 2026 Cyvanta Affiliate Marketing.</Text>
+              <Text style={styles.footerCopyright}>© 2026 LIO MART Affiliate Marketing.</Text>
             </View>
 
           </View>

@@ -106,9 +106,9 @@ export default function Header({
       <div className="header-container">
         {/* Logo */}
         <div className="logo-section" onClick={() => setView('home')}>
-          <div className="logo-icon">C</div>
+          <img src="/logo.webp" alt="Lio Mart Logo" className="logo-img" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
           <h1 className="logo-text">
-            Cyvanta<span>Affiliate</span>
+            LIO<span> MART</span>
           </h1>
         </div>
 
