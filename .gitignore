@@ -34,3 +34,10 @@ build/
 
 backend/.env
 frontend/.env
+
+# Android build outputs (large binaries — don't commit)
+frontend/android/app/release/
+frontend/android/app/build/
+frontend/android/.gradle/
+frontend/android/build/
+frontend/dist/
